@@ -30,6 +30,15 @@ Merging is safe to repeat in either direction:
 - The chip at the top shows how long ago you last backed up. It turns orange after 7 days.
 - Clearing the browser's site data, uninstalling the browser, or replacing a device without a backup would lose that device's log.
 
+## Lists
+Departments, planograms, issue types and causes are edited in **Lists**. Issues link to these entries, so:
+- **Renaming** an entry updates every issue that uses it, including History, Stats, exports and share text.
+- **Deleting an unused entry** removes it.
+- **Deleting an entry that issues use** asks you to choose:
+  - **Archive:** hidden from new issues, but past issues keep it and Stats still count it. Restore it any time from *Archived*.
+  - **Merge into another entry:** moves those issues to it. Merging a department moves its planograms too.
+- **Merging backups** between devices keeps entries added on either side, takes renames from the newer lists, and doesn't bring back anything deleted or merged away.
+
 ## Appearance
 **Lists → Appearance** has these settings, saved per device and carried in backups:
 - **Theme:** Auto, Light or Dark.
