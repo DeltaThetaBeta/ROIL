@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <!-- Everything stays on this device: the page may only load its own files, and can't send data anywhere. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: data:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: data: https://www.googleapis.com https://oauth2.googleapis.com; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0e6a5a">
 <script>/* paint the saved colors before the page draws */try{var p=JSON.parse(localStorage.getItem('roil.apPaint')||'null');if(p){var r=document.documentElement;for(var k in p.attrs)if(/^data-(theme|contrast|status|shape|size)$/.test(k))r.setAttribute(k,String(p.attrs[k]));if(typeof p.css==='string'&&p.css){var st=document.createElement('style');st.id='apStyle';st.textContent=p.css;document.head.appendChild(st)}}}catch(e){}</script>
@@ -93,6 +93,7 @@ textarea{min-height:76px;resize:vertical}
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--surface)}
 .seg button{border:0;background:none;padding:11px 6px;cursor:pointer;font-weight:500;min-height:46px;border-left:1px solid var(--line)}
 .seg button:first-child{border-left:0}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:600}
 .seg.status button[data-v="Fixed"][aria-pressed="true"]{background:var(--good);color:var(--surface)}
 .seg.status button[data-v="Open"][aria-pressed="true"]{background:var(--open);color:var(--surface)}
@@ -672,27 +673,27 @@ const store={
     if(photo)ops.push({s:'photos',v:{id:item.id,full:photo.full,thumb:photo.thumb}});
     await write(ops);
     if(photo){photoUrls.set(item.id,URL.createObjectURL(photo.full));thumbUrls.set(item.id,URL.createObjectURL(photo.thumb))}
-    upsertLocal(item);
+    upsertLocal(item);markChanged();
   },
   async patch(id,p){
     const it=items.find(i=>i.id===id);if(!it)return;
     const n={...it,...p,updated:new Date().toISOString()};link(n);
     await write([{s:'items',v:n}]);
-    upsertLocal(n);
+    upsertLocal(n);markChanged();
   },
   async remove(it){
     tombs[it.id]=new Date().toISOString();
     await write([{s:'items',del:it.id},{s:'photos',del:it.id},{s:'meta',v:tombs,k:'deleted'}]);
-    dropLocal(it.id);
+    dropLocal(it.id);markChanged();
   },
   async saveLists(l){
     l.updated=new Date().toISOString();
-    await write([{s:'meta',v:listsBody(l),k:'lists'}]);
+    await write([{s:'meta',v:listsBody(l),k:'lists'}]);markChanged();
   }
 };
 
-/* ---------- backup, restore & storage status ---------- */
-let tombs={};   // id -> time deleted, so merging a backup from another device doesn't bring deleted issues back
+/* ---------- backup, restore, sync & storage status ---------- */
+let tombs={};   // id -> time deleted, so merging with another device doesn't bring deleted issues back
 let lastBackup=ls.get('roil.lastBackup',null);   // ISO time of the last backup file made on this device
 let store_={persisted:null,usage:null,quota:null};
 async function refreshStorage(){
@@ -702,10 +703,19 @@ async function refreshStorage(){
 }
 const fmtMB=b=>b==null?'?':b<1048576?Math.max(1,Math.round(b/1024))+' KB':(b/1048576).toFixed(b<10485760?1:0)+' MB';
 function backupAgeDays(){return lastBackup?(Date.now()-new Date(lastBackup))/86400000:Infinity}
+function agoText(iso){if(!iso)return 'never';const m=(Date.now()-new Date(iso))/60000;if(m<1)return 'just now';if(m<60)return Math.round(m)+' min ago';const h=m/60;if(h<24)return Math.round(h)+' h ago';return Math.round(h/24)+' d ago'}
 function setSync(){
-  const el=$('#sync');const d=backupAgeDays();const stale=items.length&&d>7;
-  el.className='sync '+(stale?'local':'on');
-  $('span',el).textContent=!loaded?'Starting…':!items.length?'On this device':lastBackup?`Backed up ${d<1?'today':Math.round(d)+' d ago'}`:'No backup yet';
+  const el=$('#sync');
+  if(syncCfg.dest==='drive'){
+    const w=syncDirty?` · ${syncDirty} waiting`:'';
+    const t={idle:`Synced ${agoText(syncCfg.lastSync)}`,syncing:'Syncing…',offline:'Offline'+w,reconnect:'Reconnect Drive'+w,error:'Sync problem'+w,off:'Sync paused'}[syncState]||'Sync';
+    el.className='sync '+(syncState==='idle'?'on':syncState==='syncing'?'':'local');
+    $('span',el).textContent=!loaded?'Starting…':t;
+  }else{
+    const d=backupAgeDays();const stale=items.length&&d>7;
+    el.className='sync '+(stale?'local':'on');
+    $('span',el).textContent=!loaded?'Starting…':!items.length?'On this device':lastBackup?`Backed up ${d<1?'today':Math.round(d)+' d ago'}`:'No backup yet';
+  }
   let msg='',canHide=false;
   if(items.length&&!standalone()){
     if(dev.ios)msg='On iPhone and iPad, Safari erases ROIL\'s data if you don\'t open it for 7 days. To keep it, '+installHint()+'.';
@@ -714,7 +724,7 @@ function setSync(){
   $('#banner').innerHTML=msg?`<div class="banner"><span>${esc(msg)}</span>${canHide?'<button class="btn small" id="hideInstall" type="button">Got it</button>':''}</div>`:'';
   const h=$('#hideInstall');if(h)h.onclick=()=>{ls.set('roil.hideInstall',true);setSync()};
 }
-$('#sync').addEventListener('click',()=>setView('lists'));
+$('#sync').addEventListener('click',()=>{if(syncCfg.dest==='drive'&&syncState==='reconnect')driveConnect();else setView('lists')});
 
 async function blobToB64(b){const d=await blobToDataUrl(b);return d.slice(d.indexOf(',')+1)}
 function b64ToBlob(s,type){const bin=atob(s);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type})}
@@ -725,7 +735,8 @@ async function buildBackup(){
   const parts=[`{"format":"roil-backup","version":2,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"appearance":${JSON.stringify(ap)},"items":${JSON.stringify(its)},"photos":{`];
   let first=true;
   for(const p of phs){
-    parts.push(`${first?'':','}${JSON.stringify(p.id)}:{"full":"${await blobToB64(p.full)}","thumb":"${await blobToB64(p.thumb)}"}`);first=false;
+    const full=p.full||p.thumb;if(!full)continue;
+    parts.push(`${first?'':','}${JSON.stringify(p.id)}:{"full":"${await blobToB64(full)}","thumb":"${await blobToB64(p.thumb||full)}"}`);first=false;
   }
   parts.push('}}');
   return {blob:new Blob(parts,{type:'application/json'}),count:its.length,photos:phs.length};
@@ -744,12 +755,10 @@ async function doBackup(shareIt){
     toast(`Backup ${shareIt?'shared':'saved'}: ${b.count} issue${b.count===1?'':'s'}, ${b.photos} photo${b.photos===1?'':'s'}.`);
   }catch(e){if(e&&e.name==='AbortError')return;toast('Couldn\'t make the backup. Try again.')}
 }
-/* Restore merges: an issue in the file replaces the one here only if it was edited more recently.
-   Deletions travel too: an issue deleted on either device stays deleted, unless it was edited after the deletion. */
-async function doRestore(file){
-  let data;
-  try{data=JSON.parse(await file.text())}catch(e){toast('That file isn\'t a ROIL backup.');return}
-  if(!data||data.format!=='roil-backup'||!Array.isArray(data.items)){toast('That file isn\'t a ROIL backup.');return}
+/* Merge another copy of the log into this one (a backup file, or the shared copy in sync).
+   An issue is replaced only by a more recently edited version. Deletions travel too: an issue
+   deleted on either side stays deleted, unless it was edited after the deletion. */
+async function mergeIncoming(data,opt={}){
   if(data.lists&&typeof data.lists==='object'){lists=mergeLists(lists,normLists(data.lists));relinkAll()}
   const ID=/^[a-z0-9]{6,40}$/;const have=new Map(items.map(i=>[i.id,i]));const ops=[];let added=0,updated=0,photos=0,removed=0;
   const newTombs={...tombs};
@@ -762,7 +771,7 @@ async function doRestore(file){
         for(const m of[photoUrls,thumbUrls]){const u=m.get(id);if(u){URL.revokeObjectURL(u);m.delete(id)}}}
     }
   }
-  for(const x of data.items){
+  for(const x of (Array.isArray(data.items)?data.items:[])){
     if(!x||typeof x!=='object'||!ID.test(x.id||'')||typeof x.dept!=='string'||typeof x.issue!=='string'||!STATUSES.includes(x.status))continue;
     const it={};for(const k of ITEM_FIELDS)it[k]=x[k]??(k==='fixedAt'?null:k==='photo'?false:'');it.photo=!!it.photo;
     for(const k of['dept','planogram','issue','cause','shift','created','updated'])it[k]=String(it[k]).slice(0,120);
@@ -773,7 +782,7 @@ async function doRestore(file){
     if(cur&&cur.updated>=it.updated)continue;
     if(newTombs[it.id]&&newTombs[it.id]>=it.updated)continue;   // deleted after this version was saved
     ops.push({s:'items',v:it});have.set(it.id,it);cur?updated++:added++;
-    const p=data.photos&&data.photos[it.id];
+    const p=opt.photos&&data.photos&&data.photos[it.id];
     if(it.photo&&p&&typeof p.full==='string'){
       try{const full=b64ToBlob(p.full,'image/jpeg');const thumb=typeof p.thumb==='string'?b64ToBlob(p.thumb,'image/jpeg'):full;
         ops.push({s:'photos',v:{id:it.id,full,thumb}});photos++;
@@ -784,20 +793,219 @@ async function doRestore(file){
   }
   relinkAll([...have.values()]);ops.push({s:'meta',v:listsBody(lists),k:'lists'});buildForm();
   let apChanged=false;
-  if(data.appearance&&typeof data.appearance==='object'){const inc=cleanAp(data.appearance);if((inc.updated||'')>(ap.updated||'')){ap=inc;ls.set('roil.appearance',ap);applyAp();apChanged=true}}
+  if(opt.appearance&&data.appearance&&typeof data.appearance==='object'){const inc=cleanAp(data.appearance);if((inc.updated||'')>(ap.updated||'')){ap=inc;ls.set('roil.appearance',ap);applyAp();apChanged=true}}
   ops.push({s:'meta',v:newTombs,k:'deleted'});
-  try{await write(ops)}catch(e){toast(e&&e.name==='QuotaExceededError'?'Not enough space on this device to restore.':'Couldn\'t restore. Try again.');return}
+  await write(ops);
   tombs=newTombs;
   setItems([...have.values()]);
-  const bits=[];if(added)bits.push(`${added} new`);if(updated)bits.push(`${updated} updated`);if(removed)bits.push(`${removed} removed`);if(apChanged)bits.push('appearance settings');
-  toast(bits.length?`Merged backup: ${bits.join(', ')}${added||updated?` (${photos} photo${photos===1?'':'s'})`:''}.`:'Nothing new in that backup. Your log already has everything in it.');
+  return {added,updated,removed,photos,apChanged};
+}
+async function doRestore(file){
+  let data;
+  try{data=JSON.parse(await file.text())}catch(e){toast('That file isn\'t a ROIL backup.');return}
+  if(!data||data.format!=='roil-backup'||!Array.isArray(data.items)){toast('That file isn\'t a ROIL backup.');return}
+  let r;
+  try{r=await mergeIncoming(data,{photos:true,appearance:true})}
+  catch(e){toast(e&&e.name==='QuotaExceededError'?'Not enough space on this device to restore.':'Couldn\'t restore. Try again.');return}
+  markChanged();
+  const bits=[];if(r.added)bits.push(`${r.added} new`);if(r.updated)bits.push(`${r.updated} updated`);if(r.removed)bits.push(`${r.removed} removed`);if(r.apChanged)bits.push('appearance settings');
+  toast(bits.length?`Merged backup: ${bits.join(', ')}${r.added||r.updated?` (${r.photos} photo${r.photos===1?'':'s'})`:''}.`:'Nothing new in that backup. Your log already has everything in it.');
 }
 
+/* ---------- sync ----------
+   Destinations share one engine: download the shared copy, merge it with mergeIncoming(),
+   upload the result. Every device keeps a full copy and works offline; changes wait until
+   the next sync. Google Drive now; a ROIL server destination can be added the same way.
+   Google sign-in uses Google's standard redirect (no Google code runs inside ROIL), and
+   ROIL asks only for access to files it creates, kept in a "ROIL" folder in your Drive. */
+const GOOGLE_CLIENT_ID='640481376912-jvos6re8mdiebn38q4t70a08gi24rdir.apps.googleusercontent.com';
+const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.file';
+const GAPI='https://www.googleapis.com';
+const DATA_FILE='roil-data.json';
+let syncCfg={dest:'',folderId:'',lastSync:'',...ls.get('roil.sync',{})};
+let syncDirty=Number(ls.get('roil.syncDirty',0))||0;
+let syncState='off',syncErr='',syncing=false,syncAgain=false,syncTimer=null,driveFiles=new Map();
+const saveSyncCfg=()=>ls.set('roil.sync',syncCfg);
+const redirectUri=()=>location.origin+location.pathname.replace(/index\.html$/,'');
+function gToken(){const t=ls.get('roil.gtoken',null);return t&&t.token&&t.exp>Date.now()+60000?t.token:null}
+function markChanged(){syncDirty++;ls.set('roil.syncDirty',syncDirty);scheduleSync(4000)}
+function scheduleSync(ms){if(syncCfg.dest!=='drive')return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>runSync(),ms)}
+function formBusy(){return !!(form.photoFile||$('#fNote').value.trim())}
+function driveConnect(){
+  if(formBusy()){toast('Save or clear the issue you\'re logging first. Signing in leaves ROIL for a moment.');setView('log');return}
+  const st=Math.random().toString(36).slice(2)+Date.now().toString(36);
+  ls.set('roil.oauthState',st);
+  const q=new URLSearchParams({client_id:GOOGLE_CLIENT_ID,redirect_uri:redirectUri(),response_type:'token',scope:DRIVE_SCOPE,include_granted_scopes:'true',state:st});
+  location.assign('https://accounts.google.com/o/oauth2/v2/auth?'+q.toString());
+}
+/* Google sends you back to ROIL with the access token after the # (never sent to any server). */
+function handleOAuthReturn(){
+  if(!location.hash||!/(^#|&)(access_token|error)=/.test(location.hash))return;
+  const h=new URLSearchParams(location.hash.slice(1));
+  history.replaceState(null,'',location.pathname+location.search);
+  const want=ls.get('roil.oauthState',null);ls.set('roil.oauthState',null);
+  if(h.get('error')){setTimeout(()=>toast(h.get('error')==='access_denied'?'Google Drive wasn\'t connected: access was declined.':'Google sign-in failed ('+h.get('error')+').'),300);return}
+  if(!want||h.get('state')!==want){setTimeout(()=>toast('That Google sign-in didn\'t come from this device. Try connecting again.'),300);return}
+  if(!(h.get('scope')||DRIVE_SCOPE).includes('drive.file')){setTimeout(()=>toast('ROIL needs permission to its own Drive files. Connect again and tick the Drive box.'),300);return}
+  ls.set('roil.gtoken',{token:h.get('access_token'),exp:Date.now()+Math.max(60,Number(h.get('expires_in')||3600))*1000});
+  syncCfg.dest='drive';saveSyncCfg();
+  setTimeout(()=>toast('Google Drive connected.'),300);
+}
+async function driveDisconnect(){
+  const t=ls.get('roil.gtoken',null);ls.set('roil.gtoken',null);
+  if(t&&t.token)fetch('https://oauth2.googleapis.com/revoke?token='+encodeURIComponent(t.token),{method:'POST'}).catch(()=>{});
+  syncCfg.dest='';saveSyncCfg();syncState='off';setSync();if(view==='lists')renderLists();
+  toast('Sync turned off. Your log and the copy in Google Drive both stay as they are.');
+}
+async function gfetch(url,opts={}){
+  const tok=gToken();if(!tok)throw {reconnect:true};
+  let r;try{r=await fetch(url,{...opts,headers:{...(opts.headers||{}),Authorization:'Bearer '+tok}})}catch(e){throw {net:true}}
+  if(r.status===401){ls.set('roil.gtoken',null);throw {reconnect:true}}
+  if(!r.ok){let m='';try{const j=await r.json();m=j.error&&j.error.message}catch(_){}throw {status:r.status,msg:m||('Google Drive error '+r.status)}}
+  return r;
+}
+const Drive={
+  async folder(){
+    if(syncCfg.folderId){
+      try{const j=await (await gfetch(`${GAPI}/drive/v3/files/${encodeURIComponent(syncCfg.folderId)}?fields=id,trashed`)).json();if(j.id&&!j.trashed)return j.id}
+      catch(e){if(e.reconnect||e.net)throw e}
+    }
+    const q=encodeURIComponent("name='ROIL' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+    const j=await (await gfetch(`${GAPI}/drive/v3/files?q=${q}&fields=files(id)&spaces=drive`)).json();
+    let id=j.files&&j.files[0]&&j.files[0].id;
+    if(!id)id=(await (await gfetch(`${GAPI}/drive/v3/files?fields=id`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:'ROIL',mimeType:'application/vnd.google-apps.folder',description:'Retail Operations Issue Log: synced data and photos'})})).json()).id;
+    syncCfg.folderId=id;saveSyncCfg();return id;
+  },
+  async list(folder){
+    const out=new Map();let page='';
+    do{const q=encodeURIComponent(`'${folder}' in parents and trashed=false`);
+      const j=await (await gfetch(`${GAPI}/drive/v3/files?q=${q}&fields=nextPageToken,files(id,name,version)&pageSize=1000&spaces=drive${page?'&pageToken='+encodeURIComponent(page):''}`)).json();
+      for(const f of j.files||[])out.set(f.name,f);page=j.nextPageToken||''}while(page);
+    return out;
+  },
+  async version(id){return (await (await gfetch(`${GAPI}/drive/v3/files/${encodeURIComponent(id)}?fields=version`)).json()).version},
+  async read(id){return gfetch(`${GAPI}/drive/v3/files/${encodeURIComponent(id)}?alt=media`)},
+  async create(folder,name,blob,type){
+    const b='roil'+Math.random().toString(36).slice(2);
+    const body=new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name,parents:[folder],mimeType:type})}\r\n--${b}\r\nContent-Type: ${type}\r\n\r\n`,blob,`\r\n--${b}--`]);
+    return (await gfetch(`${GAPI}/upload/drive/v3/files?uploadType=multipart&fields=id,name,version`,{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+b},body})).json();
+  },
+  async update(id,blob,type){return (await gfetch(`${GAPI}/upload/drive/v3/files/${encodeURIComponent(id)}?uploadType=media&fields=id,name,version`,{method:'PATCH',headers:{'Content-Type':type},body:blob})).json()},
+  async trash(id){await gfetch(`${GAPI}/drive/v3/files/${encodeURIComponent(id)}?fields=id`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({trashed:true})})}
+};
+/* The shared copy: everything except photos (each photo is its own file) and appearance
+   (that stays per device, so your phone and computer can look different). */
+function syncDocText(){
+  const its=items.map(x=>({...x})).sort((a,b)=>a.id<b.id?-1:1);
+  return JSON.stringify({format:'roil-sync',version:2,lists:listsBody(lists),deleted:tombs,items:its});
+}
+async function syncPhotos(folder,files){
+  const phs=await getAll('photos');const have=new Map(phs.map(p=>[p.id,p]));
+  const live=new Set(items.filter(i=>i.photo).map(i=>i.id));let got=0;
+  for(const p of phs){
+    if(!live.has(p.id))continue;
+    if(p.full&&!files.has(`photo-${p.id}.jpg`)){const f=await Drive.create(folder,`photo-${p.id}.jpg`,p.full,'image/jpeg');files.set(f.name,f)}
+    if(p.thumb&&!files.has(`thumb-${p.id}.jpg`)){const f=await Drive.create(folder,`thumb-${p.id}.jpg`,p.thumb,'image/jpeg');files.set(f.name,f)}
+  }
+  for(const id of live){   // photos logged on another device: fetch the small version now, the full one when you open the issue
+    if(have.has(id))continue;
+    const f=files.get(`thumb-${id}.jpg`)||files.get(`photo-${id}.jpg`);if(!f)continue;
+    const blob=await (await Drive.read(f.id)).blob();
+    const rec={id,thumb:blob,full:f.name.startsWith('photo-')?blob:null};
+    await write([{s:'photos',v:rec}]);
+    thumbUrls.set(id,URL.createObjectURL(blob));if(rec.full)photoUrls.set(id,URL.createObjectURL(blob));got++;
+  }
+  for(const id of Object.keys(tombs))for(const n of[`photo-${id}.jpg`,`thumb-${id}.jpg`]){const f=files.get(n);if(f){await Drive.trash(f.id);files.delete(n)}}
+  if(got)renderAll();
+}
+async function runSync(manual){
+  if(syncCfg.dest!=='drive'){syncState='off';setSync();return}
+  if(!navigator.onLine){syncState='offline';setSync();if(manual)toast('You\'re offline. Changes will sync when you\'re back online.');return}
+  if(!gToken()){syncState='reconnect';setSync();if(view==='lists')renderLists();if(manual)toast('Reconnect Google Drive to sync.');return}
+  if(!loaded)return;
+  if(syncing){syncAgain=true;return}
+  syncing=true;syncState='syncing';syncErr='';setSync();
+  const dirtyAtStart=syncDirty;let pulled=null;
+  try{
+    const folder=await Drive.folder();
+    for(let attempt=0;attempt<3;attempt++){
+      const files=await Drive.list(folder);driveFiles=files;
+      const df=files.get(DATA_FILE);let remoteText='';
+      if(df){
+        remoteText=await (await Drive.read(df.id)).text();
+        let data=null;try{data=JSON.parse(remoteText)}catch(e){}
+        if(data&&data.format==='roil-sync')pulled=await mergeIncoming(data,{photos:false,appearance:false});
+      }
+      await syncPhotos(folder,files);
+      const mine=syncDocText();
+      if(df&&mine===remoteText)break;
+      const blob=new Blob([mine],{type:'application/json'});
+      if(df){
+        if(String(await Drive.version(df.id))!==String(df.version))continue;   // another device just synced: merge again first
+        await Drive.update(df.id,blob,'application/json');
+      }else{const f=await Drive.create(folder,DATA_FILE,blob,'application/json');files.set(f.name,f)}
+      break;
+    }
+    syncCfg.lastSync=new Date().toISOString();saveSyncCfg();
+    syncDirty=Math.max(0,syncDirty-dirtyAtStart);ls.set('roil.syncDirty',syncDirty);
+    syncState='idle';
+    if(manual){const n=pulled?pulled.added+pulled.updated+pulled.removed:0;toast(n?`Synced: ${n} change${n===1?'':'s'} from your other devices.`:'Synced. Everything is up to date.')}
+  }catch(e){
+    syncState=e&&e.reconnect?'reconnect':e&&e.net?'offline':'error';
+    syncErr=e&&e.msg?e.msg:(e&&e.name==='QuotaExceededError'?'This device is out of space.':'');
+    if(manual&&syncState==='error')toast('Sync problem: '+(syncErr||'try again in a moment.'));
+  }finally{
+    syncing=false;setSync();if(view==='lists')renderLists();
+    if(syncAgain){syncAgain=false;scheduleSync(800)}
+  }
+}
+/* A full photo that came from another device is downloaded the first time it's needed. */
+async function ensureFull(id){
+  const p=await getOne('photos',id).catch(()=>null);
+  if(p&&p.full)return p.full;
+  if(syncCfg.dest==='drive'&&gToken()&&navigator.onLine){
+    try{
+      let f=driveFiles.get(`photo-${id}.jpg`);
+      if(!f){driveFiles=await Drive.list(await Drive.folder());f=driveFiles.get(`photo-${id}.jpg`)}
+      if(f){const blob=await (await Drive.read(f.id)).blob();await write([{s:'photos',v:{id,thumb:p&&p.thumb?p.thumb:blob,full:blob}}]);
+        const u=photoUrls.get(id);if(u)URL.revokeObjectURL(u);photoUrls.set(id,URL.createObjectURL(blob));return blob}
+    }catch(e){}
+  }
+  return p?(p.thumb||null):null;
+}
+function syncHtml(){
+  const d=syncCfg.dest,tok=!!gToken();
+  const seg=`<div class="seg" id="syncDest" role="group"><button type="button" data-v="" aria-pressed="${!d}">None</button><button type="button" data-v="drive" aria-pressed="${d==='drive'}">Google Drive</button><button type="button" data-v="server" disabled title="Available once self-hosting is running">ROIL server</button></div>`;
+  let body='';
+  if(d==='drive'){
+    const status=syncState==='syncing'?'Syncing…':!tok?'Not connected. Connect to start syncing.':syncState==='offline'?'Offline. Changes will sync when you\'re back online.':syncState==='error'?'Last sync failed'+(syncErr?': '+esc(syncErr):'.'):`Connected. Last synced ${agoText(syncCfg.lastSync)}.`;
+    body=`<p style="margin:0"><b>${status}</b>${syncDirty?` <span class="pill Open">${syncDirty} waiting</span>`:''}</p>
+    <div class="row">${tok?'<button class="btn small primary" type="button" id="syncNow">Sync now</button>':''}<button class="btn small${tok?'':' primary'}" type="button" id="syncConnect">${tok?'Reconnect':'Connect Google Drive'}</button><button class="btn small ghost" type="button" id="syncOff">Turn off sync</button></div>
+    <p class="note" style="margin:0">Synced data lives in a <b>ROIL</b> folder in your Google Drive: <code class="ex">${DATA_FILE}</code> plus one file per photo. ROIL can only see files it created there. Sync runs when ROIL opens, shortly after each change, and when you're back online. Google sign-ins last about an hour, so you'll sometimes be asked to reconnect. Appearance settings stay per device.</p>`;
+  }else body=`<p class="note" style="margin:0">Choose Google Drive to keep this log in step across your devices. Each device keeps a full copy and works offline. ROIL server will be available once self-hosting is running.</p>`;
+  return `<section class="panel lsec" id="syncPanel"><header><h3>Sync</h3></header><div><span class="label">Destination</span>${seg}</div>${body}</section>`;
+}
+(function bindSync(){
+  const el=$('#v-lists');
+  el.addEventListener('click',e=>{
+    const b=e.target.closest('#syncDest button');
+    if(b&&!b.disabled){const v=b.dataset.v;
+      if(v==='drive'&&syncCfg.dest!=='drive'){syncCfg.dest='drive';saveSyncCfg();if(gToken())runSync(true);else{syncState='reconnect';renderLists();toast('Tap Connect Google Drive to sign in.')}}
+      else if(v===''&&syncCfg.dest)driveDisconnect();
+      return}
+    if(e.target.closest('#syncNow')){runSync(true);return}
+    if(e.target.closest('#syncConnect')){driveConnect();return}
+    if(e.target.closest('#syncOff')){driveDisconnect();return}
+  });
+})();
+
 async function boot(){
+  handleOAuthReturn();
   buildForm();renderAll();tick();setInterval(tick,30000);setSync();
   try{
     const [its,phs,l,dl]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists'),getOne('meta','deleted')]);
-    for(const p of phs){photoUrls.set(p.id,URL.createObjectURL(p.full));thumbUrls.set(p.id,URL.createObjectURL(p.thumb))}
+    for(const p of phs){if(p.full)photoUrls.set(p.id,URL.createObjectURL(p.full));if(p.thumb)thumbUrls.set(p.id,URL.createObjectURL(p.thumb))}
     if(l)lists=normLists(l);
     if(dl&&typeof dl==='object')tombs=dl;
     const legacy=!l||!l.v||its.some(i=>!('deptId' in i));
@@ -808,6 +1016,11 @@ async function boot(){
   if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
   if(navigator.storage&&navigator.storage.persist){try{await navigator.storage.persist()}catch(e){}}
   await refreshStorage();
+  runSync();   // does nothing unless a sync destination is set
+  window.addEventListener('online',()=>runSync());
+  window.addEventListener('offline',()=>{if(syncCfg.dest){syncState='offline';setSync()}});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&syncCfg.dest&&(!syncCfg.lastSync||Date.now()-new Date(syncCfg.lastSync)>120000))runSync()});
+  setInterval(()=>{if(document.visibilityState==='visible'&&syncCfg.dest)runSync()},300000);
 }
 
 /* ---------- capture form ---------- */
@@ -921,14 +1134,14 @@ $('#saveBtn').addEventListener('click',async()=>{
 });
 
 /* ---------- photos & sharing ---------- */
-const photoSrc=it=>it.photo?(photoUrls.get(it.id)||''):'';
+const photoSrc=it=>it.photo?(photoUrls.get(it.id)||thumbUrls.get(it.id)||''):'';
 const thumbSrc=it=>it.photo?(thumbUrls.get(it.id)||''):'';
 const photoName=it=>`ROIL ${localDay(new Date(it.created))} ${it.issue.replace(/[\/\\:*?"<>|]/g,'-')}.jpg`;
 async function photoFile(it){
   if(!it.photo)return null;
-  const p=await getOne('photos',it.id).catch(()=>null);
-  if(!p)throw new Error('photo missing');
-  return new File([p.full],photoName(it),{type:'image/jpeg'});
+  const b=await ensureFull(it.id);
+  if(!b)throw new Error('photo missing');
+  return new File([b],photoName(it),{type:'image/jpeg'});
 }
 function cardText(it){
   const lines=[`ROIL · ${it.issue}`,`${fmtDT(it.created)}${it.shift?' · '+it.shift:''}`,`Dept: ${it.dept}`];
@@ -1190,7 +1403,7 @@ function openDetail(id){
   const it=items.find(i=>i.id===id);if(!it)return;
   const src=photoSrc(it);
   openSheet(`<div class="head"><div><h2>${esc(it.issue)}</h2><span class="mono muted" style="font-size:13px">${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</span></div><button class="btn small" data-close>Close</button></div>
-  ${src?`<img src="${esc(src)}" alt="Issue photo">`:''}
+  ${src?`<img id="dImg" src="${esc(src)}" alt="Issue photo">`:''}
   <div class="row"><button class="btn small primary" id="dShare">Share to Teams</button><button class="btn small" id="dCopy">Copy for Teams</button><button class="btn small" id="dText">Copy text</button>${src?'<button class="btn small" id="dPng">Copy photo</button>':''}</div>
   <div><span class="label">Status</span><div class="seg status" id="dStatus">${segHtml(STATUSES,it.status)}</div></div>
   <div class="two collapse"><div><label class="label" for="dDept">Department</label><select id="dDept">${deptOptions(it.deptId)}</select></div><div><label class="label" for="dSub">Planogram</label><select id="dSub">${subOptions(it.deptId,it.planogramId)}</select></div></div>
@@ -1203,6 +1416,7 @@ function openDetail(id){
   $('#dStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st=b.dataset.v;$('#dStatus').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===st))});
   $('#dDept').onchange=e=>{$('#dSub').innerHTML=subOptions(e.target.value,'')};
   const fileP=it.photo?photoFile(it):null;if(fileP)fileP.catch(()=>{});
+  if(it.photo&&!photoUrls.has(it.id))ensureFull(it.id).then(()=>{const im=$('#dImg'),u=photoUrls.get(it.id);if(im&&u)im.src=u});
   $('#dShare').onclick=()=>shareItem(it,fileP);
   $('#dCopy').onclick=()=>copyItem(it);
   $('#dText').onclick=()=>copyText(cardText(it));
@@ -1297,7 +1511,7 @@ function importThemeText(text,fallbackName){
 function backupHtml(){
   const d=backupAgeDays();
   return `<section class="panel lsec"><header><h3>Backup &amp; storage</h3></header>
-  <p class="note" style="margin:0">Everything is stored only on this device, in this browser. A backup file holds every issue, photo, list and deletion. Use it to move to a new device, or to merge logs between devices: make a backup on one and restore it on the other. Restoring never erases newer work.</p>
+  <p class="note" style="margin:0">${syncCfg.dest?'This device keeps a full copy and sync keeps it in step with your other devices. A backup file is an extra safety copy you control.':'Everything is stored only on this device, in this browser.'} A backup file holds every issue, photo, list and deletion. Use it to move to a new device, or to merge logs between devices: make a backup on one and restore it on the other. Restoring never erases newer work.</p>
   <p style="margin:0"><b>${lastBackup?'Last backup: '+esc(fmtDT(lastBackup)):'No backup made yet'}</b>${items.length&&d>7?' <span class="pill Open">Due</span>':''}</p>
   <div class="row"><button class="btn small primary" data-act="bk-dl">Download backup</button><button class="btn small" data-act="bk-share">Share backup</button><label class="btn small ghost" for="rFile">Restore or merge a backup</label><input type="file" id="rFile" accept="application/json,.json" hidden></div>
   <p class="note" style="margin:0">Storage: ${store_.persisted===true?'kept permanently':store_.persisted===false?(dev.ios?'Safari erases it after 7 days without a visit unless ROIL is on your Home Screen. To keep it, '+installHint():'your browser may clear it if space runs low. To keep it, '+installHint()):'unknown'}. Using ${fmtMB(store_.usage)}.</p>
@@ -1361,6 +1575,7 @@ function renderLists(){
     ${lists.showShift?`<div><span class="label">Shifts</span>${rowsHtml('shifts',lists.shifts,U)}</div>`:''}
   </section>
   ${appearanceHtml()}
+  ${syncHtml()}
   ${backupHtml()}
   <div><button class="btn small ghost${armedKey==='reset'?' danger':''}" data-act="reset">${armedKey==='reset'?'Tap again to restore starter lists':'Restore starter lists'}</button></div>`;
   if(fid){const f=document.getElementById(fid);if(f){f.focus();if(f.setSelectionRange&&f.type==='text')f.setSelectionRange(f.value.length,f.value.length)}}
