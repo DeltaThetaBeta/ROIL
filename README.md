@@ -30,6 +30,15 @@ Merging is safe to repeat in either direction:
 - The chip at the top shows how long ago you last backed up. It turns orange after 7 days.
 - Clearing the browser's site data, uninstalling the browser, or replacing a device without a backup would lose that device's log.
 
+## Appearance
+**Lists → Appearance** has these settings, saved per device and carried in backups:
+- **Theme:** Auto, Light or Dark.
+- **Accent color:** 8 presets or any custom color. ROIL adjusts it automatically if needed so text stays readable.
+- **Contrast:** Normal or High, for bright store lighting.
+- **Status colors:** Default or Color-blind friendly.
+- **Shape:** Rounded, Soft or Square.
+- **Size:** Compact, Normal or Large.
+
 ## On a computer
 To add a photo, click the photo box, drag a picture onto it, or paste a screenshot with **Ctrl+V**.
 
