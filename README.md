@@ -25,6 +25,27 @@ Merging is safe to repeat in either direction:
 - Deletions carry over, unless the issue was edited after it was deleted.
 - An older backup never brings back something you deleted.
 
+## Sync with Google Drive
+**Lists → Sync → Google Drive → Connect Google Drive** on each device, signed in with the same Google account.
+
+**How it works:**
+- Every device keeps a full copy and works offline.
+- Sync runs when ROIL opens, a few seconds after each change, when you're back online, and with **Sync now**.
+- Merging uses the same rules as backups: the newest edit wins, and deletions and list changes carry across.
+- Appearance settings stay per device.
+
+**Where the data goes:** a **ROIL** folder in your Google Drive, containing `roil-data.json` plus one file per photo. ROIL can only see files it created there. Other devices download small photo previews right away, and full photos when you open an issue.
+
+**Signing in:** Google sign-ins last about an hour. When the chip at the top says **Reconnect Drive**, tap it.
+
+**Google Cloud setup** (already done for this app):
+- OAuth client ID: Web application.
+- Authorized JavaScript origin: `https://deltathetabeta.github.io`
+- Authorized redirect URI: `https://deltathetabeta.github.io/ROIL/`
+- The client ID is set in `index.html` (`GOOGLE_CLIENT_ID`).
+
+A **ROIL server** destination will be added once self-hosting is running.
+
 ## Backups (do one weekly)
 - **Download backup** / **Share backup** saves one file with every issue, photo, list and deletion.
 - The chip at the top shows how long ago you last backed up. It turns orange after 7 days.
