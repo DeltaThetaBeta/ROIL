@@ -217,6 +217,11 @@ details.arch>summary{cursor:pointer;font-size:14px;color:var(--muted);padding:4p
 details.arch .lrows{margin-top:8px}
 .arow{display:grid;grid-template-columns:minmax(0,1fr) auto auto 40px;gap:8px;align-items:center}
 .arow .an{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+#fIssue .cgroup{display:grid;gap:6px}
+#fIssue .cgroup+.cgroup{margin-top:10px}
+.cglabel{font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.rite{display:grid;gap:8px;margin-top:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:var(--r-sm)}
+.lrow.irow select.icat{grid-column:1/-1;min-height:36px;padding:6px 10px;font-size:14px}
 /* ---------- Appearance settings (Lists → Appearance). Set as attributes on <html>. ---------- */
 :root[data-shape="soft"]{--r:6px;--r-sm:5px;--r-pill:8px;--r-lg:8px}
 :root[data-shape="square"]{--r:2px;--r-sm:2px;--r-pill:2px;--r-lg:2px}
@@ -286,12 +291,17 @@ details.arch .lrows{margin-top:8px}
 
     <div>
       <span class="label">Issue<span class="req" id="reqIssue" hidden>Pick one</span></span>
-      <div class="chips" id="fIssue" role="group" aria-label="Issue"></div>
+      <div id="fIssue" role="group" aria-label="Issue"></div>
+      <div class="rite" id="fRiteWrap" hidden><label class="switch"><input type="checkbox" id="fRite"><span>RITE ticket submitted</span></label><input type="text" id="fRiteNo" maxlength="40" placeholder="Ticket number (optional)" aria-label="RITE ticket number"></div>
     </div>
 
     <div>
-      <span class="label">Likely cause</span>
-      <div class="chips" id="fCause" role="group" aria-label="Likely cause"></div>
+      <span class="label">Source <span class="muted" style="text-transform:none;letter-spacing:0;font-family:var(--f-body);font-weight:400">who or what likely caused it</span></span>
+      <div class="chips" id="fSource" role="group" aria-label="Source"></div>
+    </div>
+    <div>
+      <span class="label">Cause <span class="muted" style="text-transform:none;letter-spacing:0;font-family:var(--f-body);font-weight:400">why it happened</span></span>
+      <div class="chips" id="fCause" role="group" aria-label="Cause"></div>
     </div>
 
     <div>
@@ -359,6 +369,8 @@ const DEFAULT_LISTS = {
   issues:["Wrong facing / placement","Overstuffed","Mixed product","Missing ESL","ESL not paired","Item in wrong location","RITE","Damaged product or fixture","Not per planogram","Missing signage","Safety / security concern"],
   causes:["Outdated planogram","Training / process gap","Planogram not followed","Customer left item out","Display not maintained","Stock not on hand","Missed or late reset","Unknown"],
   shifts:["Opening","Mid","Closing"],
+  sources:["Truck / freight","Customer","Recovery / zoning","Reset / planogram change","Pricing / ESL system","Vendor / merch partner","Unknown"],
+  categories:["Placement","Pricing & labels","Demo units","Condition","Safety & security"],
   showShift:false
 };
 const STATUSES=["Fixed","Open","Needs follow-up"];
@@ -527,16 +539,16 @@ function hash36(s){let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(
 const sid=(p,key)=>p+hash36(String(key).trim().toLowerCase());
 const rid=p=>p+'_'+Date.now().toString(36).slice(-5)+Math.random().toString(36).slice(2,7);
 const ENTRY_ID=/^[a-z0-9_]{1,40}$/;
-const KINDS={issues:{p:'i',field:'issueId',name:'issue',noun:'issue type'},causes:{p:'c',field:'causeId',name:'cause',noun:'cause'},shifts:{p:'s',field:'shiftId',name:'shift',noun:'shift'}};
+const KINDS={issues:{p:'i',field:'issueId',name:'issue',noun:'issue type'},sources:{p:'o',field:'sourceId',name:'source',noun:'source'},causes:{p:'c',field:'causeId',name:'cause',noun:'cause'},categories:{p:'g',field:null,name:null,noun:'category'},shifts:{p:'s',field:'shiftId',name:'shift',noun:'shift'}};
 function ent(x,p,key){
   if(typeof x==='string'){const n=x.trim().slice(0,120);return n?{id:sid(p,key||n),name:n,archived:false}:null}
-  if(x&&typeof x==='object'&&typeof x.name==='string'&&x.name.trim()){const n=x.name.trim().slice(0,120);return {id:ENTRY_ID.test(x.id||'')?x.id:sid(p,key||n),name:n,archived:!!x.archived}}
+  if(x&&typeof x==='object'&&typeof x.name==='string'&&x.name.trim()){const n=x.name.trim().slice(0,120);const e={id:ENTRY_ID.test(x.id||'')?x.id:sid(p,key||n),name:n,archived:!!x.archived};if(ENTRY_ID.test(x.cat||''))e.cat=x.cat;return e}
   return null;
 }
 /* Accepts every lists format ROIL has used (plain names, or entries with ids) and returns entries with ids. */
 function normLists(d){
   const has=d&&typeof d==='object';
-  const l={v:2,departments:[],issues:[],causes:[],shifts:[],showShift:has&&d.showShift===true,updated:has&&typeof d.updated==='string'?d.updated:'',
+  const l={v:3,departments:[],issues:[],sources:[],causes:[],shifts:[],categories:[],defaultSource:has&&ENTRY_ID.test(d.defaultSource||'')?d.defaultSource:'',showShift:has&&d.showShift===true,updated:has&&typeof d.updated==='string'?d.updated:'',
     removed:has&&Array.isArray(d.removed)?d.removed.filter(x=>ENTRY_ID.test(x)).slice(-2000):[],moved:{}};
   if(has&&d.moved&&typeof d.moved==='object')for(const [a,b] of Object.entries(d.moved))if(ENTRY_ID.test(a)&&ENTRY_ID.test(b))l.moved[a]=b;
   const deps=has&&Array.isArray(d.departments)&&d.departments.length?d.departments:DEFAULT_LISTS.departments;
@@ -556,12 +568,26 @@ function normLists(d){
     const arr=has&&Array.isArray(d[k])&&d[k].length?d[k]:DEFAULT_LISTS[k];
     for(const x of arr){const e=ent(x,KINDS[k].p);if(e&&!l[k].some(q=>q.id===e.id))l[k].push(e)}
   }
+  if(!has||!(d.v>=3))upgradeLists(l);
   return l;
 }
-function listsBody(l){return JSON.parse(JSON.stringify({v:2,departments:l.departments,issues:l.issues,causes:l.causes,shifts:l.shifts,showShift:!!l.showShift,updated:l.updated||'',removed:l.removed||[],moved:l.moved||{}}))}
-let IX={dept:new Map(),pog:new Map(),issues:new Map(),causes:new Map(),shifts:new Map()};
+/* Version 3 lists: Source split out of Cause, issue categories, RITE renamed. Runs once on older
+   lists (on any device), always with the same ids, so devices that upgrade separately still agree. */
+const CUSTOMER_CAUSE=()=>sid('c','Customer left item out'),CUSTOMER_SOURCE=()=>sid('o','Customer'),DEMO_CAT=()=>sid('g','Demo units');
+const ISSUE_CATS={'Placement':['Wrong facing / placement','Overstuffed','Mixed product','Item in wrong location','Not per planogram'],
+  'Pricing & labels':['Missing ESL','ESL not paired','Missing signage'],'Demo units':['RITE','Demo unit issue'],'Condition':['Damaged product or fixture'],'Safety & security':['Safety / security concern']};
+function upgradeLists(l){
+  const rite=l.issues.find(e=>e.name.toLowerCase()==='rite');if(rite)rite.name='Demo unit issue';
+  for(const [cat,names] of Object.entries(ISSUE_CATS)){const cid=sid('g',cat);
+    for(const e of l.issues)if(!e.cat&&names.some(n=>n.toLowerCase()===e.name.toLowerCase()))e.cat=cid}
+  const ci=l.causes.findIndex(e=>e.id===CUSTOMER_CAUSE());if(ci>=0){l.causes.splice(ci,1);l.removed.push(CUSTOMER_CAUSE())}
+  if(!l.defaultSource)l.defaultSource=sid('o','Truck / freight');
+  l.v=3;
+}
+function listsBody(l){return JSON.parse(JSON.stringify({v:3,departments:l.departments,issues:l.issues,sources:l.sources,causes:l.causes,shifts:l.shifts,categories:l.categories,defaultSource:l.defaultSource||'',showShift:!!l.showShift,updated:l.updated||'',removed:l.removed||[],moved:l.moved||{}}))}
+let IX={dept:new Map(),pog:new Map()};for(const k in KINDS)IX[k]=new Map();
 function reindex(){
-  IX={dept:new Map(),pog:new Map(),issues:new Map(),causes:new Map(),shifts:new Map()};
+  IX={dept:new Map(),pog:new Map()};for(const k in KINDS)IX[k]=new Map();
   for(const d of lists.departments){IX.dept.set(d.id,d);for(const p of d.planograms)IX.pog.set(p.id,{p,d})}
   for(const k in KINDS)for(const e of lists[k])IX[k].set(e.id,e);
 }
@@ -587,8 +613,9 @@ function link(it){
     pg={p,d};IX.pog.set(p.id,pg);
   }
   it.planogramId=pg?pg.p.id:'';it.planogram=pg?pg.p.name:'';
+  if(it.causeId===CUSTOMER_CAUSE()||String(it.cause||'').toLowerCase()==='customer left item out'){if(!it.sourceId){it.sourceId=CUSTOMER_SOURCE();it.source='Customer'}it.causeId='';it.cause=''}
   for(const k in KINDS){
-    const K=KINDS[k];it[K.field]=follow(it[K.field]||'');
+    const K=KINDS[k];if(!K.field)continue;it[K.field]=follow(it[K.field]||'');
     let e=it[K.field]&&IX[k].get(it[K.field]);
     if(!e&&(it[K.name]||it[K.field])){
       e=byName(lists[k],it[K.name]);
@@ -601,7 +628,8 @@ function link(it){
 function relinkAll(arr=items){reindex();let ch=false;for(const it of arr)ch=link(it)||ch;return ch}
 function usageCounts(){
   const u=new Map();const inc=id=>{if(id)u.set(id,(u.get(id)||0)+1)};
-  for(const it of items){inc(it.deptId);inc(it.planogramId);inc(it.issueId);inc(it.causeId);inc(it.shiftId)}
+  for(const it of items){inc(it.deptId);inc(it.planogramId);inc(it.issueId);inc(it.sourceId);inc(it.causeId);inc(it.shiftId)}
+  for(const e of lists.issues)if(e.cat)u.set('cat:'+e.cat,(u.get('cat:'+e.cat)||0)+1);
   return u;
 }
 /* Merge two versions of the lists: renames and order from the newer one; entries added on
@@ -633,7 +661,7 @@ let loaded=false;
 let view='log';
 let hf=ls.get('roil.hf',{range:'30',dept:'',issue:'',status:'',q:''});
 let srange=ls.get('roil.srange','30');
-const form={photoFile:null,photoUrl:null,dept:'',sub:'',issue:'',cause:'',status:'Fixed',shift:''};
+const form={photoFile:null,photoUrl:null,dept:'',sub:'',issue:'',source:null,cause:'',status:'Fixed',shift:''};
 const last=ls.get('roil.last',{});
 form.dept=last.dept||'';form.sub=last.sub||'';form.shift=last.shift||'';
 const photoUrls=new Map(),thumbUrls=new Map();   // item id -> blob: URL for photos kept on this device
@@ -663,8 +691,8 @@ function dropLocal(id){
   for(const m of[photoUrls,thumbUrls]){const u=m.get(id);if(u){URL.revokeObjectURL(u);m.delete(id)}}
   setItems(items.filter(x=>x.id!==id));
 }
-const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','causeId','shiftId','dept','planogram','issue','cause','shift','note','status','fixedAt','photo'];
-const REF_FIELDS=['deptId','planogramId','issueId','causeId','shiftId'];
+const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','sourceId','causeId','shiftId','dept','planogram','issue','source','cause','shift','note','status','fixedAt','photo','rite','riteNo'];
+const REF_FIELDS=['deptId','planogramId','issueId','sourceId','causeId','shiftId'];
 function serverItem(it){const o={};for(const k of ITEM_FIELDS)o[k]=it[k]??(k==='fixedAt'?null:k==='photo'?false:'');o.photo=!!o.photo;return o}
 
 const store={
@@ -774,7 +802,8 @@ async function mergeIncoming(data,opt={}){
   for(const x of (Array.isArray(data.items)?data.items:[])){
     if(!x||typeof x!=='object'||!ID.test(x.id||'')||typeof x.dept!=='string'||typeof x.issue!=='string'||!STATUSES.includes(x.status))continue;
     const it={};for(const k of ITEM_FIELDS)it[k]=x[k]??(k==='fixedAt'?null:k==='photo'?false:'');it.photo=!!it.photo;
-    for(const k of['dept','planogram','issue','cause','shift','created','updated'])it[k]=String(it[k]).slice(0,120);
+    for(const k of['dept','planogram','issue','source','cause','shift','created','updated'])it[k]=String(it[k]).slice(0,120);
+    it.rite=!!it.rite;it.riteNo=String(it.riteNo||'').slice(0,40);
     it.note=String(it.note).slice(0,2000);
     for(const k of REF_FIELDS)it[k]=ENTRY_ID.test(String(it[k]))?String(it[k]):'';
     link(it);
@@ -1040,25 +1069,39 @@ function buildForm(){
   if(!d||d.archived){form.dept='';form.sub=''}
   else{form.sub=toEntryId(new Map(d.planograms.map(p=>[p.id,p])),d.planograms,form.sub);const p=d.planograms.find(x=>x.id===form.sub);if(!p||p.archived)form.sub=''}
   if(!lists.showShift)form.shift='';
-  for(const [f,k] of [['issue','issues'],['cause','causes'],['shift','shifts']]){form[f]=toEntryId(IX[k],lists[k],form[f]);if(form[f]&&IX[k].get(form[f]).archived)form[f]=''}
+  if(form.source===null)form.source=lists.defaultSource||'';   // a fresh form starts on the default source
+  for(const [f,k] of [['issue','issues'],['source','sources'],['cause','causes'],['shift','shifts']]){form[f]=toEntryId(IX[k],lists[k],form[f]);if(form[f]&&IX[k].get(form[f]).archived)form[f]=''}
   $('#shiftWrap').hidden=!lists.showShift;
   $('#fDept').innerHTML=deptOptions(form.dept);
   $('#fSub').innerHTML=subOptions(form.dept,form.sub);
-  $('#fIssue').innerHTML=chipHtml(activeOf(lists.issues),form.issue);
+  $('#fIssue').innerHTML=issueChipsHtml(form.issue);
+  $('#fSource').innerHTML=chipHtml(activeOf(lists.sources),form.source);
+  showRite();
   $('#fCause').innerHTML=chipHtml(activeOf(lists.causes),form.cause);
   $('#fStatus').innerHTML=segHtml(STATUSES,form.status);
   $('#fShift').innerHTML=segHtml(activeOf(lists.shifts),form.shift);
 }
+/* Issue chips grouped by category, so a long list stays easy to scan. */
+function issueChipsHtml(sel){
+  const act=activeOf(lists.issues),cats=activeOf(lists.categories),groups=[];
+  for(const c of cats){const g=act.filter(e=>e.cat===c.id);if(g.length)groups.push([c.name,g])}
+  const rest=act.filter(e=>!e.cat||!cats.some(c=>c.id===e.cat));if(rest.length)groups.push([groups.length?'Other':'',rest]);
+  if(groups.length<=1)return `<div class="chips">${chipHtml(act,sel)}</div>`;
+  return groups.map(([n,g])=>`<div class="cgroup"><span class="cglabel">${esc(n)}</span><div class="chips">${chipHtml(g,sel)}</div></div>`).join('');
+}
+const catName=issueId=>{const e=IX.issues.get(issueId),c=e&&e.cat&&IX.categories.get(e.cat);return c?c.name:'Uncategorized'};
+const isDemoIssue=id=>{const e=IX.issues.get(id);return !!(e&&e.cat===DEMO_CAT())};
+function showRite(){const on=isDemoIssue(form.issue);$('#fRiteWrap').hidden=!on;if(!on){$('#fRite').checked=false;$('#fRiteNo').value=''}}
 function tick(){$('#when').textContent=form.photoFile?'Photo taken · '+fmtDT(form.takenAt):'Logged as '+fmtDT(new Date().toISOString());if(view==='follow')renderFollow()}
 function bindChoice(id,key,toggle){
   $(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;
     form[key]=(toggle&&form[key]===v)?'':v;
     $(id).querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===form[key]));
-    if(key==='issue')$('#reqIssue').hidden=true;
+    if(key==='issue'){$('#reqIssue').hidden=true;showRite()}
     if(key==='shift')saveLast();
   });
 }
-bindChoice('#fIssue','issue',true);bindChoice('#fCause','cause',true);bindChoice('#fStatus','status',false);bindChoice('#fShift','shift',true);
+bindChoice('#fIssue','issue',true);bindChoice('#fSource','source',true);bindChoice('#fCause','cause',true);bindChoice('#fStatus','status',false);bindChoice('#fShift','shift',true);
 function saveLast(){ls.set('roil.last',{dept:form.dept,sub:form.sub,shift:form.shift})}
 $('#fDept').addEventListener('change',e=>{form.dept=e.target.value;form.sub='';$('#fSub').innerHTML=subOptions(form.dept,'');$('#reqDept').hidden=true;saveLast()});
 $('#fSub').addEventListener('change',e=>{form.sub=e.target.value;saveLast()});
@@ -1110,8 +1153,10 @@ $('#saveBtn').addEventListener('click',async()=>{
   const btn=$('#saveBtn');btn.disabled=true;
   const now=new Date().toISOString();
   const created=form.takenAt&&form.photoFile?form.takenAt:now;
-  const item={id:newId(),created,updated:now,deptId:form.dept,planogramId:form.sub||'',issueId:form.issue,causeId:form.cause||'',
-    shiftId:lists.showShift?(form.shift||''):'',dept:'',planogram:'',issue:'',cause:'',shift:'',
+  const demo=isDemoIssue(form.issue);
+  const item={id:newId(),created,updated:now,deptId:form.dept,planogramId:form.sub||'',issueId:form.issue,sourceId:form.source||'',causeId:form.cause||'',
+    shiftId:lists.showShift?(form.shift||''):'',dept:'',planogram:'',issue:'',source:'',cause:'',shift:'',
+    rite:demo&&$('#fRite').checked,riteNo:demo?$('#fRiteNo').value.trim().slice(0,40):'',
     note:$('#fNote').value.trim(),status:form.status,fixedAt:form.status==='Fixed'?now:null,photo:false};
   link(item);
   let photo=null;
@@ -1124,7 +1169,7 @@ $('#saveBtn').addEventListener('click',async()=>{
     await store.put(item,photo);
     const fileP=photo?Promise.resolve(new File([photo.full],photoName(item),{type:'image/jpeg'})):null;
     if(form.photoUrl)URL.revokeObjectURL(form.photoUrl);
-    form.photoFile=null;form.photoUrl=null;form.takenAt=null;form.issue='';form.cause='';form.status='Fixed';
+    form.photoFile=null;form.photoUrl=null;form.takenAt=null;form.issue='';form.source=null;form.cause='';form.status='Fixed';$('#fRite').checked=false;$('#fRiteNo').value='';
     $('#fNote').value='';showPhoto();buildForm();tick();
     window.scrollTo({top:0,behavior:'smooth'});
     toast(item.status==='Fixed'?'Saved as fixed.':'Saved. It\'s on your follow-up list.',[['Share',()=>shareItem(item,fileP)],['Copy',()=>copyItem(item)]]);
@@ -1146,7 +1191,9 @@ async function photoFile(it){
 function cardText(it){
   const lines=[`ROIL · ${it.issue}`,`${fmtDT(it.created)}${it.shift?' · '+it.shift:''}`,`Dept: ${it.dept}`];
   if(it.planogram)lines.push(`Planogram: ${it.planogram}`);
-  if(it.cause)lines.push(`Likely cause: ${it.cause}`);
+  if(it.source)lines.push(`Source: ${it.source}`);
+  if(it.cause)lines.push(`Cause: ${it.cause}`);
+  if(isDemoIssue(it.issueId))lines.push(`RITE: ${it.rite?'submitted'+(it.riteNo?' #'+it.riteNo:''):'not submitted yet'}`);
   lines.push(`Status: ${it.status}${it.status!=='Fixed'?' (open '+age(it.created)+')':''}`);
   if(it.note)lines.push(`Note: ${it.note}`);
   return lines.join('\n');
@@ -1235,6 +1282,7 @@ function renderAll(){
 }
 function thumb(it){const s=thumbSrc(it);return s?`<img class="thumb" src="${esc(s)}" alt="" loading="lazy">`:`<span class="thumb">NO PHOTO</span>`}
 function itemCard(it,extra=''){
+  if(isDemoIssue(it.issueId)&&!it.rite)extra+='<span class="pill Needs">RITE not submitted</span>';
   return `<button class="item" data-id="${esc(it.id)}">${thumb(it)}<span class="body">
     <span class="t">${esc(it.issue)} <span class="pill ${pillCls(it.status)}">${esc(it.status)}</span>${extra}</span>
     <span class="s">${esc(it.dept)}${it.sub?' › '+esc(it.sub):''}${it.planogram?' · PG '+esc(it.planogram):''}</span>
@@ -1261,10 +1309,10 @@ function rangeOpts(sel){return [['1','Today (24 h)'],['7','Last 7 days'],['30','
 function historyFiltered(){
   const q=hf.q.trim().toLowerCase();
   return items.filter(it=>inRange(it,hf.range)&&(!hf.dept||it.deptId===hf.dept)&&(!hf.issue||it.issueId===hf.issue)&&(!hf.status||it.status===hf.status)
-    &&(!q||[it.note,it.planogram,it.sub,it.cause].join(' ').toLowerCase().includes(q)));
+    &&(!hf.source||it.sourceId===hf.source)&&(!q||[it.note,it.planogram,it.source,it.cause,it.riteNo].join(' ').toLowerCase().includes(q)));
 }
 function renderHistory(){
-  hf.dept=toEntryId(IX.dept,lists.departments,hf.dept);hf.issue=toEntryId(IX.issues,lists.issues,hf.issue);
+  hf.dept=toEntryId(IX.dept,lists.departments,hf.dept);hf.issue=toEntryId(IX.issues,lists.issues,hf.issue);hf.source=toEntryId(IX.sources,lists.sources,hf.source||'');
   const el=$('#v-history');const arr=historyFiltered();
   const focused=document.activeElement&&document.activeElement.id==='hq';
   el.innerHTML=`<h2>History</h2>
@@ -1273,6 +1321,7 @@ function renderHistory(){
     <select id="hStatus" aria-label="Status"><option value="">Any status</option>${STATUSES.map(s=>`<option${s===hf.status?' selected':''}>${esc(s)}</option>`).join('')}</select>
     <select id="hDept" aria-label="Department"><option value="">All departments</option>${lists.departments.map(d=>`<option value="${d.id}"${d.id===hf.dept?' selected':''}>${optLabel(d)}</option>`).join('')}</select>
     <select id="hIssue" aria-label="Issue"><option value="">All issues</option>${lists.issues.map(e=>`<option value="${e.id}"${e.id===hf.issue?' selected':''}>${optLabel(e)}</option>`).join('')}</select>
+    <select id="hSource" aria-label="Source"><option value="">All sources</option>${lists.sources.map(e=>`<option value="${e.id}"${e.id===hf.source?' selected':''}>${optLabel(e)}</option>`).join('')}</select>
     <input class="wide" type="search" id="hq" placeholder="Search notes, planograms, categories" value="${esc(hf.q)}">
   </div>
   <div class="row" style="justify-content:space-between"><span class="muted">${arr.length} issue${arr.length===1?'':'s'}</span>
@@ -1280,7 +1329,7 @@ function renderHistory(){
   ${!loaded?emptyState('Loading your log…',''):arr.length?`<div class="list">${arr.map(it=>itemCard(it)).join('')}</div>`:emptyState(items.length?'No issues match':'No issues logged yet',items.length?'Try a wider date range or clear a filter.':'Go to Log, take a photo and pick a department and issue. Everything you save shows up here.')}`;
   const upd=(k,v)=>{hf[k]=v;ls.set('roil.hf',hf);renderHistory()};
   $('#hRange').onchange=e=>upd('range',e.target.value);$('#hStatus').onchange=e=>upd('status',e.target.value);
-  $('#hDept').onchange=e=>upd('dept',e.target.value);$('#hIssue').onchange=e=>upd('issue',e.target.value);
+  $('#hDept').onchange=e=>upd('dept',e.target.value);$('#hIssue').onchange=e=>upd('issue',e.target.value);$('#hSource').onchange=e=>upd('source',e.target.value);
   let t;$('#hq').oninput=e=>{clearTimeout(t);t=setTimeout(()=>upd('q',e.target.value),250)};
   if(focused){const q=$('#hq');q.focus();q.setSelectionRange(q.value.length,q.value.length)}
   $('#expCsv').onclick=()=>exportCsv(arr);$('#expReport').onclick=()=>exportReport(arr);
@@ -1322,8 +1371,8 @@ function renderStats(){
   const coachShift=lists.showShift&&countBy(coach.filter(i=>i.shift),i=>i.shift)[0];
   let insight='';
   if(arr.length>=5){
-    const top=countBy(arr,i=>i.issue)[0];const topD=countBy(arr,i=>i.dept)[0];
-    insight=`<div class="insight"><b>${esc(top[0])}</b> is the most common issue (${top[1]} of ${arr.length}). <b>${esc(topD[0])}</b> has the most issues overall (${topD[1]}).${coach.length?` ${coach.length} issue${coach.length===1?' points':'s point'} to training or planogram not being followed${coachIssues.length?', mostly '+coachIssues.map(c=>esc(c[0]).toLowerCase()).join(', '):''}${coachShift&&coachShift[1]>1?`, most often on ${esc(coachShift[0].toLowerCase())} shift`:''}.`:''}</div>`;
+    const top=countBy(arr,i=>i.issue)[0];const topS=countBy(arr,i=>i.source)[0];const topD=countBy(arr,i=>i.dept)[0];
+    insight=`<div class="insight"><b>${esc(top[0])}</b> is the most common issue (${top[1]} of ${arr.length}). <b>${esc(topD[0])}</b> has the most issues overall (${topD[1]}).${topS&&topS[0]!=='Not set'?` Most issues trace back to <b>${esc(topS[0])}</b> (${topS[1]}).`:''}${coach.length?` ${coach.length} issue${coach.length===1?' points':'s point'} to training or planogram not being followed${coachIssues.length?', mostly '+coachIssues.map(c=>esc(c[0]).toLowerCase()).join(', '):''}${coachShift&&coachShift[1]>1?`, most often on ${esc(coachShift[0].toLowerCase())} shift`:''}.`:''}</div>`;
   }
   el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Stats</h2><select id="sRange" style="width:auto" aria-label="Date range">${rangeOpts(r)}</select></div>
   ${!items.length?emptyState(!loaded?'Loading your log…':'No stats yet','Once you log a few issues, this shows what goes wrong most, where it happens, and what\'s causing it.'):`
@@ -1338,7 +1387,9 @@ function renderStats(){
     <div class="panel full"><span class="label">Trend</span>${trend(arr,r)}</div>
     <div class="panel"><span class="label">By issue</span>${bars(countBy(arr,i=>i.issue),openBy(arr,i=>i.issue))}<div class="legend"><span><i style="background:var(--accent)"></i>Fixed</span><span><i style="background:var(--open)"></i>Still open</span></div></div>
     <div class="panel"><span class="label">By department</span>${bars(countBy(arr,i=>i.dept),openBy(arr,i=>i.dept))}</div>
-    <div class="panel"><span class="label">Likely cause</span>${bars(causes,null)}</div>
+    <div class="panel"><span class="label">By source</span>${bars(countBy(arr,i=>i.source),openBy(arr,i=>i.source))}</div>
+    <div class="panel"><span class="label">By cause</span>${bars(causes,null)}</div>
+    <div class="panel"><span class="label">By category</span>${bars(countBy(arr,i=>catName(i.issueId)),openBy(arr,i=>catName(i.issueId)))}</div>
     ${lists.showShift?`<div class="panel"><span class="label">By shift</span>${bars(countBy(arr,i=>i.shift),null)}</div>`:''}
     <div class="panel"><span class="label">Repeat spots</span>${combos.length?`<div class="hot">${combos.map(([k,v])=>`<div><b>${v}×</b><span>${esc(k)}</span></div>`).join('')}</div>`:'<p class="note">No department and issue pair has come up twice yet.</p>'}</div>
     <div class="panel"><span class="label">Repeat planograms</span>${pogs.length?`<div class="hot">${pogs.map(([k,v])=>`<div><b>${v}×</b><span>${esc(k)}</span></div>`).join('')}</div>`:'<p class="note">No planogram has come up twice yet.</p>'}</div>
@@ -1352,7 +1403,7 @@ function summaryText(arr,r){
   const lbl={'1':'last 24 hours','7':'last 7 days','30':'last 30 days','90':'last 90 days','all':'all time'}[r];
   const L=[`ROIL summary · ${lbl} · ${arr.length} issues`];
   const add=(t,e)=>{if(e.length)L.push('',t,...e.slice(0,5).map(([k,v])=>`• ${k}: ${v}`))};
-  add('Top issues',countBy(arr,i=>i.issue));add('Top departments',countBy(arr,i=>i.dept));add('Likely causes',countBy(arr.filter(i=>i.cause),i=>i.cause));
+  add('Top issues',countBy(arr,i=>i.issue));add('Top departments',countBy(arr,i=>i.dept));add('Top sources',countBy(arr.filter(i=>i.source),i=>i.source));add('Causes',countBy(arr.filter(i=>i.cause),i=>i.cause));
   const o=openItems();L.push('',`Still open: ${o.length}`);
   return L.join('\n');
 }
@@ -1365,9 +1416,9 @@ function save(filename,data){
   setTimeout(()=>URL.revokeObjectURL(u),30000);
 }
 function exportCsv(arr){
-  const head=['Date','Time','Shift','Department','Issue','Likely cause','Planogram','Status','Fixed at','Hours to fix','Note','Photo'];
+  const head=['Date','Time','Shift','Department','Planogram','Category','Issue','Source','Cause','Status','Fixed at','Hours to fix','RITE ticket','Note','Photo'];
   const rows=arr.map(it=>{const d=new Date(it.created);const fx=it.fixedAt?new Date(it.fixedAt):null;
-    return [d.toLocaleDateString(),d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}),it.shift,it.dept,it.issue,it.cause,it.planogram,it.status,fx?fx.toLocaleString():'',fx?((fx-d)/3600000).toFixed(2):'',it.note,it.photo?'Yes':'No']});
+    return [d.toLocaleDateString(),d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}),it.shift,it.dept,it.planogram,catName(it.issueId),it.issue,it.source,it.cause,it.status,fx?fx.toLocaleString():'',fx?((fx-d)/3600000).toFixed(2):'',isDemoIssue(it.issueId)?(it.rite?'Submitted'+(it.riteNo?' #'+it.riteNo:''):'Not submitted'):'',it.note,it.photo?'Yes':'No']});
   save(`ROIL issues ${localDay(new Date())}.csv`,'﻿'+[head,...rows].map(r=>r.map(csvCell).join(',')).join('\r\n'));
 }
 async function exportReport(arr){
@@ -1383,7 +1434,7 @@ h2{font-size:17px;margin:0 0 4px}.s{display:inline-block;font-size:12px;padding:
 dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:6px 0 0;font-size:14px}dt{color:#5a6a64}dd{margin:0}@media(max-width:560px){.it{grid-template-columns:1fr}.it img,.np{width:100%}}</style></head><body>
 <h1>Floor issue report</h1><p class="m">${arr.length} issues · ${open} still open · created ${esc(fmtDT(new Date().toISOString()))}</p>
 ${arr.map(it=>`<div class="it">${imgs[it.id]?`<img src="${imgs[it.id]}" alt="">`:'<div class="np">No photo</div>'}<div><h2>${esc(it.issue)}<span class="s ${pillCls(it.status)}">${esc(it.status)}</span></h2>
-<dl><dt>When</dt><dd>${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</dd><dt>Department</dt><dd>${esc(it.dept)}</dd>${it.planogram?`<dt>Planogram</dt><dd>${esc(it.planogram)}</dd>`:''}${it.cause?`<dt>Likely cause</dt><dd>${esc(it.cause)}</dd>`:''}${it.fixedAt?`<dt>Fixed</dt><dd>${esc(fmtDT(it.fixedAt))}</dd>`:''}${it.note?`<dt>Note</dt><dd>${esc(it.note)}</dd>`:''}</dl></div></div>`).join('')}
+<dl><dt>When</dt><dd>${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</dd><dt>Department</dt><dd>${esc(it.dept)}</dd>${it.planogram?`<dt>Planogram</dt><dd>${esc(it.planogram)}</dd>`:''}${it.source?`<dt>Source</dt><dd>${esc(it.source)}</dd>`:''}${it.cause?`<dt>Cause</dt><dd>${esc(it.cause)}</dd>`:''}${it.fixedAt?`<dt>Fixed</dt><dd>${esc(fmtDT(it.fixedAt))}</dd>`:''}${it.note?`<dt>Note</dt><dd>${esc(it.note)}</dd>`:''}</dl></div></div>`).join('')}
 </body></html>`;
   await save(`ROIL report ${localDay(new Date())}.html`,html);
 }
@@ -1408,13 +1459,16 @@ function openDetail(id){
   <div><span class="label">Status</span><div class="seg status" id="dStatus">${segHtml(STATUSES,it.status)}</div></div>
   <div class="two collapse"><div><label class="label" for="dDept">Department</label><select id="dDept">${deptOptions(it.deptId)}</select></div><div><label class="label" for="dSub">Planogram</label><select id="dSub">${subOptions(it.deptId,it.planogramId)}</select></div></div>
   <div class="two collapse"><div><label class="label" for="dIssue">Issue</label><select id="dIssue">${entryOptions(lists.issues,it.issueId)}</select></div>
-  <div><label class="label" for="dCause">Likely cause</label><select id="dCause">${entryOptions(lists.causes,it.causeId,'Not set')}</select></div></div>
+  <div><label class="label" for="dCause">Cause</label><select id="dCause">${entryOptions(lists.causes,it.causeId,'Not set')}</select></div></div>
+  <div><label class="label" for="dSource">Source</label><select id="dSource">${entryOptions(lists.sources,it.sourceId,'Not set')}</select></div>
+  <div class="rite" id="dRiteWrap" ${isDemoIssue(it.issueId)?'':'hidden'}><label class="switch"><input type="checkbox" id="dRite" ${it.rite?'checked':''}><span>RITE ticket submitted</span></label><input type="text" id="dRiteNo" maxlength="40" value="${esc(it.riteNo||'')}" placeholder="Ticket number (optional)" aria-label="RITE ticket number"></div>
   <div><label class="label" for="dNote">Note</label><textarea id="dNote">${esc(it.note)}</textarea></div>
   ${it.fixedAt?`<p class="note" style="margin:0">Fixed ${esc(fmtDT(it.fixedAt))}${new Date(it.fixedAt)-new Date(it.created)>=600000?' · took '+dur(new Date(it.fixedAt)-new Date(it.created)):' · on the spot'}</p>`:''}
   <div class="row" style="justify-content:space-between"><button class="btn danger small" id="dDel">Delete</button><button class="btn primary" id="dSave">Save changes</button></div>`);
   let st=it.status;
   $('#dStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st=b.dataset.v;$('#dStatus').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===st))});
   $('#dDept').onchange=e=>{$('#dSub').innerHTML=subOptions(e.target.value,'')};
+  $('#dIssue').onchange=e=>{$('#dRiteWrap').hidden=!isDemoIssue(e.target.value)};
   const fileP=it.photo?photoFile(it):null;if(fileP)fileP.catch(()=>{});
   if(it.photo&&!photoUrls.has(it.id))ensureFull(it.id).then(()=>{const im=$('#dImg'),u=photoUrls.get(it.id);if(im&&u)im.src=u});
   $('#dShare').onclick=()=>shareItem(it,fileP);
@@ -1427,7 +1481,7 @@ function openDetail(id){
   $('#dSave').onclick=async()=>{
     const dept=$('#dDept').value;if(!dept){toast('Pick a department.');return}
     const now=new Date().toISOString();
-    const p={status:st,deptId:dept,issueId:$('#dIssue').value,causeId:$('#dCause').value,planogramId:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
+    const demo=isDemoIssue($('#dIssue').value);const p={status:st,deptId:dept,issueId:$('#dIssue').value,sourceId:$('#dSource').value,causeId:$('#dCause').value,rite:demo&&$('#dRite').checked,riteNo:demo?$('#dRiteNo').value.trim().slice(0,40):'',planogramId:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
     if(st==='Fixed'&&it.status!=='Fixed')p.fixedAt=now;if(st!=='Fixed')p.fixedAt=null;
     try{await store.patch(it.id,p);closeSheet();toast('Saved.')}catch(e){toast('Couldn\'t save. Try again.')}
   };
@@ -1544,11 +1598,13 @@ function archivedHtml(k,arc,U){
 }
 function rowsHtml(k,arr,U){
   const act=activeOf(arr),noun=nounOf(k);
-  return `<ul class="lrows">${act.map((e,i)=>`<li class="lrow">
+  const catSel=e=>k!=='issues'?'':`<select class="icat" data-cat-for="${e.id}" aria-label="Category for ${esc(e.name)}"><option value="">No category</option>${activeOf(lists.categories).map(c=>`<option value="${c.id}"${c.id===e.cat?' selected':''}>${esc(c.name)}</option>`).join('')}</select>`;
+  const uses=e=>k==='categories'?`${U.get('cat:'+e.id)||0} issue types`:'Used by '+usedText(U.get(e.id)||0);
+  return `<ul class="lrows">${act.map((e,i)=>`<li class="lrow${k==='issues'?' irow':''}">
     <input type="text" id="li-${k}-${e.id}" data-k="${k}" data-id="${e.id}" value="${esc(e.name)}" aria-label="Rename ${esc(e.name)}">
     <button class="ib" data-act="up" data-k="${k}" data-id="${e.id}" ${i?'':'disabled'} aria-label="Move up">${IC.up}</button>
     <button class="ib" data-act="down" data-k="${k}" data-id="${e.id}" ${i<act.length-1?'':'disabled'} aria-label="Move down">${IC.down}</button>
-    <button class="ib del${armedKey===k+':'+e.id?' armed':''}" data-act="del" data-k="${k}" data-id="${e.id}" aria-label="Delete ${esc(e.name)}" title="Used by ${usedText(U.get(e.id)||0)}">${IC.del}</button></li>`).join('')}</ul>
+    <button class="ib del${armedKey===k+':'+e.id?' armed':''}" data-act="del" data-k="${k}" data-id="${e.id}" aria-label="Delete ${esc(e.name)}" title="${uses(e)}">${IC.del}</button>${catSel(e)}</li>`).join('')}</ul>
   <div class="ladd"><input type="text" id="add-${k}" data-add="${k}" placeholder="Add ${noun}" aria-label="New ${noun}"><button class="btn small" data-act="add" data-k="${k}">Add</button></div>
   ${archivedHtml(k,arr.filter(e=>e.archived),U)}`;
 }
@@ -1568,7 +1624,11 @@ function renderLists(){
     ${archivedHtml('dept',lists.departments.filter(d=>d.archived),U)}
   </section>
   <section class="panel lsec"><header><h3>Issue types</h3><span class="muted mono" style="font-size:12px">${activeOf(lists.issues).length}</span></header>${rowsHtml('issues',lists.issues,U)}</section>
-  <section class="panel lsec"><header><h3>Likely causes</h3><span class="muted mono" style="font-size:12px">${activeOf(lists.causes).length}</span></header>${rowsHtml('causes',lists.causes,U)}</section>
+  <section class="panel lsec"><header><h3>Issue categories</h3><span class="muted mono" style="font-size:12px">${activeOf(lists.categories).length}</span></header><p class="note" style="margin:0">Groups issue types on the Log screen and in Stats and reports. Pick each issue type's category above. Issue types in the <b>Demo units</b> category get a RITE ticket checkbox.</p>${rowsHtml('categories',lists.categories,U)}</section>
+  <section class="panel lsec"><header><h3>Sources</h3><span class="muted mono" style="font-size:12px">${activeOf(lists.sources).length}</span></header><p class="note" style="margin:0">Who or what likely caused the issue.</p>
+    <div><label class="label" for="defSource">Selected by default when logging</label><select id="defSource"><option value="">None</option>${activeOf(lists.sources).map(e=>`<option value="${e.id}"${e.id===lists.defaultSource?' selected':''}>${esc(e.name)}</option>`).join('')}</select></div>
+    ${rowsHtml('sources',lists.sources,U)}</section>
+  <section class="panel lsec"><header><h3>Causes</h3><span class="muted mono" style="font-size:12px">${activeOf(lists.causes).length}</span></header>${rowsHtml('causes',lists.causes,U)}</section>
   <section class="panel lsec"><header><h3>Statuses</h3></header><p class="note" style="margin:0">Fixed (the default), Open and Needs follow-up. These stay as they are, since the Open tab depends on them.</p></section>
   <section class="panel lsec"><header><h3>Archived features</h3></header>
     <label class="switch"><input type="checkbox" id="tShift" ${lists.showShift?'checked':''}><span><b>Shift selector</b><br><span class="note">Adds a shift choice to the Log screen and a By shift chart to Stats.</span></span></label>
@@ -1598,6 +1658,8 @@ function moveEntry(k,id,dir){
 function removeEntry(k,id){
   const arr=getArr(k);const i=arr.findIndex(x=>x.id===id);if(i<0)return;
   if(k==='dept')for(const p of arr[i].planograms)lists.removed.push(p.id);
+  if(k==='categories')for(const e of lists.issues)if(e.cat===id)delete e.cat;
+  if(k==='sources'&&lists.defaultSource===id)lists.defaultSource='';
   arr.splice(i,1);lists.removed.push(id);openDepts.delete(id);
 }
 function delEntry(k,id){
@@ -1606,7 +1668,7 @@ function delEntry(k,id){
   if(!e.archived&&(k==='dept'||k==='issues')&&activeOf(arr).length<=1){toast(`Keep at least one ${nounOf(k)}.`);return}
   if(!n){
     if(armedKey!==k+':'+id){arm(k+':'+id);return}
-    armedKey=null;removeEntry(k,id);commitLists(`Deleted “${e.name}”.`);return;
+    armedKey=null;removeEntry(k,id);commitLists(k==='categories'?`Deleted “${e.name}”. Its issue types are now uncategorized.`:`Deleted “${e.name}”.`);return;
   }
   openUsedSheet(k,e,n);
 }
@@ -1619,7 +1681,7 @@ function openUsedSheet(k,e,n){
   <div class="panel stack" style="gap:8px"><b>Merge into another ${noun}</b><span class="note">Moves ${n===1?'that issue':'all '+n+' issues'} to the ${noun} you pick, then removes “${esc(e.name)}”.${k==='dept'?' Its planograms move too.':''}</span>
     ${targets.length?`<select id="uTarget" aria-label="Merge into"><option value="">Choose a ${noun}…</option>${targets.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select><div><button class="btn" id="uMerge" type="button">Merge</button></div>`
       :`<span class="note">There's no other ${noun}${k.startsWith('pog:')?' in this department':''} to merge into.</span>`}</div>`);
-  const a=$('#uArch');if(a)a.onclick=()=>{e.archived=true;closeSheet();commitLists(`Archived “${e.name}”. Past issues keep it.`)};
+  const a=$('#uArch');if(a)a.onclick=()=>{e.archived=true;if(k==='sources'&&lists.defaultSource===e.id)lists.defaultSource='';closeSheet();commitLists(`Archived “${e.name}”. Past issues keep it.`)};
   const m=$('#uMerge');if(m)m.onclick=async()=>{const t=$('#uTarget').value;if(!t){toast(`Pick a ${noun} to merge into.`);return}
     m.disabled=true;try{await mergeEntry(k,e.id,t);closeSheet()}catch(err){m.disabled=false;toast('Couldn\'t merge. Try again.')}};
 }
@@ -1630,9 +1692,9 @@ async function mergeEntry(k,from,to){
   reindex();
   const now=new Date().toISOString(),ops=[],next=[];let n=0;
   for(const it of items){
-    const before=[it.deptId,it.planogramId,it.issueId,it.causeId,it.shiftId].join('|');
+    const before=[it.deptId,it.planogramId,it.issueId,it.sourceId,it.causeId,it.shiftId].join('|');
     const c={...it};link(c);
-    if([c.deptId,c.planogramId,c.issueId,c.causeId,c.shiftId].join('|')!==before){c.updated=now;ops.push({s:'items',v:c});n++}
+    if([c.deptId,c.planogramId,c.issueId,c.sourceId,c.causeId,c.shiftId].join('|')!==before){c.updated=now;ops.push({s:'items',v:c});n++}
     next.push(c);
   }
   if(ops.length)await write(ops);
@@ -1649,6 +1711,8 @@ async function mergeEntry(k,from,to){
   el.addEventListener('change',e=>{
     const t=e.target;
     if(t.id==='rFile'){const f=t.files&&t.files[0];t.value='';if(f)doRestore(f);return}
+    if(t.dataset.catFor){const e=IX.issues.get(t.dataset.catFor);if(e){if(t.value)e.cat=t.value;else delete e.cat;commitLists()}return}
+    if(t.id==='defSource'){lists.defaultSource=t.value;form.source=null;commitLists(t.value?`New issues start with “${IX.sources.get(t.value).name}”.`:'No source is selected by default now.');return}
     if(t.id==='tShift'){lists.showShift=t.checked;commitLists(t.checked?'Shift selector turned on.':'Shift selector archived.');return}
     if(t.dataset.k&&t.dataset.id){
       const arr=getArr(t.dataset.k),e=arr.find(x=>x.id===t.dataset.id),v=t.value.trim().slice(0,120);

@@ -52,7 +52,15 @@ A **ROIL server** destination will be added once self-hosting is running.
 - Clearing the browser's site data, uninstalling the browser, or replacing a device without a backup would lose that device's log.
 
 ## Lists
-Departments, planograms, issue types and causes are edited in **Lists**. Issues link to these entries, so:
+Each issue records:
+- **Department** and **planogram**.
+- **Issue:** what's wrong, grouped into **categories** (Placement, Pricing & labels, Demo units, Condition, Safety & security).
+- **Source:** who or what likely caused it, such as Truck / freight or Customer. One source can be the default for new issues; it starts as Truck / freight.
+- **Cause:** why it happened.
+
+Issue types in the **Demo units** category get a **RITE ticket submitted** checkbox and an optional ticket number. Until it's ticked, the issue shows *RITE not submitted*.
+
+All of these are edited in **Lists**. Issues link to these entries, so:
 - **Renaming** an entry updates every issue that uses it, including History, Stats, exports and share text.
 - **Deleting an unused entry** removes it.
 - **Deleting an entry that issues use** asks you to choose:
