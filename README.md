@@ -33,6 +33,31 @@ Three layouts, set in **Lists → Appearance → Log screen layout**:
 
 **Auto** (the default) uses Steps on phones and Sections on computers. The Save button stays at the bottom of the screen, within thumb reach.
 
+## SKUs, items and lock-ups
+These are on the **Where** step or card:
+- **Location SKU:** the 7-digit SKU from the shelf tag (ESL). On Android, tap **Scan** and point the camera at the tag's QR code. You can also type it, or use a Bluetooth scanner. Once ROIL has seen a SKU, it fills in the department and planogram you used last time. You can add a product name, and **View on bestbuy.com** opens the product.
+- **Lock-up:** turn this on when customers can't reach the spot. If you pick Customer as the source for a lock-up issue, ROIL warns you. Stats shows lock-up issues separately, as employee-caused.
+- **Items found:** scan (**Scan items** keeps the camera open) or type the UPC of each product that's actually there. Scanning the same product again adds one to its quantity. Each item is marked:
+  - **Correct:** it belongs to this location's SKU.
+  - **Wrong item:** it belongs somewhere else.
+  - **Not known yet:** tap **Belongs here** or **Different product**, and ROIL remembers your answer.
+
+  UPCs are checked as you add them, so a misread barcode is caught.
+- **Already logged?** When you save, ROIL checks for an open issue with the same location SKU, an item in common, or the same planogram and issue. If there's one, you can open it instead of saving a duplicate. You can turn this off in Lists → Appearance → Log screen.
+
+**Lists → Products** holds what ROIL has learned. Each SKU shows its UPCs, a product name and a bestbuy.com link. There's also a list of UPCs that aren't paired yet, which you can pair with a SKU. Products sync between your devices and are included in backups.
+
+**Pair mode** (in Lists → Products) teaches ROIL quickly. Scan a shelf tag, then every product that belongs on it, then the next tag, and so on.
+
+**Bluetooth or USB barcode scanners:** use one set to keyboard (HID) mode with Enter (or Tab) after each scan. It works anywhere in ROIL:
+- In Pair mode, scans go to Pair mode.
+- With an issue open, scans go to that issue.
+- Otherwise, scans go to the Log screen.
+
+A shelf-tag QR sets the location SKU, and a product barcode adds an item. For shelf-tag QR codes, the scanner needs to be a **2D** model.
+
+On computers, Chrome can't use the camera to scan, so type codes or use a scanner there.
+
 ## More than one device
 The easy way is **Sync with Google Drive** (below), which keeps every device in step automatically. Without sync, each device keeps its own log, and you can combine them with a backup file:
 1. On device A: **Lists → Share backup** (to yourself in Teams or Google Drive), or **Download backup**.

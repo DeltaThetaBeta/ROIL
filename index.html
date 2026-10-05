@@ -336,6 +336,39 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 .linkish.rm.armed{font-weight:700}
 #dBA.busy{opacity:.5;pointer-events:none}
 .linkish{color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;font-family:var(--f-body);text-decoration:underline}
+
+/* ---------- SKUs, items found, scanning (Phase 3) ---------- */
+.skub{display:grid;gap:14px}
+.skuin{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.skuin input{font-size:18px;letter-spacing:.06em}
+.skuinfo{margin-top:6px;font-size:14px;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
+.skuinfo .ladd{width:100%}
+.found{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:6px}
+.frow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r-sm);padding:8px 8px 8px 10px}
+.frow.v-right{border-left-color:var(--good)}.frow.v-wrong{border-left-color:var(--bad)}
+.fmain{display:grid;gap:3px;min-width:0}
+.fcode{font-size:14px;overflow-wrap:anywhere}
+.fsub{font-size:13px;color:var(--muted)}
+.fask{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.qty{display:flex;align-items:center;gap:4px}
+.qty .ib{width:36px;height:36px;font-size:18px}
+.qty span{min-width:2ch;text-align:center}
+.pill.bad{background:color-mix(in srgb,var(--bad) 14%,var(--surface));color:var(--bad)}
+.pill:not(.Open):not(.Needs):not(.Fixed):not(.bad){background:var(--sunk);color:var(--muted)}
+.ladd.three{grid-template-columns:minmax(0,1fr) auto auto}
+.warnline{margin:8px 0 0;font-size:13px;font-weight:600;color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,transparent);border-radius:var(--r-sm);padding:6px 10px}
+#scanHost .overlay{z-index:60}
+.scansheet{gap:10px}
+.scanview{position:relative;background:#000;border-radius:var(--r-sm);overflow:hidden;aspect-ratio:4/3;max-height:52vh}
+.scanview video{width:100%;height:100%;object-fit:cover;display:block}
+.scanframe{position:absolute;inset:18% 12%;border:3px solid rgba(255,255,255,.85);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.25)}
+.scanlog{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-family:var(--f-mono);font-size:13px}
+.scanlog li{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.scanlog li:first-child{border-color:var(--accent)}
+.pairnow{display:grid;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.pairnow b{font-size:24px;letter-spacing:.06em}
+.dupw{display:grid;gap:4px;justify-items:start}
+.dupw .item{width:100%}
 </style>
 </head>
 <body>
@@ -390,6 +423,7 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
           <select id="fSub" aria-label="Planogram"></select>
         </div>
       </div>
+      <div class="part" id="part-sku"><div id="fSkuBox"></div></div>
       <div class="part" id="part-issue">
         <p class="req" id="reqIssue" hidden>Pick what's wrong</p>
         <div id="fIssue" role="group" aria-label="Issue"></div>
@@ -398,6 +432,7 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
       <div class="part" id="part-source">
         <span class="label">Source <span class="lsub">who or what likely caused it</span></span>
         <div class="chips small-chips" id="fSource" role="group" aria-label="Source"></div>
+        <p class="warnline" id="lockWarn" hidden></p>
       </div>
       <div class="part" id="part-cause">
         <span class="label">Cause <span class="lsub">why it happened</span></span>
@@ -437,6 +472,7 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 
 <div id="partHost"></div>
 <div id="sheetHost"></div>
+<div id="scanHost"></div>
 <div id="toastHost"></div>
 
 <script>
@@ -484,7 +520,7 @@ const standalone=()=>{try{return matchMedia('(display-mode: standalone)').matche
    palette 'roil' is ROIL's own look (follows Auto/Light/Dark). Any other palette sets every
    color: a built-in editor-style theme, or 'custom' (your own colors or an imported VS Code theme).
    Whatever the colors, accent and status text are nudged until they're readable on the cards. */
-const AP_DEFAULT={palette:'roil',theme:'auto',contrast:'normal',accent:'',status:'default',shape:'rounded',size:'normal',custom:null,customName:'',logLayout:'auto',whyOpen:false,afterPrompt:true,updated:''};
+const AP_DEFAULT={palette:'roil',theme:'auto',contrast:'normal',accent:'',status:'default',shape:'rounded',size:'normal',custom:null,customName:'',logLayout:'auto',whyOpen:false,afterPrompt:true,dupCheck:true,updated:''};
 const AP_OPTS={theme:['auto','light','dark'],contrast:['normal','high'],status:['default','cb'],shape:['rounded','soft','square'],size:['compact','normal','large'],logLayout:['auto','sections','summary','steps']};
 const ACCENTS=[['Teal','#0e6a5a'],['Blue','#1d5fbf'],['Indigo','#4b4fc4'],['Plum','#7b3f9e'],['Red','#b3261e'],['Orange','#b4530b'],['Green','#2e7d32'],['Graphite','#3d4650']];
 const PAL_KEYS=['bg','surface','ink','muted','line','accent','open','follow','good','bad'];
@@ -516,6 +552,7 @@ function cleanAp(a){
     if(a.palette==='custom'&&o.custom)o.palette='custom';else if(PALETTES[a.palette])o.palette=a.palette;
     if(typeof a.whyOpen==='boolean')o.whyOpen=a.whyOpen;
     if(typeof a.afterPrompt==='boolean')o.afterPrompt=a.afterPrompt;
+    if(typeof a.dupCheck==='boolean')o.dupCheck=a.dupCheck;
     if(typeof a.updated==='string')o.updated=a.updated.slice(0,40);
   }
   return o;
@@ -764,7 +801,7 @@ let loaded=false;
 let view='log';
 let hf=ls.get('roil.hf',{range:'30',dept:'',issue:'',status:'',q:''});
 let srange=ls.get('roil.srange','30');
-const form={photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,dept:'',sub:'',issue:'',source:null,cause:'',status:'Open',shift:''};
+const form={photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,dept:'',sub:'',issue:'',source:null,cause:'',status:'Open',shift:'',sku:'',lockup:false,found:[]};
 const last=ls.get('roil.last',{});
 form.dept=last.dept||'';form.sub=last.sub||'';form.shift=last.shift||'';
 const photoUrls=new Map(),thumbUrls=new Map(),afterUrls=new Map(),afterThumbUrls=new Map();   // item id -> blob: URL for photos kept on this device
@@ -797,9 +834,9 @@ function dropLocal(id){
   dropPhotoUrls(id);
   setItems(items.filter(x=>x.id!==id));
 }
-const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','sourceId','causeId','shiftId','dept','planogram','issue','source','cause','shift','note','status','fixedAt','photo','photoRev','after','afterRev','rite','riteNo'];
+const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','sourceId','causeId','shiftId','dept','planogram','issue','source','cause','shift','note','status','fixedAt','photo','photoRev','after','afterRev','rite','riteNo','sku','lockup','found'];
 const REF_FIELDS=['deptId','planogramId','issueId','sourceId','causeId','shiftId'];
-function serverItem(it){const o={};for(const k of ITEM_FIELDS)o[k]=it[k]??(k==='fixedAt'?null:k==='photo'?false:'');o.photo=!!o.photo;return o}
+function serverItem(it){const o={};for(const k of ITEM_FIELDS)o[k]=it[k]??(k==='fixedAt'?null:k==='photo'?false:'');o.photo=!!o.photo;o.lockup=!!o.lockup;o.found=cleanFound(o.found);return o}
 
 const store={
   async put(item,photo){
@@ -866,7 +903,7 @@ function b64ToBlob(s,type){const bin=atob(s);const a=new Uint8Array(bin.length);
    doesn't need one giant string. Same item format the server version uses. */
 async function buildBackup(){
   const phs=await getAll('photos');const its=items.map(x=>({...x}));const l=listsBody(lists);
-  const parts=[`{"format":"roil-backup","version":2,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"appearance":${JSON.stringify(ap)},"items":${JSON.stringify(its)},"photos":{`];
+  const parts=[`{"format":"roil-backup","version":2,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"products":${JSON.stringify(prods)},"appearance":${JSON.stringify(ap)},"items":${JSON.stringify(its)},"photos":{`];
   let first=true;
   for(const p of phs){
     const full=p.full||p.thumb,af=p.after||p.afterThumb;if(!full&&!af)continue;
@@ -896,6 +933,7 @@ async function doBackup(shareIt){
    deleted on either side stays deleted, unless it was edited after the deletion. */
 async function mergeIncoming(data,opt={}){
   if(data.lists&&typeof data.lists==='object'){lists=mergeLists(lists,normLists(data.lists));relinkAll()}
+  let prodOp=null;if(data.products&&typeof data.products==='object'){const m=mergeProds(prods,cleanProds(data.products));if(JSON.stringify(m)!==JSON.stringify(prods)){prods=m;prodOp={s:'meta',v:prods,k:'products'}}}
   const ID=/^[a-z0-9]{6,40}$/;const have=new Map(items.map(i=>[i.id,i]));const ops=[];let added=0,updated=0,photos=0,removed=0;
   const newTombs={...tombs};
   if(data.deleted&&typeof data.deleted==='object'){
@@ -913,6 +951,7 @@ async function mergeIncoming(data,opt={}){
     for(const k of['dept','planogram','issue','source','cause','shift','created','updated'])it[k]=String(it[k]).slice(0,120);
     it.rite=!!it.rite;it.riteNo=String(it.riteNo||'').slice(0,40);it.after=!!it.after;const REV=v=>/^[a-z0-9]{1,20}$/.test(String(v||''))?String(v):'';it.afterRev=REV(it.afterRev);it.photoRev=it.photo?REV(it.photoRev):'';if(!it.after)it.afterRev='';
     it.note=String(it.note).slice(0,2000);
+    it.sku=SKU_RE.test(String(x.sku||''))?String(x.sku):'';it.lockup=!!x.lockup;it.found=cleanFound(x.found);
     for(const k of REF_FIELDS)it[k]=ENTRY_ID.test(String(it[k]))?String(it[k]):'';
     link(it);
     const cur=have.get(it.id);
@@ -935,7 +974,7 @@ async function mergeIncoming(data,opt={}){
   relinkAll([...have.values()]);ops.push({s:'meta',v:listsBody(lists),k:'lists'});buildForm();
   let apChanged=false;
   if(opt.appearance&&data.appearance&&typeof data.appearance==='object'){const inc=cleanAp(data.appearance);if((inc.updated||'')>(ap.updated||'')){ap=inc;ls.set('roil.appearance',ap);applyAp();apChanged=true;if(loaded)renderLog()}}
-  ops.push({s:'meta',v:newTombs,k:'deleted'});
+  ops.push({s:'meta',v:newTombs,k:'deleted'});if(prodOp)ops.push(prodOp);
   await write(ops);
   tombs=newTombs;
   setItems([...have.values()]);
@@ -1037,9 +1076,10 @@ const Drive={
 };
 /* The shared copy: everything except photos (each photo is its own file) and appearance
    (that stays per device, so your phone and computer can look different). */
+function sortedProds(){const o={skus:{},upcs:{}};for(const t of['skus','upcs'])for(const k of Object.keys(prods[t]).sort())o[t][k]=prods[t][k];return o}
 function syncDocText(){
   const its=items.map(x=>({...x})).sort((a,b)=>a.id<b.id?-1:1);
-  return JSON.stringify({format:'roil-sync',version:2,lists:listsBody(lists),deleted:tombs,items:its});
+  return JSON.stringify({format:'roil-sync',version:2,lists:listsBody(lists),deleted:tombs,products:sortedProds(),items:its});
 }
 const pname=(kind,id,rev)=>rev?`${kind}-${id}-${rev}.jpg`:`${kind}-${id}.jpg`;
 async function syncPhotos(folder,files){
@@ -1155,14 +1195,15 @@ async function boot(){
   handleOAuthReturn();
   buildForm();showPhotos();renderLog();renderAll();tick();setInterval(tick,30000);setSync();
   try{
-    const [its,phs,l,dl]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists'),getOne('meta','deleted')]);
+    const [its,phs,l,dl,pr]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists'),getOne('meta','deleted'),getOne('meta','products')]);
+    if(pr)prods=cleanProds(pr);
     for(const p of phs)setPhotoUrls(p);
     if(l)lists=normLists(l);
     if(dl&&typeof dl==='object')tombs=dl;
     const legacy=!l||!l.v||its.some(i=>!('deptId' in i));
     const ch=relinkAll(its);
     if(legacy||ch)await write([{s:'meta',v:listsBody(lists),k:'lists'},...its.map(v=>({s:'items',v}))]);
-    loaded=true;buildForm();setItems(its);renderLog();
+    loaded=true;buildForm();setItems(its);if(logBox)logBox.render();renderLog();
   }catch(e){loaded=true;renderAll();toast('Your browser won\'t let ROIL store data. Make sure you\'re not in a private or Incognito window.')}
   if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
   if(navigator.storage&&navigator.storage.persist){try{await navigator.storage.persist()}catch(e){}}
@@ -1300,10 +1341,334 @@ async function compress(file,max,q){
 const blobToDataUrl=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b)});
 const newRev=()=>Date.now().toString(36);
 
+/* ---------- SKUs, items found, lock-ups and scanning ----------
+   Location SKU: the 7-digit Best Buy SKU on the shelf tag (ESL). Its QR code holds a link like
+   http://bby.us/?c=BB017606594636&LMD=True, and the SKU is the last 7 digits of c.
+   Items found: UPCs (or product SKUs) of what's actually on the shelf, with a quantity.
+   Products directory: learns which UPCs belong to which SKU, so items can be marked right or wrong. */
+const SKU_RE=/^\d{6,7}$/,UPC_RE=/^\d{8,14}$/;
+function gtinOk(d){if(!/^(\d{8}|\d{12,14})$/.test(d))return false;let s=0;const n=d.length;for(let i=0;i<n-1;i++)s+=(+d[n-2-i])*(i%2===0?3:1);return (10-s%10)%10===+d[n-1]}
+function upcE2A(e){const ns=e[0],d=e.slice(1,7),c=e[7],l=d[5];let m;
+  if(l<='2')m=d[0]+d[1]+l+'0000'+d[2]+d[3]+d[4];else if(l==='3')m=d[0]+d[1]+d[2]+'00000'+d[3]+d[4];
+  else if(l==='4')m=d[0]+d[1]+d[2]+d[3]+'00000'+d[4];else m=d[0]+d[1]+d[2]+d[3]+d[4]+'0000'+l;
+  return ns+m+c}
+/* Read a scanned or typed code: {kind:'sku'|'upc'|'bad', code, esl} */
+function parseCode(raw){
+  const t=String(raw||'').trim();
+  if(/[?&]c=/i.test(t)||/bby\.us/i.test(t)){const m=t.match(/[?&]c=([^&#\s]+)/i);const dg=m?m[1].replace(/\D/g,''):'';return dg.length>=7?{kind:'sku',code:dg.slice(-7),esl:true}:{kind:'bad',code:t}}
+  const dg=t.replace(/[\s-]/g,'');
+  if(!/^\d+$/.test(dg))return {kind:'bad',code:t};
+  if(SKU_RE.test(dg))return {kind:'sku',code:dg};
+  if(dg.length===8){if(/^[01]/.test(dg)){const a=upcE2A(dg);if(gtinOk(a))return {kind:'upc',code:a}}return gtinOk(dg)?{kind:'upc',code:dg}:{kind:'bad',code:dg}}
+  if(dg.length>=12&&dg.length<=14){let c=dg;if(c.length===14&&c.startsWith('00'))c=c.slice(2);else if(c.length===13&&c[0]==='0')c=c.slice(1);return gtinOk(c)?{kind:'upc',code:c}:{kind:'bad',code:dg,check:true}}
+  return {kind:'bad',code:dg};
+}
+const bbUrl=sku=>`https://www.bestbuy.com/site/searchpage.jsp?st=${encodeURIComponent(sku)}`;
+function cleanFound(a){
+  if(!Array.isArray(a))return [];const out=[];
+  for(const x of a.slice(0,50)){if(!x||typeof x!=='object')continue;const code=String(x.code||'');const kind=x.kind==='sku'?'sku':'upc';
+    if(kind==='sku'?!SKU_RE.test(code):!UPC_RE.test(code))continue;const qty=Math.max(1,Math.min(999,parseInt(x.qty,10)||1));
+    const ex=out.find(o=>o.code===code&&o.kind===kind);if(ex)ex.qty=Math.min(999,ex.qty+qty);else out.push({code,kind,qty})}
+  return out;
+}
+
+/* ---------- products directory (synced, merged entry by entry: newest edit wins) ---------- */
+let prods={skus:{},upcs:{}};
+function cleanProds(p){
+  const o={skus:{},upcs:{}};if(!p||typeof p!=='object')return o;
+  for(const [k,v] of Object.entries(p.skus||{})){if(!SKU_RE.test(k)||!v||typeof v!=='object')continue;
+    o.skus[k]={name:String(v.name||'').slice(0,80),deptId:ENTRY_ID.test(String(v.deptId||''))?String(v.deptId):'',planogramId:ENTRY_ID.test(String(v.planogramId||''))?String(v.planogramId):'',deleted:!!v.deleted,updated:String(v.updated||'').slice(0,40)}}
+  for(const [k,v] of Object.entries(p.upcs||{})){if(!UPC_RE.test(k)||!v||typeof v!=='object')continue;
+    o.upcs[k]={sku:SKU_RE.test(String(v.sku||''))?String(v.sku):'',no:Array.isArray(v.no)?v.no.filter(x=>SKU_RE.test(String(x))).map(String).slice(-20):[],updated:String(v.updated||'').slice(0,40)}}
+  return o;
+}
+function mergeProds(a,b){
+  const o={skus:{...a.skus},upcs:{...a.upcs}};
+  for(const t of['skus','upcs'])for(const [k,v] of Object.entries(b[t]))if(!o[t][k]||(v.updated||'')>(o[t][k].updated||''))o[t][k]=v;
+  return o;
+}
+async function saveProds(){await write([{s:'meta',v:prods,k:'products'}]);markChanged()}
+const nowIso=()=>new Date().toISOString();
+const skuEntry=sku=>{const e=prods.skus[sku];return e&&!e.deleted?e:null};
+const prodName=sku=>(skuEntry(sku)||{}).name||'';
+const upcSku=upc=>(prods.upcs[upc]||{}).sku||'';
+function setSkuInfo(sku,patch){const e=prods.skus[sku]&&!prods.skus[sku].deleted?prods.skus[sku]:{name:'',deptId:'',planogramId:''};prods.skus[sku]={...e,...patch,deleted:false,updated:nowIso()}}
+function linkUpc(upc,sku){const e=prods.upcs[upc]||{no:[]};prods.upcs[upc]={sku,no:(e.no||[]).filter(x=>x!==sku),updated:nowIso()};if(sku&&!skuEntry(sku))setSkuInfo(sku,{})}
+function notHere(upc,sku){const e=prods.upcs[upc]||{sku:'',no:[]};prods.upcs[upc]={sku:e.sku===sku?'':e.sku,no:[...new Set([...(e.no||[]),sku])].slice(-20),updated:nowIso()}}
+/* right / wrong / '' (unknown) for one item found at a location */
+function verdict(f,loc){
+  if(!loc)return '';
+  if(f.kind==='sku')return f.code===loc?'right':'wrong';
+  const e=prods.upcs[f.code];if(!e)return '';
+  if(e.sku)return e.sku===loc?'right':'wrong';
+  return (e.no||[]).includes(loc)?'wrong':'';
+}
+function foundLabel(f){const s=f.kind==='sku'?f.code:upcSku(f.code);const n=s?prodName(s):'';return {code:(f.kind==='sku'?'SKU ':'UPC ')+f.code,sub:f.kind==='upc'&&s?`SKU ${s}${n?' · '+n:''}`:(n||'')}}
+function foundText(it,loc){
+  return (it.found||[]).map(f=>{const v=verdict(f,loc);const l=foundLabel(f);return `${f.qty}× ${l.code}${l.sub?' ('+l.sub+')':''}${v==='right'?' · correct':v==='wrong'?' · wrong item':''}`});
+}
+
+/* ---------- camera scanning (Chrome on Android; elsewhere type codes or use a scanner) ---------- */
+const canCam=typeof window.BarcodeDetector==='function'&&!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia);
+let camScan=null;   // the open camera scanner, if any
+async function openScanner({title,hint,continuous,onCode}){
+  if(!canCam){toast('This browser can\'t scan with the camera. Type the code, or use a Bluetooth scanner.');return}
+  closeScanner();
+  const host=$('#scanHost');
+  host.innerHTML=`<div class="overlay scanov"><div class="sheet scansheet" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="head"><h2>${esc(title)}</h2><button class="btn small primary" type="button" id="scanDone">Done</button></div>
+    <div class="scanview"><video id="scanVideo" playsinline muted></video><i class="scanframe"></i></div>
+    <p class="note" id="scanMsg" style="margin:0">${esc(hint||'Point the camera at a shelf tag QR code or a product barcode.')}</p>
+    <div class="row"><button class="btn small" type="button" id="scanTorch" hidden>Light</button></div>
+    ${continuous?'<ul class="scanlog" id="scanLog"></ul>':''}</div></div>`;
+  const S=camScan={onCode,continuous,stream:null,timer:null,seen:new Map(),done:false};
+  $('#scanDone').onclick=closeScanner;
+  $('.overlay',host).addEventListener('click',e=>{if(e.target.classList.contains('overlay'))closeScanner()});
+  try{
+    let formats=['qr_code','upc_a','upc_e','ean_13','ean_8','code_128'];
+    try{const sup=await BarcodeDetector.getSupportedFormats();formats=formats.filter(f=>sup.includes(f))}catch(e){}
+    const det=new BarcodeDetector({formats});
+    S.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
+    if(camScan!==S){S.stream.getTracks().forEach(t=>t.stop());return}
+    const v=$('#scanVideo');v.srcObject=S.stream;await v.play().catch(()=>{});
+    const track=S.stream.getVideoTracks()[0];let torch=false;
+    try{const cap=track.getCapabilities&&track.getCapabilities();if(cap&&cap.torch){const b=$('#scanTorch');b.hidden=false;b.onclick=async()=>{torch=!torch;try{await track.applyConstraints({advanced:[{torch}]});b.setAttribute('aria-pressed',torch)}catch(e){}}}}catch(e){}
+    const tick=async()=>{
+      if(camScan!==S)return;
+      try{
+        if(v.readyState>=2){
+          const now=performance.now();
+          for(const r of await det.detect(v)){
+            const raw=r.rawValue||'';const last=S.seen.get(raw);S.seen.set(raw,now);
+            if(last&&now-last<1500)continue;          // still in view: counts once until it leaves the frame
+            const c=parseCode(raw);if(c.kind==='bad')continue;
+            try{navigator.vibrate&&navigator.vibrate(40)}catch(e){}
+            const msg=S.onCode(c);
+            if(!S.continuous){closeScanner();return}
+            $('#scanMsg').textContent=msg||'Scanned.';
+            const lg=$('#scanLog');if(lg&&msg){const li=document.createElement('li');li.textContent=msg;lg.prepend(li);while(lg.children.length>6)lg.lastChild.remove()}
+          }
+        }
+      }catch(e){}
+      if(camScan===S)S.timer=setTimeout(tick,140);
+    };
+    tick();
+  }catch(e){
+    const m=$('#scanMsg');if(m)m.textContent=e&&e.name==='NotAllowedError'?'Camera access was blocked. Allow the camera for this site in Chrome\'s settings, or type the code.':'Couldn\'t start the camera. Type the code instead.';
+  }
+}
+function closeScanner(){
+  const S=camScan;camScan=null;
+  if(S){clearTimeout(S.timer);if(S.stream)S.stream.getTracks().forEach(t=>t.stop())}
+  const h=$('#scanHost');if(h)h.innerHTML='';
+}
+
+/* ---------- the SKU box: location SKU, lock-up and items found (Log screen and issue screen) ---------- */
+function SkuBox(root,st,opt={}){
+  let naming=false;
+  const self={root,st,
+    render(){
+      const loc=st.sku,e=loc?skuEntry(loc):null,name=e?e.name:'';
+      const rows=st.found.map((f,i)=>{const v=verdict(f,loc),l=foundLabel(f);
+        return `<li class="frow v-${v||'unk'}"><div class="fmain"><span class="fcode mono">${esc(l.code)}</span>${l.sub?`<span class="fsub">${esc(l.sub)}</span>`:''}
+          <span class="fv">${v==='right'?'<span class="pill Fixed">Correct</span>':v==='wrong'?'<span class="pill bad">Wrong item</span>':loc?'<span class="pill">Not known yet</span>':'<span class="pill">Add the location SKU to check</span>'}</span>
+          ${!v&&loc&&f.kind==='upc'?`<span class="fask"><button type="button" class="btn small" data-belong="${i}">Belongs here</button><button type="button" class="btn small" data-diff="${i}">Different product</button></span>`:''}</div>
+          <div class="qty"><button type="button" class="ib" data-dec="${i}" aria-label="One less">−</button><span class="mono">${f.qty}</span><button type="button" class="ib" data-inc="${i}" aria-label="One more">+</button></div></li>`}).join('');
+      const wrong=st.found.filter(f=>verdict(f,loc)==='wrong').length;
+      root.innerHTML=`<div class="skub">
+        <div><label class="label" for="${opt.id}Sku">Location SKU <span class="lsub">from the shelf tag</span></label>
+          <div class="skuin"><input type="text" id="${opt.id}Sku" class="skuInput mono" inputmode="numeric" autocomplete="off" maxlength="80" placeholder="${canCam?'Scan or type the SKU':'Type or scan the SKU'}" value="${esc(loc)}">${canCam?'<button type="button" class="btn" data-scan="sku">Scan</button>':''}</div>
+          ${loc?`<div class="skuinfo">${naming?`<span class="ladd"><input type="text" class="nameIn" maxlength="80" placeholder="Product name" value="${esc(name)}" aria-label="Product name"><button type="button" class="btn small" data-savename>Save</button></span>`
+            :`${name?`<b>${esc(name)}</b> · <button type="button" class="linkish" data-name>Rename</button>`:'<button type="button" class="linkish" data-name>Add product name</button>'} · <a class="linkish" href="${bbUrl(loc)}" target="_blank" rel="noopener noreferrer">View on bestbuy.com</a> · <button type="button" class="linkish rm" data-clrsku>Clear</button>`}</div>`:''}
+        </div>
+        <label class="switch"><input type="checkbox" class="lockIn" ${st.lockup?'checked':''}><span>Lock-up <span class="lsub">customers can't reach it</span></span></label>
+        <div><span class="label">Items found <span class="lsub">${st.found.length?`${st.found.reduce((a,f)=>a+f.qty,0)} item${st.found.reduce((a,f)=>a+f.qty,0)===1?'':'s'}${wrong?` · ${wrong} wrong`:''}`:'what\'s actually there (optional)'}</span></span>
+          ${rows?`<ul class="found">${rows}</ul>`:''}
+          <div class="ladd${canCam?' three':''}"><input type="text" class="addCode mono" inputmode="numeric" autocomplete="off" maxlength="80" placeholder="Type a UPC" aria-label="Add an item by UPC or SKU"><button type="button" class="btn small" data-add>Add</button>${canCam?'<button type="button" class="btn small" data-scan="items">Scan items</button>':''}</div>
+        </div></div>`;
+      if(naming){const n=$('.nameIn',root);n.focus();n.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('[data-savename]',root).click()}}}
+    },
+    changed(){self.render();opt.onChange&&opt.onChange()},
+    setLoc(code,quiet){
+      if(st.sku===code)return;
+      const had=st.sku;st.sku=code;naming=false;
+      if(had&&!quiet)toast(`Location SKU changed to ${code}.`);
+      opt.onSku&&opt.onSku(code);self.changed();
+    },
+    addItem(c){
+      const ex=st.found.find(f=>f.code===c.code&&f.kind===c.kind);
+      if(ex)ex.qty=Math.min(999,ex.qty+1);else{if(st.found.length>=50){toast('That\'s the most items one issue can hold.');return ''}st.found.push({code:c.code,kind:c.kind,qty:1})}
+      self.changed();
+      const f=ex||st.found[st.found.length-1],v=verdict(f,st.sku);
+      return `${c.kind==='sku'?'SKU':'UPC'} ${c.code}${f.qty>1?' ×'+f.qty:''}${v==='right'?' · correct':v==='wrong'?' · wrong item':''}`;
+    },
+    /* a scan from the camera or a Bluetooth scanner. ctx 'items' = scanning products */
+    take(c,ctx){
+      if(c.kind==='bad'){toast(c.check?`${c.code} isn't a valid UPC (the check digit doesn't match). Scan it again.`:`Couldn't read “${c.code.slice(0,30)}” as a SKU or UPC.`);return ''}
+      if(c.kind==='sku'&&(c.esl||ctx!=='items'||!st.sku)){self.setLoc(c.code);return `Location SKU ${c.code}${prodName(c.code)?' · '+prodName(c.code):''}`}
+      return self.addItem(c);
+    }
+  };
+  root.addEventListener('click',async e=>{
+    const t=e.target.closest('button');if(!t)return;const d=t.dataset;
+    if(d.scan){openScanner(d.scan==='sku'?{title:'Scan the shelf tag',hint:'Point the camera at the QR code on the shelf tag (ESL).',onCode:c=>self.take(c,'sku')}
+      :{title:'Scan items',hint:'Scan each product\'s UPC. Scan the same product again to count another one.',continuous:true,onCode:c=>self.take(c,'items')});return}
+    if('add' in d){const inp=$('.addCode',root);const v=inp.value.trim();if(!v)return;const c=parseCode(v);if(c.kind==='bad'){self.take(c);return}inp.value='';self.take(c,'items');const again=$('.addCode',root);if(again)again.focus();return}
+    if('inc' in d||'dec' in d){const f=st.found[+(d.inc??d.dec)];if(!f)return;if('inc' in d)f.qty=Math.min(999,f.qty+1);else if(f.qty>1)f.qty--;else st.found.splice(+d.dec,1);self.changed();return}
+    if('belong' in d||'diff' in d){const f=st.found[+(d.belong??d.diff)];if(!f||!st.sku)return;
+      if('belong' in d){linkUpc(f.code,st.sku);toast(`Got it. UPC ${f.code} belongs to SKU ${st.sku}.`)}else{notHere(f.code,st.sku);toast('Marked as a wrong item. Pair it with its own SKU in Lists → Products when you can.')}
+      await saveProds();self.changed();return}
+    if('name' in d){naming=true;self.render();return}
+    if('savename' in d){const n=$('.nameIn',root).value.trim().slice(0,80);setSkuInfo(st.sku,{name:n});naming=false;await saveProds();self.changed();return}
+    if('clrsku' in d){st.sku='';naming=false;self.changed();return}
+  });
+  root.addEventListener('change',e=>{
+    const t=e.target;
+    if(t.classList.contains('lockIn')){st.lockup=t.checked;opt.onChange&&opt.onChange('lockup');return}
+    if(t.classList.contains('skuInput')){const v=t.value.trim();if(!v){if(st.sku){st.sku='';self.changed()}return}
+      const c=parseCode(v);if(c.kind==='sku'){self.setLoc(c.code,true);if(st.sku===c.code)self.render()}else{toast(c.kind==='upc'?'That looks like a product UPC. Add it under Items found; the location SKU is the 7-digit number on the shelf tag.':'A SKU is the 6 or 7-digit number on the shelf tag.');t.value=st.sku}}
+  });
+  root.addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;
+    if(e.target.classList.contains('addCode')){e.preventDefault();$('[data-add]',root).click()}
+    else if(e.target.classList.contains('skuInput')){e.preventDefault();e.target.blur()}
+  });
+  root.addEventListener('input',e=>{const t=e.target;if(t.classList.contains('skuInput')&&/^\d{7}$/.test(t.value.trim()))t.blur()});
+  self.render();
+  return self;
+}
+
+/* ---------- Bluetooth / USB barcode scanners (keyboard mode) ----------
+   A scanner "types" the code very fast and presses Enter. ROIL spots that burst anywhere in the app
+   and sends the code to Pair mode, an open issue, or the Log screen. */
+let detailBox=null,pairTake=null;
+function routeScan(raw){
+  const c=parseCode(raw);
+  if(camScan){const m=camScan.onCode(c);if(m){const s=$('#scanMsg');if(s)s.textContent=m}return}
+  if(pairTake){pairTake(c);return}
+  if(detailBox&&detailBox.root.isConnected){detailBox.take(c,'auto');return}
+  if(view!=='log')setView('log');
+  if(logBox){logBox.take(c,'auto');if(c.kind!=='bad')toast(c.kind==='sku'?`Location SKU ${c.code}`:`Added ${c.kind==='sku'?'SKU':'UPC'} ${c.code}`)}
+}
+(function hidScanner(){
+  let buf='',t0=0,last=0;
+  document.addEventListener('keydown',e=>{
+    if(e.ctrlKey||e.altKey||e.metaKey)return;
+    const now=performance.now();
+    if(now-last>45){buf='';t0=now}
+    last=now;
+    if(e.key==='Enter'||e.key==='Tab'){
+      if(buf.length>=6&&(now-t0)/buf.length<30){
+        e.preventDefault();e.stopPropagation();
+        const el=document.activeElement;   // a scan into a text box: take the typed code back out
+        if(el&&/^(INPUT|TEXTAREA)$/.test(el.tagName)&&typeof el.value==='string'&&el.value.endsWith(buf)){el.value=el.value.slice(0,-buf.length)}
+        const code=buf;buf='';routeScan(code);return;
+      }
+      buf='';return;
+    }
+    if(e.key&&e.key.length===1)buf+=e.key;
+  },true);
+})();
+
+/* ---------- Pair mode: scan a shelf tag, then the products that belong there ---------- */
+function openPairMode(){
+  let cur='';const log=[];
+  const paint=()=>{const s=$('#pairSku');if(!s)return;s.textContent=cur||'None yet';$('#pairName').textContent=cur&&prodName(cur)?prodName(cur):'';
+    $('#pairLog').innerHTML=log.slice(0,12).map(l=>`<li>${esc(l)}</li>`).join('')};
+  pairTake=c=>{
+    let msg;
+    if(c.kind==='bad')msg=c.check?`${c.code}: check digit doesn't match. Scan again.`:`Couldn't read “${c.code.slice(0,30)}”.`;
+    else if(c.kind==='sku'){cur=c.code;if(!skuEntry(cur)){setSkuInfo(cur,{});saveProds()}msg=`Shelf tag: SKU ${cur}${prodName(cur)?' · '+prodName(cur):''}`}
+    else if(!cur)msg='Scan the shelf tag first, so ROIL knows which SKU these belong to.';
+    else{const was=upcSku(c.code);
+      if(was===cur)msg=`UPC ${c.code} is already paired with SKU ${cur}.`;
+      else{linkUpc(c.code,cur);saveProds();msg=`UPC ${c.code} → SKU ${cur}${was?` (moved from SKU ${was})`:''}`}}
+    log.unshift(msg);paint();return msg;
+  };
+  openSheet(`<div class="head"><h2>Pair mode</h2><button class="btn small primary" data-close>Done</button></div>
+  <p class="note" style="margin:0">Scan a shelf tag, then each product that belongs on it. Every product you scan is paired with that tag's SKU, so ROIL can tell right items from wrong ones. Scan the next tag to move on.</p>
+  <div class="pairnow"><span class="label" style="margin:0">Current shelf tag</span><b class="mono" id="pairSku"></b><span class="muted" id="pairName"></span></div>
+  ${canCam?'<button class="btn primary big" type="button" id="pairCam">Scan with camera</button>':''}
+  <div class="ladd"><input type="text" id="pairIn" class="mono" inputmode="numeric" autocomplete="off" placeholder="Type a SKU or UPC, or use a scanner" aria-label="SKU or UPC"><button class="btn small" type="button" id="pairAdd">Add</button></div>
+  <ul class="scanlog" id="pairLog"></ul>`,()=>{pairTake=null;if(view==='lists')renderLists()});
+  const add=()=>{const i=$('#pairIn');const v=i.value.trim();if(!v)return;i.value='';pairTake(parseCode(v));i.focus()};
+  $('#pairAdd').onclick=add;$('#pairIn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();add()}};
+  const pc=$('#pairCam');if(pc)pc.onclick=()=>openScanner({title:'Pair mode',hint:'Scan a shelf tag QR, then its products\' UPCs.',continuous:true,onCode:c=>pairTake?pairTake(c):''});
+  paint();
+}
+
+/* ---------- Lists → Products ---------- */
+let prodQ='';const openSkus=new Set();
+function unknownUpcs(){
+  const m=new Map();
+  for(const it of items)for(const f of it.found||[])if(f.kind==='upc'&&!upcSku(f.code)){const x=m.get(f.code)||{n:0,at:new Set()};x.n++;if(it.sku)x.at.add(it.sku);m.set(f.code,x)}
+  return [...m.entries()].sort((a,b)=>b[1].n-a[1].n);
+}
+function productsHtml(){
+  const skus=Object.entries(prods.skus).filter(([,e])=>!e.deleted);
+  const byS=new Map();for(const [u,e] of Object.entries(prods.upcs))if(e.sku){if(!byS.has(e.sku))byS.set(e.sku,[]);byS.get(e.sku).push(u)}
+  const q=prodQ.trim().toLowerCase();
+  const list=skus.filter(([s,e])=>!q||s.includes(q)||(e.name||'').toLowerCase().includes(q)||(byS.get(s)||[]).some(u=>u.includes(q))).sort((a,b)=>(b[1].updated||'').localeCompare(a[1].updated||''));
+  const unk=unknownUpcs();
+  return `<section class="panel lsec" id="prodPanel"><header><h3>Products</h3><span class="muted mono" style="font-size:12px">${skus.length} SKU${skus.length===1?'':'s'} · ${(n=>`${n} UPC${n===1?'':'s'}`)(Object.values(prods.upcs).filter(e=>e.sku).length)}</span></header>
+  <p class="note" style="margin:0">ROIL learns which UPCs belong to which SKU when you tap <b>Belongs here</b> on an item, or with Pair mode. Synced with your other devices.</p>
+  <div class="row"><button class="btn small primary" type="button" data-act="pair">Pair mode</button>${canCam?'':'<span class="note">Type codes, or use a Bluetooth or USB scanner.</span>'}</div>
+  ${skus.length?`<input type="search" id="pq" placeholder="Find a SKU, UPC or product name" value="${esc(prodQ)}" aria-label="Find a product">`:''}
+  <div class="lrows">${list.slice(0,40).map(([s,e])=>{const ups=byS.get(s)||[];return `<details class="dept" data-sku="${s}" ${openSkus.has(s)?'open':''}><summary><span class="mono">${s}</span>${e.name?` · ${esc(e.name)}`:''}<span class="cnt">${ups.length} UPC${ups.length===1?'':'s'}</span></summary>
+    <div class="dbody">
+      <div class="ladd"><input type="text" id="pn-${s}" data-pname="${s}" value="${esc(e.name||'')}" maxlength="80" placeholder="Product name (optional)" aria-label="Product name"><button class="btn small danger${armedKey==='sku:'+s?' armed':''}" type="button" data-act="delsku" data-sku="${s}">${armedKey==='sku:'+s?'Tap again':'Delete'}</button></div>
+      <a class="linkish" href="${bbUrl(s)}" target="_blank" rel="noopener noreferrer">View on bestbuy.com</a>
+      ${ups.length?`<ul class="lrows">${ups.map(u=>`<li class="arow"><span class="mono">${u}</span><span></span><span></span><button class="btn small" type="button" data-act="unlink" data-upc="${u}">Unpair</button></li>`).join('')}</ul>`:'<p class="note" style="margin:0">No UPCs paired yet.</p>'}
+    </div></details>`}).join('')}${list.length>40?`<p class="note">Showing 40 of ${list.length}. Search to find others.</p>`:''}${q&&!list.length?'<p class="note">No match.</p>':''}</div>
+  ${unk.length?`<details class="arch" ${openSkus.has('_unk')?'open':''} data-sku="_unk"><summary>UPCs not paired yet (${unk.length})</summary><ul class="lrows">${unk.slice(0,40).map(([u,x])=>`<li class="ladd"><span class="mono" style="align-self:center">${u} <span class="muted">· seen ${x.n}×${x.at.size?' at SKU '+[...x.at].slice(0,3).join(', '):''}</span></span><span class="row" style="gap:6px;flex-wrap:nowrap"><input type="text" class="mono" style="width:7.5em;min-height:38px" inputmode="numeric" maxlength="7" id="lk-${u}" placeholder="SKU" aria-label="SKU for UPC ${u}"><button class="btn small" type="button" data-act="linkupc" data-upc="${u}">Pair</button></span></li>`).join('')}</ul></details>`:''}
+  </section>`;
+}
+(function bindProducts(){
+  const el=$('#v-lists');
+  el.addEventListener('click',async e=>{
+    const b=e.target.closest('#prodPanel [data-act]');if(!b)return;const a=b.dataset.act;
+    if(a==='pair'){openPairMode();return}
+    if(a==='unlink'){const u=b.dataset.upc,s=upcSku(u);prods.upcs[u]={sku:'',no:[...new Set([...(prods.upcs[u].no||[]),s])].slice(-20),updated:nowIso()};await saveProds();renderLists();toast(`Unpaired UPC ${u}.`);return}
+    if(a==='delsku'){const s=b.dataset.sku;if(armedKey!=='sku:'+s){arm('sku:'+s);return}armedKey=null;
+      prods.skus[s]={...prods.skus[s],deleted:true,updated:nowIso()};for(const [u,x] of Object.entries(prods.upcs))if(x.sku===s)prods.upcs[u]={...x,sku:'',updated:nowIso()};
+      await saveProds();renderLists();toast(`Deleted SKU ${s} from Products. Issues keep their SKU.`);return}
+    if(a==='linkupc'){const u=b.dataset.upc,inp=document.getElementById('lk-'+u),s=(inp.value||'').trim();if(!SKU_RE.test(s)){toast('Type the 6 or 7-digit SKU.');inp.focus();return}
+      linkUpc(u,s);await saveProds();renderLists();toast(`Paired UPC ${u} with SKU ${s}.`)}
+  });
+  el.addEventListener('toggle',e=>{const d=e.target;if(d.matches&&d.matches('#prodPanel details[data-sku]')){if(d.open)openSkus.add(d.dataset.sku);else openSkus.delete(d.dataset.sku)}},true);
+  el.addEventListener('change',async e=>{const t=e.target;if(t.dataset&&t.dataset.pname){setSkuInfo(t.dataset.pname,{name:t.value.trim().slice(0,80)});await saveProds();renderLists()}});
+  let qt;el.addEventListener('input',e=>{if(e.target.id==='pq'){clearTimeout(qt);qt=setTimeout(()=>{prodQ=e.target.value;renderLists()},250)}});
+})();
+
+/* ---------- possible duplicates: an open issue for the same item ---------- */
+function findDuplicates(f,exceptId){
+  const codes=new Set((f.found||[]).map(x=>x.kind+':'+x.code));const out=[];
+  for(const it of items){
+    if(it.id===exceptId||it.status==='Fixed')continue;
+    let why='';
+    if(f.sku&&it.sku===f.sku)why='Same location SKU';
+    else if(codes.size&&(it.found||[]).some(x=>codes.has(x.kind+':'+x.code)))why='Same item found';
+    else if(f.planogramId&&it.deptId===f.deptId&&it.planogramId===f.planogramId&&it.issueId===f.issueId&&(!f.sku||!it.sku))why='Same planogram and issue';
+    if(why)out.push({it,why});
+  }
+  return out.sort((a,b)=>(a.why==='Same planogram and issue')-(b.why==='Same planogram and issue')||(a.it.created<b.it.created?1:-1)).slice(0,5);
+}
+function askDuplicate(d,onSave){
+  openSheet(`<div class="head"><h2>Already logged?</h2><button class="btn small" data-close>Cancel</button></div>
+  <p class="note" style="margin:0">${d.length===1?'There\'s an open issue':'There are open issues'} that might be the same thing. Open one to add a photo or a note, or to mark it fixed, or save this as a new issue.</p>
+  <div class="list">${d.map(x=>`<div class="dupw"><span class="pill Needs">${esc(x.why)}</span>${itemCard(x.it)}</div>`).join('')}</div>
+  <button class="btn primary big" type="button" id="dupSave">Save as a new issue</button>`);
+  $('#sheetHost').querySelectorAll('.item').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.id;closeSheet();openDetail(id);toast('Your new issue is still on the Log screen, unsaved.')}));
+  $('#dupSave').onclick=()=>{closeSheet();onSave()};
+}
+const LOCK_WARN='This is a lock-up, so customers can\'t reach it. Is Customer the right source?';
+
+let logBox=null;
+
 /* ---------- Log screen layouts ----------
    The fields live once (in #logParts). Each layout moves them into place, so saving, checking
    and syncing work the same whichever layout you use. Settings: Lists → Appearance → Log screen. */
-const PART_IDS=['photos','where','issue','source','cause','status','note','shift'];
+const PART_IDS=['photos','where','sku','issue','source','cause','status','note','shift'];
 const PART=id=>document.getElementById('part-'+id);
 const IC_LOG={
   photos:'<svg viewBox="0 0 24 24"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2l1.5-2h6l1.5 2h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.5" r="3.6"/></svg>',
@@ -1314,7 +1679,7 @@ const IC_LOG={
 };
 const STEPS=[
   {id:'photos',title:'Photos',parts:['photos'],skip:true},
-  {id:'where',title:'Where',parts:['where']},
+  {id:'where',title:'Where',parts:['where','sku']},
   {id:'what',title:'What\'s wrong',parts:['issue']},
   {id:'why',title:'Why',parts:['source','cause'],skip:true},
   {id:'finish',title:'Finish',parts:['status','note','shift']}
@@ -1327,7 +1692,7 @@ function logValues(){
   const d=IX.dept.get(form.dept),p=form.sub&&IX.pog.get(form.sub);
   return {
     photos:[form.photoFile?'Before':'',form.afterFile?'After':''].filter(Boolean).join(' + ')||'',
-    where:d?d.name+(p?' › '+p.p.name:''):'',
+    where:d?d.name+(p?' › '+p.p.name:'')+(form.sku?' · SKU '+form.sku:'')+(form.found.length?` · ${form.found.length} item${form.found.length===1?'':'s'}`:'')+(form.lockup?' · lock-up':''):'',
     what:nameOf('issues',form.issue),
     source:nameOf('sources',form.source),cause:nameOf('causes',form.cause),
     why:[nameOf('sources',form.source)||'No source',nameOf('causes',form.cause)||'cause not set'].join(' · '),
@@ -1345,7 +1710,7 @@ function renderLog(){
   const L=logLayout(),body=$('#logBody');body.innerHTML='';body.className='stack log-'+L;
   $('#logSteps').hidden=L!=='steps';
   if(L==='sections'){
-    body.append(card('photos','Photos',['photos']),card('where','Where',['where']),card('what','What\'s wrong',['issue']));
+    body.append(card('photos','Photos',['photos']),card('where','Where',['where','sku']),card('what','What\'s wrong',['issue']));
     const why=card('why','Why',[]);why.id='whyCard';body.append(why);
     body.append(card('finish','Details',['status','note','shift']));
     fillWhy();
@@ -1368,18 +1733,20 @@ function fillWhy(){
   b.innerHTML='';
   if(open){b.append(PART('source'),PART('cause'));if(!ap.whyOpen){const t=document.createElement('button');t.type='button';t.className='btn small ghost';t.textContent='Done';t.onclick=()=>{whyOpenNow=false;fillWhy()};b.append(t)}}
   else{const v=logValues();const r=document.createElement('button');r.type='button';r.className='whyrow';
-    r.innerHTML=`<span><span class="k">Source</span> ${esc(v.source||'Not set')}</span><span><span class="k">Cause</span> ${esc(v.cause||'Not set')}</span><span class="chg">Change</span>`;
+    r.innerHTML=`${lockConflict(form.lockup,form.source)?'<span class="warnline" style="flex-basis:100%;margin:0">Lock-up with Customer as the source: check this.</span>':''}<span><span class="k">Source</span> ${esc(v.source||'Not set')}</span><span><span class="k">Cause</span> ${esc(v.cause||'Not set')}</span><span class="chg">Change</span>`;
     r.onclick=()=>{whyOpenNow=true;fillWhy()};b.append(r)}
 }
 /* An issue with an after photo is fixed: Open and Follow-up stay locked until the after photo is removed. */
 function lockStatus(el,locked){if(!el)return;el.querySelectorAll('button').forEach(b=>{const off=locked&&b.dataset.v!=='Fixed';b.disabled=off;b.title=off?'Remove the after photo to change the status':''})}
+const lockConflict=(lock,src)=>!!lock&&src===CUSTOMER_SOURCE();
 function updateLogUI(){
   lockStatus($('#fStatus'),!!form.afterFile);$('#statusLock').hidden=!form.afterFile;
+  const lw=$('#lockWarn');if(lw){const c=lockConflict(form.lockup,form.source);lw.hidden=!c;lw.textContent=c?LOCK_WARN:''}
   const L=logLayout(),v=logValues();
   if(L==='sections'&&!(ap.whyOpen||whyOpenNow))fillWhy();
   if(L==='summary'){
     const rows=$('#sRows');if(rows){
-      const R=[['where','Where',v.where,['where'],true],['what','What\'s wrong',v.what,['issue'],true],['source','Source',v.source,['source'],false],['cause','Cause',v.cause,['cause'],false],['note','Note',v.note,['note'],false]];
+      const R=[['where','Where',v.where,['where','sku'],true],['what','What\'s wrong',v.what,['issue'],true],['source','Source',v.source,['source'],false],['cause','Cause',v.cause,['cause'],false],['note','Note',v.note,['note'],false]];
       if(lists.showShift)R.push(['shift','Shift',nameOf('shifts',form.shift),['shift'],false]);
       rows.innerHTML=R.map(([k,label,val,,req])=>`<button type="button" class="srow" data-row="${k}"><span class="k">${label}</span><span class="v${val?'':req?' need':' unset'}">${esc(val||(req?'Choose…':'Not set'))}</span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>`).join('');
       rows.querySelectorAll('.srow').forEach(b=>b.onclick=()=>{const r=R.find(x=>x[0]===b.dataset.row);openPart(r[1],r[3],r[0])});
@@ -1425,17 +1792,26 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&partOpen)closePart(
 /* Called after any choice on the form: moves you along where that saves a tap. */
 function onFormChoice(key){
   updateLogUI();
+  if((key==='source'||key==='lockup')&&lockConflict(form.lockup,form.source))toast(LOCK_WARN);
   if(key==='status')showPhotos();
   const demo=key==='issue'&&isDemoIssue(form.issue);
   if(partOpen&&['issue','source','cause','shift'].includes(key)&&form[key]&&!demo&&partOpen.key===({issue:'what'}[key]||key))setTimeout(()=>closePart(),180);
   if(logLayout()==='steps'&&key==='issue'&&form.issue&&!demo&&STEPS[step].id==='what')setTimeout(()=>goStep(step+1),220);
 }
 $('#fNote').addEventListener('input',()=>{if(logLayout()!=='sections')updateLogUI()});
+logBox=SkuBox($('#fSkuBox'),form,{id:'f',
+  onChange:k=>{if(k==='lockup'){onFormChoice('lockup');if(!(ap.whyOpen||whyOpenNow))fillWhy()}else updateLogUI()},
+  onSku:sku=>{   // a SKU you've logged before fills in its department and planogram
+    const e=skuEntry(sku);if(!e||!e.deptId)return;const d=IX.dept.get(e.deptId);if(!d||d.archived)return;
+    const pg=e.planogramId&&d.planograms.find(x=>x.id===e.planogramId&&!x.archived)?e.planogramId:'';
+    if(form.dept===e.deptId&&form.sub===pg)return;
+    form.dept=e.deptId;form.sub=pg;$('#fDept').innerHTML=deptOptions(form.dept);$('#fSub').innerHTML=subOptions(form.dept,form.sub);$('#reqDept').hidden=true;saveLast();
+    toast(`Filled in ${d.name}${pg?' › '+d.planograms.find(x=>x.id===pg).name:''} from last time.`)}});
 
 /* ---------- saving ---------- */
 $('#saveBtn').addEventListener('click',()=>{form.saveAfterPhoto=false;doSave(false)});
 $('#afterIn').addEventListener('cancel',()=>{form.saveAfterPhoto=false});
-async function doSave(skipAfterCheck){
+async function doSave(skipAfterCheck,skipDup){
   let bad=false;
   if(!form.dept){$('#reqDept').hidden=false;bad=true}
   if(!form.issue){$('#reqIssue').hidden=false;bad=true}
@@ -1446,6 +1822,7 @@ async function doSave(skipAfterCheck){
     return;
   }
   if(!loaded){toast('Still loading. Try again in a moment.');return}
+  if(ap.dupCheck&&!skipAfterCheck&&!skipDup){const d=findDuplicates({sku:form.sku,found:form.found,deptId:form.dept,planogramId:form.sub,issueId:form.issue});if(d.length){askDuplicate(d,()=>doSave(false,true));return}}
   if(form.status==='Fixed'&&!form.afterFile&&ap.afterPrompt&&!skipAfterCheck){askAfterOnSave();return}
   const btn=$('#saveBtn');btn.disabled=true;
   const now=new Date().toISOString();
@@ -1454,7 +1831,8 @@ async function doSave(skipAfterCheck){
   const item={id:newId(),created,updated:now,deptId:form.dept,planogramId:form.sub||'',issueId:form.issue,sourceId:form.source||'',causeId:form.cause||'',
     shiftId:lists.showShift?(form.shift||''):'',dept:'',planogram:'',issue:'',source:'',cause:'',shift:'',
     rite:demo&&$('#fRite').checked,riteNo:demo?$('#fRiteNo').value.trim().slice(0,40):'',
-    note:$('#fNote').value.trim(),status:form.status,fixedAt:form.status==='Fixed'?now:null,photo:false,after:false,afterRev:''};
+    note:$('#fNote').value.trim(),status:form.status,fixedAt:form.status==='Fixed'?now:null,photo:false,after:false,afterRev:'',
+    sku:form.sku||'',lockup:!!form.lockup,found:cleanFound(form.found)};
   link(item);
   let photo=null;
   try{
@@ -1465,6 +1843,7 @@ async function doSave(skipAfterCheck){
     }
     btn.textContent='Saving…';
     await store.put(item,photo);
+    if(item.sku){const e=skuEntry(item.sku);if(!e||e.deptId!==item.deptId||e.planogramId!==item.planogramId){setSkuInfo(item.sku,{deptId:item.deptId,planogramId:item.planogramId});saveProds()}}
     const fileP=photo&&photo.full?Promise.resolve(new File([photo.full],photoName(item),{type:'image/jpeg'})):null;
     resetForm();
     toast(item.status==='Fixed'?'Saved as fixed.':'Saved. It\'s on your Open list.',[['Share',()=>shareItem(item,fileP)],['Copy',()=>copyItem(item)]]);
@@ -1474,9 +1853,9 @@ async function doSave(skipAfterCheck){
 }
 function resetForm(){
   for(const u of[form.photoUrl,form.afterUrl])if(u)URL.revokeObjectURL(u);
-  Object.assign(form,{photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,takenAt:null,issue:'',source:null,cause:'',status:'Open',saveAfterPhoto:false});
+  Object.assign(form,{photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,takenAt:null,issue:'',source:null,cause:'',status:'Open',saveAfterPhoto:false,sku:'',lockup:false,found:[]});
   $('#fRite').checked=false;$('#fRiteNo').value='';$('#fNote').value='';whyOpenNow=false;step=0;
-  showPhotos();buildForm();tick();renderLog();
+  showPhotos();buildForm();tick();if(logBox)logBox.render();renderLog();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 /* Saving as Fixed without an after photo: a reminder (turn it off in Lists → Appearance → Log screen). */
@@ -1501,6 +1880,9 @@ async function photoFile(it){
 function cardText(it){
   const lines=[`ROIL · ${it.issue}`,`${fmtDT(it.created)}${it.shift?' · '+it.shift:''}`,`Dept: ${it.dept}`];
   if(it.planogram)lines.push(`Planogram: ${it.planogram}`);
+  if(it.sku)lines.push(`Location SKU: ${it.sku}${prodName(it.sku)?' ('+prodName(it.sku)+')':''}`);
+  if(it.lockup)lines.push('Lock-up');
+  const ft=foundText(it,it.sku);if(ft.length)lines.push('Items found:',...ft.map(x=>'  '+x));
   if(it.source)lines.push(`Source: ${it.source}`);
   if(it.cause)lines.push(`Cause: ${it.cause}`);
   if(isDemoIssue(it.issueId))lines.push(`RITE: ${it.rite?'submitted'+(it.riteNo?' #'+it.riteNo:''):'not submitted yet'}`);
@@ -1598,9 +1980,10 @@ function renderAll(){
 function thumb(it){const b=thumbSrc(it),a=it.after?afterThumbUrls.get(it.id)||'':'';if(b&&a)return `<span class="thumb ba"><img src="${esc(b)}" alt=""><img src="${esc(a)}" alt=""></span>`;const x=b||a;return x?`<img class="thumb" src="${esc(x)}" alt="" loading="lazy">`:`<span class="thumb">${it.photo?'PHOTO':'NO PHOTO'}</span>`}
 function itemCard(it,extra=''){
   if(isDemoIssue(it.issueId)&&!it.rite)extra+='<span class="pill Needs">RITE not submitted</span>';
+  const nw=(it.found||[]).filter(f=>verdict(f,it.sku)==='wrong').length;if(nw)extra+=`<span class="pill bad">${nw} wrong item${nw===1?'':'s'}</span>`;
   return `<button class="item" data-id="${esc(it.id)}">${thumb(it)}<span class="body">
     <span class="t">${esc(it.issue)} <span class="pill ${pillCls(it.status)}">${esc(it.status)}</span>${extra}</span>
-    <span class="s">${esc(it.dept)}${it.sub?' › '+esc(it.sub):''}${it.planogram?' · PG '+esc(it.planogram):''}</span>
+    <span class="s">${esc(it.dept)}${it.sub?' › '+esc(it.sub):''}${it.planogram?' · PG '+esc(it.planogram):''}${it.sku?' · SKU '+esc(it.sku):''}${it.lockup?' · lock-up':''}</span>
     <span class="s mono" style="font-size:12px">${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</span>
     ${it.note?`<span class="n">${esc(it.note)}</span>`:''}</span></button>`;
 }
@@ -1624,7 +2007,7 @@ function rangeOpts(sel){return [['1','Today (24 h)'],['7','Last 7 days'],['30','
 function historyFiltered(){
   const q=hf.q.trim().toLowerCase();
   return items.filter(it=>inRange(it,hf.range)&&(!hf.dept||it.deptId===hf.dept)&&(!hf.issue||it.issueId===hf.issue)&&(!hf.status||it.status===hf.status)
-    &&(!hf.source||it.sourceId===hf.source)&&(!q||[it.note,it.planogram,it.source,it.cause,it.riteNo].join(' ').toLowerCase().includes(q)));
+    &&(!hf.source||it.sourceId===hf.source)&&(!q||[it.note,it.planogram,it.source,it.cause,it.riteNo,it.sku,prodName(it.sku),...(it.found||[]).map(f=>f.code+' '+(f.kind==='upc'?upcSku(f.code):''))].join(' ').toLowerCase().includes(q)));
 }
 function renderHistory(){
   hf.dept=toEntryId(IX.dept,lists.departments,hf.dept);hf.issue=toEntryId(IX.issues,lists.issues,hf.issue);hf.source=toEntryId(IX.sources,lists.sources,hf.source||'');
@@ -1637,7 +2020,7 @@ function renderHistory(){
     <select id="hDept" aria-label="Department"><option value="">All departments</option>${lists.departments.map(d=>`<option value="${d.id}"${d.id===hf.dept?' selected':''}>${optLabel(d)}</option>`).join('')}</select>
     <select id="hIssue" aria-label="Issue"><option value="">All issues</option>${lists.issues.map(e=>`<option value="${e.id}"${e.id===hf.issue?' selected':''}>${optLabel(e)}</option>`).join('')}</select>
     <select id="hSource" aria-label="Source"><option value="">All sources</option>${lists.sources.map(e=>`<option value="${e.id}"${e.id===hf.source?' selected':''}>${optLabel(e)}</option>`).join('')}</select>
-    <input class="wide" type="search" id="hq" placeholder="Search notes, planograms, categories" value="${esc(hf.q)}">
+    <input class="wide" type="search" id="hq" placeholder="Search notes, planograms, SKUs, UPCs" value="${esc(hf.q)}">
   </div>
   <div class="row" style="justify-content:space-between"><span class="muted">${arr.length} issue${arr.length===1?'':'s'}</span>
     <span class="row"><button class="btn small" id="expReport" ${arr.length?'':'disabled'}>Download report</button><button class="btn small" id="expCsv" ${arr.length?'':'disabled'}>Download spreadsheet</button></span></div>
@@ -1706,6 +2089,8 @@ function renderStats(){
     <div class="panel"><span class="label">By cause</span>${bars(causes,null)}</div>
     <div class="panel"><span class="label">By category</span>${bars(countBy(arr,i=>catName(i.issueId)),openBy(arr,i=>catName(i.issueId)))}</div>
     ${lists.showShift?`<div class="panel"><span class="label">By shift</span>${bars(countBy(arr,i=>i.shift),null)}</div>`:''}
+    <div class="panel"><span class="label">Lock-up issues</span>${(()=>{const lk=arr.filter(i=>i.lockup);return lk.length?`<p class="note" style="margin:0 0 8px"><b>${lk.length}</b> of ${arr.length} issues were in lock-ups. Customers can't reach those, so they point to employees${lk.some(i=>i.sourceId===CUSTOMER_SOURCE())?`. ${lk.filter(i=>i.sourceId===CUSTOMER_SOURCE()).length} still say Customer as the source: worth a look`:''}.</p>${bars(countBy(lk,i=>i.issue),openBy(lk,i=>i.issue),6)}`:'<p class="note">No lock-up issues in this range. Turn on Lock-up on the Log screen when it applies.</p>'})()}</div>
+    <div class="panel"><span class="label">Repeat SKUs</span>${(()=>{const r=countBy(arr.filter(i=>i.sku),i=>`${i.sku}${prodName(i.sku)?' · '+prodName(i.sku):''} (${i.dept})`).filter(x=>x[1]>1).slice(0,8);return r.length?`<div class="hot">${r.map(([k,v])=>`<div><b>${v}×</b><span>${esc(k)}</span></div>`).join('')}</div>`:'<p class="note">No location SKU has come up twice yet.</p>'})()}</div>
     <div class="panel"><span class="label">Repeat spots</span>${combos.length?`<div class="hot">${combos.map(([k,v])=>`<div><b>${v}×</b><span>${esc(k)}</span></div>`).join('')}</div>`:'<p class="note">No department and issue pair has come up twice yet.</p>'}</div>
     <div class="panel"><span class="label">Repeat planograms</span>${pogs.length?`<div class="hot">${pogs.map(([k,v])=>`<div><b>${v}×</b><span>${esc(k)}</span></div>`).join('')}</div>`:'<p class="note">No planogram has come up twice yet.</p>'}</div>
   </div>
@@ -1731,9 +2116,9 @@ function save(filename,data){
   setTimeout(()=>URL.revokeObjectURL(u),30000);
 }
 function exportCsv(arr){
-  const head=['Date','Time','Shift','Department','Planogram','Category','Issue','Source','Cause','Status','Fixed at','Hours to fix','RITE ticket','Note','Photo'];
+  const head=['Date','Time','Shift','Department','Planogram','Category','Issue','Source','Cause','Status','Fixed at','Hours to fix','RITE ticket','Location SKU','Product','Lock-up','Items found','Wrong items','Note','Photo','After photo'];
   const rows=arr.map(it=>{const d=new Date(it.created);const fx=it.fixedAt?new Date(it.fixedAt):null;
-    return [d.toLocaleDateString(),d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}),it.shift,it.dept,it.planogram,catName(it.issueId),it.issue,it.source,it.cause,it.status,fx?fx.toLocaleString():'',fx?((fx-d)/3600000).toFixed(2):'',isDemoIssue(it.issueId)?(it.rite?'Submitted'+(it.riteNo?' #'+it.riteNo:''):'Not submitted'):'',it.note,it.photo?'Yes':'No']});
+    return [d.toLocaleDateString(),d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}),it.shift,it.dept,it.planogram,catName(it.issueId),it.issue,it.source,it.cause,it.status,fx?fx.toLocaleString():'',fx?((fx-d)/3600000).toFixed(2):'',isDemoIssue(it.issueId)?(it.rite?'Submitted'+(it.riteNo?' #'+it.riteNo:''):'Not submitted'):'',it.sku||'',prodName(it.sku),it.lockup?'Yes':'',foundText(it,it.sku).join('; '),(it.found||[]).filter(f=>verdict(f,it.sku)==='wrong').reduce((a,f)=>a+f.qty,0)||'',it.note,it.photo?'Yes':'No',it.after?'Yes':'No']});
   save(`ROIL issues ${localDay(new Date())}.csv`,'﻿'+[head,...rows].map(r=>r.map(csvCell).join(',')).join('\r\n'));
 }
 async function exportReport(arr){
@@ -1751,7 +2136,7 @@ h2{font-size:17px;margin:0 0 4px}.s{display:inline-block;font-size:12px;padding:
 dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:6px 0 0;font-size:14px}dt{color:#5a6a64}dd{margin:0}@media(max-width:560px){.it{grid-template-columns:1fr}.it img,.np{width:100%}}</style></head><body>
 <h1>Floor issue report</h1><p class="m">${arr.length} issues · ${open} still open · created ${esc(fmtDT(new Date().toISOString()))}</p>
 ${arr.map(it=>`<div class="it"><div class="ph">${imgs[it.id]?`<img src="${imgs[it.id]}" alt="Before">`:'<div class="np">No photo</div>'}${aimgs[it.id]?`<img src="${aimgs[it.id]}" alt="After"><span class="cap">Before · After</span>`:''}</div><div><h2>${esc(it.issue)}<span class="s ${pillCls(it.status)}">${esc(it.status)}</span></h2>
-<dl><dt>When</dt><dd>${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</dd><dt>Department</dt><dd>${esc(it.dept)}</dd>${it.planogram?`<dt>Planogram</dt><dd>${esc(it.planogram)}</dd>`:''}${it.source?`<dt>Source</dt><dd>${esc(it.source)}</dd>`:''}${it.cause?`<dt>Cause</dt><dd>${esc(it.cause)}</dd>`:''}${it.fixedAt?`<dt>Fixed</dt><dd>${esc(fmtDT(it.fixedAt))}</dd>`:''}${it.note?`<dt>Note</dt><dd>${esc(it.note)}</dd>`:''}</dl></div></div>`).join('')}
+<dl><dt>When</dt><dd>${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</dd><dt>Department</dt><dd>${esc(it.dept)}</dd>${it.planogram?`<dt>Planogram</dt><dd>${esc(it.planogram)}</dd>`:''}${it.sku?`<dt>Location SKU</dt><dd>${esc(it.sku)}${prodName(it.sku)?' · '+esc(prodName(it.sku)):''}${it.lockup?' · lock-up':''}</dd>`:it.lockup?'<dt>Lock-up</dt><dd>Yes</dd>':''}${(it.found||[]).length?`<dt>Items found</dt><dd>${foundText(it,it.sku).map(esc).join('<br>')}</dd>`:''}${it.source?`<dt>Source</dt><dd>${esc(it.source)}</dd>`:''}${it.cause?`<dt>Cause</dt><dd>${esc(it.cause)}</dd>`:''}${it.fixedAt?`<dt>Fixed</dt><dd>${esc(fmtDT(it.fixedAt))}</dd>`:''}${it.note?`<dt>Note</dt><dd>${esc(it.note)}</dd>`:''}</dl></div></div>`).join('')}
 </body></html>`;
   await save(`ROIL report ${localDay(new Date())}.html`,html);
 }
@@ -1766,7 +2151,7 @@ function openSheet(html,onClose){
   document.addEventListener('keydown',escClose);
 }
 function escClose(e){if(e.key==='Escape')closeSheet()}
-function closeSheet(){$('#sheetHost').innerHTML='';document.removeEventListener('keydown',escClose);if(sheetClose){const f=sheetClose;sheetClose=null;f()}}
+function closeSheet(){$('#sheetHost').innerHTML='';detailBox=null;document.removeEventListener('keydown',escClose);if(sheetClose){const f=sheetClose;sheetClose=null;f()}}
 function openDetail(id){
   const it=items.find(i=>i.id===id);if(!it)return;
   const src=photoSrc(it);
@@ -1776,9 +2161,10 @@ function openDetail(id){
   <div class="row"><button class="btn small primary" id="dShare">Share to Teams</button><button class="btn small" id="dCopy">Copy for Teams</button><button class="btn small" id="dText">Copy text</button>${src?'<button class="btn small" id="dPng">Copy photo</button>':''}</div>
   <div><span class="label">Status</span><div class="seg status" id="dStatus">${segHtml(STATUSES,it.status)}</div><p class="note lockn" id="dLock" ${it.after?'':'hidden'}>It's Fixed because there's an after photo. Remove the after photo to change the status.</p></div>
   <div class="two collapse"><div><label class="label" for="dDept">Department</label><select id="dDept">${deptOptions(it.deptId)}</select></div><div><label class="label" for="dSub">Planogram</label><select id="dSub">${subOptions(it.deptId,it.planogramId)}</select></div></div>
+  <div id="dSkuBox"></div>
   <div class="two collapse"><div><label class="label" for="dIssue">Issue</label><select id="dIssue">${entryOptions(lists.issues,it.issueId)}</select></div>
   <div><label class="label" for="dCause">Cause</label><select id="dCause">${entryOptions(lists.causes,it.causeId,'Not set')}</select></div></div>
-  <div><label class="label" for="dSource">Source</label><select id="dSource">${entryOptions(lists.sources,it.sourceId,'Not set')}</select></div>
+  <div><label class="label" for="dSource">Source</label><select id="dSource">${entryOptions(lists.sources,it.sourceId,'Not set')}</select><p class="warnline" id="dLockWarn" hidden></p></div>
   <div class="rite" id="dRiteWrap" ${isDemoIssue(it.issueId)?'':'hidden'}><label class="switch"><input type="checkbox" id="dRite" ${it.rite?'checked':''}><span>RITE ticket submitted</span></label><input type="text" id="dRiteNo" maxlength="40" value="${esc(it.riteNo||'')}" placeholder="Ticket number (optional)" aria-label="RITE ticket number"></div>
   <div><label class="label" for="dNote">Note</label><textarea id="dNote">${esc(it.note)}</textarea></div>
   ${it.fixedAt?`<p class="note" style="margin:0">Fixed ${esc(fmtDT(it.fixedAt))}${new Date(it.fixedAt)-new Date(it.created)>=600000?' · took '+dur(new Date(it.fixedAt)-new Date(it.created)):' · on the spot'}</p>`:''}
@@ -1791,6 +2177,10 @@ function openDetail(id){
   if(it.photo&&!photoUrls.has(it.id))ensureFull(it.id).then(()=>{const im=$('#dImg'),u=photoUrls.get(it.id);if(im&&u)im.src=u});
   if(it.after&&!afterUrls.has(it.id))ensureFull(it.id,'after').then(()=>{const im=$('#dAfterImg'),u=afterUrls.get(it.id);if(im&&u)im.src=u});
   const cur=()=>items.find(i=>i.id===it.id)||it;
+  const ds={sku:it.sku||'',lockup:!!it.lockup,found:cleanFound(it.found)};
+  const dWarn=()=>{const c=lockConflict(ds.lockup,$('#dSource').value);const w=$('#dLockWarn');w.hidden=!c;w.textContent=c?LOCK_WARN:''};
+  detailBox=SkuBox($('#dSkuBox'),ds,{id:'d',onChange:dWarn});
+  $('#dSource').addEventListener('change',dWarn);dWarn();
   const setSt=v=>{st=v;$('#dStatus').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===st))};
   const refreshBA=()=>{const c=cur();$('#dBA').innerHTML=baHtml(c);const dg=$('#dPng');if(dg)dg.hidden=!c.photo;lockStatus($('#dStatus'),c.after);$('#dLock').hidden=!c.after;if(c.after)setSt('Fixed')};
   lockStatus($('#dStatus'),it.after);
@@ -1816,7 +2206,7 @@ function openDetail(id){
   $('#dSave').onclick=async()=>{
     const dept=$('#dDept').value;if(!dept){toast('Pick a department.');return}
     const now=new Date().toISOString();
-    const demo=isDemoIssue($('#dIssue').value);const p={status:st,deptId:dept,issueId:$('#dIssue').value,sourceId:$('#dSource').value,causeId:$('#dCause').value,rite:demo&&$('#dRite').checked,riteNo:demo?$('#dRiteNo').value.trim().slice(0,40):'',planogramId:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
+    const demo=isDemoIssue($('#dIssue').value);const p={sku:ds.sku,lockup:ds.lockup,found:cleanFound(ds.found),status:st,deptId:dept,issueId:$('#dIssue').value,sourceId:$('#dSource').value,causeId:$('#dCause').value,rite:demo&&$('#dRite').checked,riteNo:demo?$('#dRiteNo').value.trim().slice(0,40):'',planogramId:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
     if(st==='Fixed'&&it.status!=='Fixed')p.fixedAt=now;if(st!=='Fixed')p.fixedAt=null;
     const nowFixed=st==='Fixed'&&it.status!=='Fixed';
     try{await store.patch(it.id,p);closeSheet();toast('Saved.');if(nowFixed&&!it.after&&ap.afterPrompt)askAfterFor(it.id,true)}catch(e){toast('Couldn\'t save. Try again.')}
@@ -1903,7 +2293,8 @@ function appearanceHtml(){
   <div class="logset"><span class="label">Log screen layout</span>${seg('logLayout',[['auto','Auto'],['sections','Sections'],['summary','Summary'],['steps','Steps']])}
     <p class="note" style="margin:6px 0 0">${{auto:`Auto uses Steps on phones and Sections on computers (this device: ${dev.mobile?'Steps':'Sections'}).`,sections:'Sections: every field on one screen, in cards.',summary:'Summary: one row per field. Tap a row to fill it in.',steps:'Steps: one card at a time, with Next and Save at the bottom.'}[ap.logLayout]}</p>
     <label class="switch" style="margin-top:10px"><input type="checkbox" id="apWhy" ${ap.whyOpen?'checked':''}><span>Always show Source and Cause</span></label>
-    <label class="switch" style="margin-top:8px"><input type="checkbox" id="apAfter" ${ap.afterPrompt?'checked':''}><span>Ask for an after photo when saving as Fixed</span></label></div>
+    <label class="switch" style="margin-top:8px"><input type="checkbox" id="apAfter" ${ap.afterPrompt?'checked':''}><span>Ask for an after photo when saving as Fixed</span></label>
+    <label class="switch" style="margin-top:8px"><input type="checkbox" id="apDup" ${ap.dupCheck?'checked':''}><span>Warn when an open issue may already cover it</span></label></div>
   <p class="note" style="margin:0">Saved on this device and included in backups, so a restore brings your look along.</p>
   </section>`;
 }
@@ -1928,7 +2319,7 @@ function importThemeText(text,fallbackName){
       renderLists();return}
     if(e.target.closest('#apCustomize')){setAp({palette:'custom',custom:paletteOnScreen(),customName:'Custom',accent:''});renderLists();toast('Copied the current colors into Custom. Change any of them below.');return}
     if(e.target.closest('#apImport')){$('#apImportFile').click();return}
-    if(e.target.closest('#apReset')){setAp({...AP_DEFAULT,custom:ap.custom,customName:ap.customName,logLayout:ap.logLayout,whyOpen:ap.whyOpen,afterPrompt:ap.afterPrompt});renderLists();toast('Appearance reset to default. Your custom theme and Log screen settings are kept.')}
+    if(e.target.closest('#apReset')){setAp({...AP_DEFAULT,custom:ap.custom,customName:ap.customName,logLayout:ap.logLayout,whyOpen:ap.whyOpen,afterPrompt:ap.afterPrompt,dupCheck:ap.dupCheck});renderLists();toast('Appearance reset to default. Your custom theme and Log screen settings are kept.')}
   });
   // live preview while dragging a color picker; saved when the picker closes
   el.addEventListener('input',e=>{
@@ -1942,6 +2333,7 @@ function importThemeText(text,fallbackName){
     else if(t.dataset.ck&&ap.custom){setAp({custom:{...ap.custom,[t.dataset.ck]:t.value}});renderLists()}
     else if(t.id==='apWhy'){setAp({whyOpen:t.checked});toast(t.checked?'Source and Cause will always show.':'Source and Cause fold into one row until you tap it.')}
     else if(t.id==='apAfter'){setAp({afterPrompt:t.checked})}
+    else if(t.id==='apDup'){setAp({dupCheck:t.checked})}
     else if(t.id==='apImportFile'){const f=t.files&&t.files[0];t.value='';if(f)f.text().then(x=>importThemeText(x,f.name.replace(/\.jsonc?$/i,'')))}
   });
 })();
@@ -2012,11 +2404,12 @@ function renderLists(){
     <div><label class="label" for="defSource">Selected by default when logging</label><select id="defSource"><option value="">None</option>${activeOf(lists.sources).map(e=>`<option value="${e.id}"${e.id===lists.defaultSource?' selected':''}>${esc(e.name)}</option>`).join('')}</select></div>
     ${rowsHtml('sources',lists.sources,U)}</section>
   <section class="panel lsec"><header><h3>Causes</h3><span class="muted mono" style="font-size:12px">${activeOf(lists.causes).length}</span></header>${rowsHtml('causes',lists.causes,U)}</section>
-  <section class="panel lsec"><header><h3>Statuses</h3></header><p class="note" style="margin:0">Fixed (the default), Open and Needs follow-up. These stay as they are, since the Open tab depends on them.</p></section>
+  <section class="panel lsec"><header><h3>Statuses</h3></header><p class="note" style="margin:0">Open (the default), Fixed and Needs follow-up. These stay as they are, since the Open tab depends on them.</p></section>
   <section class="panel lsec"><header><h3>Archived features</h3></header>
     <label class="switch"><input type="checkbox" id="tShift" ${lists.showShift?'checked':''}><span><b>Shift selector</b><br><span class="note">Adds a shift choice to the Log screen and a By shift chart to Stats.</span></span></label>
     ${lists.showShift?`<div><span class="label">Shifts</span>${rowsHtml('shifts',lists.shifts,U)}</div>`:''}
   </section>
+  ${productsHtml()}
   ${appearanceHtml()}
   ${syncHtml()}
   ${backupHtml()}
