@@ -258,6 +258,79 @@ details.arch .lrows{margin-top:8px}
 .swc{display:inline-flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;color:var(--muted)}
 .swc input{width:38px;height:38px;border:1px solid var(--line);border-radius:50%;padding:2px;background:var(--surface);cursor:pointer}
 .lsec>header .btn{margin-left:auto}
+/* ---------- Log screen (Phase 2): cards, before/after boxes, summary rows, steps, save bar ---------- */
+p.req{margin:0 0 6px;font-weight:600}
+#v-log,#logBody,.lcb,#partBody{grid-template-columns:minmax(0,1fr)}
+.lcard,.part,#fIssue{min-width:0}
+.lcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:grid;gap:12px}
+.lch{display:flex;align-items:center;gap:8px}
+.lch svg{width:20px;height:20px;stroke:var(--accent);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.lch h3{font-family:var(--f-display);font-size:18px;letter-spacing:.04em;margin:0;text-transform:uppercase}
+.lcb{gap:14px}
+.pboxes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pbox{position:relative;min-width:0}
+.pboxes .photo-drop{min-height:160px;padding:12px}
+.pboxes .photo-drop svg{width:34px;height:34px}
+.pboxes .photo-drop strong{font-size:18px}
+.pboxes .ph-hint{font-size:13px}
+.pboxes .photo-drop.has{padding:0}
+.pboxes .photo-drop.has::after{content:attr(data-tag);position:absolute;left:6px;bottom:6px;background:rgba(0,0,0,.62);color:#fff;font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:4px}
+.pboxes .photo-drop.has img{height:100%;min-height:160px;max-height:240px;object-fit:cover}
+.photo-drop.after svg{stroke:var(--good)}
+.photo-drop.after.off{opacity:.62;border-style:dotted}
+.photo-drop.after.off svg{stroke:var(--muted)}
+.photo-drop.after.unsaved{outline:2px dashed var(--open);outline-offset:-2px}
+.pclear{position:absolute;top:6px;right:6px;width:34px;height:34px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0}
+.lsub{font-family:var(--f-body);font-weight:400;text-transform:none;letter-spacing:0;font-size:13px;margin-left:4px}
+.small-chips .chip{padding:6px 11px;font-size:14px;min-height:36px}
+/* issue category tabs */
+.ctabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.ctabs::-webkit-scrollbar{display:none}
+.ctab{border:1px solid var(--line);background:var(--sunk);border-radius:var(--r-sm);padding:7px 12px;font-family:var(--f-display);font-weight:600;font-size:14px;letter-spacing:.04em;cursor:pointer;color:var(--muted);min-height:38px;white-space:nowrap}
+.ctab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+/* compact Why row */
+.whyrow{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:center;width:100%;text-align:left;border:1px dashed var(--line);background:var(--sunk);border-radius:var(--r-sm);padding:10px 12px;cursor:pointer;min-height:46px}
+.whyrow .k,.srow .k{font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.whyrow .chg{margin-left:auto;color:var(--accent);font-weight:600;font-size:14px}
+/* summary rows */
+.srows{display:grid;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.srow{display:grid;grid-template-columns:7.5em minmax(0,1fr) 18px;gap:10px;align-items:center;border:0;border-top:1px solid var(--line);background:none;padding:12px 14px;text-align:left;cursor:pointer;min-height:54px;width:100%}
+.srow:first-child{border-top:0}
+.srow .v{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.srow .v.unset{color:var(--muted);font-weight:400}
+.srow .v.need{color:var(--accent)}
+.srow svg{width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* step strip */
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.stp{border:0;border-bottom:3px solid var(--line);background:none;padding:4px 2px 6px;text-align:left;cursor:pointer;display:grid;gap:1px;min-width:0;min-height:44px}
+.stp b{font-family:var(--f-display);font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stp span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stp.done{border-bottom-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.stp.done span{color:var(--ink)}
+.stp[aria-current="step"]{border-bottom-color:var(--accent)}
+.stp[aria-current="step"] b{color:var(--accent)}
+.log-steps .lcard{min-height:46vh;align-content:start}
+/* save bar: stays within thumb reach above the tab bar */
+.savebar{position:sticky;bottom:calc(68px + env(safe-area-inset-bottom,0px));z-index:5;display:flex;gap:8px;padding:10px 0 4px;background:linear-gradient(to bottom,transparent,var(--bg) 14px)}
+.savebar .btn{min-height:56px}
+.savebar .btn.big{flex:1;width:auto}
+.savebar #stepBack,.savebar #stepSkip{flex:none;min-width:84px}
+@media (max-width:899.98px){
+  .savebar{position:fixed;left:0;right:0;bottom:calc(var(--navh,63px) + env(safe-area-inset-bottom,0px));max-width:760px;margin:0 auto;padding:12px 16px 8px;z-index:15}
+  #v-log{padding-bottom:64px}
+  body:has(#v-log:not([hidden])) .toast{bottom:calc(var(--navh,63px) + 84px + env(safe-area-inset-bottom,0px))}
+}
+@media (min-width:900px){.savebar{bottom:0;padding-bottom:12px}}
+/* list thumbnails and the issue screen: before and after side by side */
+.item .thumb.ba{display:grid;grid-template-columns:1fr 1fr;gap:1px;overflow:hidden;padding:0}
+.item .thumb.ba img{width:100%;height:100%;object-fit:cover;display:block}
+.ba2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ba2 figure{margin:0;display:grid;gap:4px;min-width:0}
+.ba2 figure img,.sheet .ba2 img{width:100%;aspect-ratio:3/4;max-height:340px;object-fit:contain;border-radius:var(--r-sm);background:var(--sunk)}
+.ba2 figcaption{font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.np2{display:grid;place-items:center;aspect-ratio:3/4;max-height:340px;border:2px dashed var(--line);border-radius:var(--r-sm);background:var(--sunk);color:var(--muted);font-size:14px;text-align:center;padding:10px}
+.np2.addafter{color:var(--accent);font-weight:600;cursor:pointer;border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.linkish{color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;font-family:var(--f-body);text-decoration:underline}
 </style>
 </head>
 <body>
@@ -271,55 +344,75 @@ details.arch .lrows{margin-top:8px}
 
   <!-- LOG -->
   <section id="v-log" class="stack">
-    <div>
-      <label class="photo-drop" id="photoDrop" for="photoIn">
-        <svg viewBox="0 0 24 24"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2l1.5-2h6l1.5 2h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.5" r="3.6"/></svg>
-        <strong>Take photo</strong>
-        <span class="muted" style="font-size:14px">Opens your camera</span>
-        <input id="photoIn" type="file" accept="image/*" capture="environment">
-      </label>
-      <div class="photo-tools"><span class="when" id="when"></span><button class="btn small ghost" id="clearPhoto" hidden>Remove photo</button></div>
+    <div id="logSteps" class="steps" hidden></div>
+    <div id="logBody" class="stack"></div>
+    <div class="savebar" id="saveBar">
+      <button class="btn" id="stepBack" type="button" hidden>Back</button>
+      <button class="btn ghost" id="stepSkip" type="button" hidden>Skip</button>
+      <button class="btn primary big" id="stepNext" type="button" hidden>Next</button>
+      <button class="btn primary big" id="saveBtn" type="button">Save issue</button>
     </div>
 
-    <div>
-      <span class="label">Department &amp; planogram<span class="req" id="reqDept" hidden>Pick a department</span></span>
-      <div class="two collapse">
-        <select id="fDept" aria-label="Department"></select>
-        <select id="fSub" aria-label="Planogram"></select>
+    <!-- The Log screen's fields. Each layout (Sections, Summary rows, Step-by-step) moves these into place. -->
+    <div id="logParts" hidden>
+      <div class="part" id="part-photos">
+        <div class="pboxes">
+          <div class="pbox">
+            <label class="photo-drop" id="photoDrop" for="photoIn" data-tag="Before">
+              <svg viewBox="0 0 24 24"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2l1.5-2h6l1.5 2h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.5" r="3.6"/></svg>
+              <strong>Before</strong>
+              <span class="muted ph-hint" id="beforeHint">Take photo</span>
+              <input id="photoIn" type="file" accept="image/*" capture="environment">
+            </label>
+            <button class="pclear" id="clearPhoto" type="button" hidden aria-label="Remove before photo">×</button>
+          </div>
+          <div class="pbox">
+            <label class="photo-drop after" id="afterDrop" for="afterIn" data-tag="After">
+              <svg viewBox="0 0 24 24"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2l1.5-2h6l1.5 2h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M9.5 12.5l1.8 1.8 3.4-3.6"/></svg>
+              <strong>After</strong>
+              <span class="muted ph-hint" id="afterHint">Add when fixed</span>
+              <input id="afterIn" type="file" accept="image/*" capture="environment">
+            </label>
+            <button class="pclear" id="clearAfter" type="button" hidden aria-label="Remove after photo">×</button>
+          </div>
+        </div>
+        <div class="photo-tools"><span class="when" id="when"></span></div>
+      </div>
+      <div class="part" id="part-where">
+        <p class="req" id="reqDept" hidden>Pick a department</p>
+        <div class="two collapse">
+          <select id="fDept" aria-label="Department"></select>
+          <select id="fSub" aria-label="Planogram"></select>
+        </div>
+      </div>
+      <div class="part" id="part-issue">
+        <p class="req" id="reqIssue" hidden>Pick what's wrong</p>
+        <div id="fIssue" role="group" aria-label="Issue"></div>
+        <div class="rite" id="fRiteWrap" hidden><label class="switch"><input type="checkbox" id="fRite"><span>RITE ticket submitted</span></label><input type="text" id="fRiteNo" maxlength="40" placeholder="Ticket number (optional)" aria-label="RITE ticket number"></div>
+      </div>
+      <div class="part" id="part-source">
+        <span class="label">Source <span class="lsub">who or what likely caused it</span></span>
+        <div class="chips small-chips" id="fSource" role="group" aria-label="Source"></div>
+      </div>
+      <div class="part" id="part-cause">
+        <span class="label">Cause <span class="lsub">why it happened</span></span>
+        <div class="chips small-chips" id="fCause" role="group" aria-label="Cause"></div>
+      </div>
+      <div class="part" id="part-status">
+        <span class="label">Status</span>
+        <div class="seg status" id="fStatus" role="group" aria-label="Status"></div>
+      </div>
+      <div class="part" id="part-note">
+        <label class="label" for="fNote">Note</label>
+        <textarea id="fNote" placeholder="What you saw, what you did"></textarea>
+      </div>
+      <div class="part" id="part-shift">
+        <div id="shiftWrap" hidden>
+          <span class="label">Shift</span>
+          <div class="seg" id="fShift" role="group" aria-label="Shift"></div>
+        </div>
       </div>
     </div>
-
-    <div>
-      <span class="label">Issue<span class="req" id="reqIssue" hidden>Pick one</span></span>
-      <div id="fIssue" role="group" aria-label="Issue"></div>
-      <div class="rite" id="fRiteWrap" hidden><label class="switch"><input type="checkbox" id="fRite"><span>RITE ticket submitted</span></label><input type="text" id="fRiteNo" maxlength="40" placeholder="Ticket number (optional)" aria-label="RITE ticket number"></div>
-    </div>
-
-    <div>
-      <span class="label">Source <span class="muted" style="text-transform:none;letter-spacing:0;font-family:var(--f-body);font-weight:400">who or what likely caused it</span></span>
-      <div class="chips" id="fSource" role="group" aria-label="Source"></div>
-    </div>
-    <div>
-      <span class="label">Cause <span class="muted" style="text-transform:none;letter-spacing:0;font-family:var(--f-body);font-weight:400">why it happened</span></span>
-      <div class="chips" id="fCause" role="group" aria-label="Cause"></div>
-    </div>
-
-    <div>
-      <label class="label" for="fNote">Note</label>
-      <textarea id="fNote" placeholder="What you saw, what you did"></textarea>
-    </div>
-
-    <div>
-      <span class="label">Status</span>
-      <div class="seg status" id="fStatus" role="group" aria-label="Status"></div>
-    </div>
-
-    <div id="shiftWrap" hidden>
-      <span class="label">Shift</span>
-      <div class="seg" id="fShift" role="group" aria-label="Shift"></div>
-    </div>
-
-    <button class="btn primary big" id="saveBtn">Save issue</button>
   </section>
 
   <section id="v-follow" class="stack" hidden></section>
@@ -336,6 +429,7 @@ details.arch .lrows{margin-top:8px}
   <button data-v="lists"><svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="17" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></svg>Lists</button>
 </nav>
 
+<div id="partHost"></div>
 <div id="sheetHost"></div>
 <div id="toastHost"></div>
 
@@ -384,8 +478,8 @@ const standalone=()=>{try{return matchMedia('(display-mode: standalone)').matche
    palette 'roil' is ROIL's own look (follows Auto/Light/Dark). Any other palette sets every
    color: a built-in editor-style theme, or 'custom' (your own colors or an imported VS Code theme).
    Whatever the colors, accent and status text are nudged until they're readable on the cards. */
-const AP_DEFAULT={palette:'roil',theme:'auto',contrast:'normal',accent:'',status:'default',shape:'rounded',size:'normal',custom:null,customName:'',updated:''};
-const AP_OPTS={theme:['auto','light','dark'],contrast:['normal','high'],status:['default','cb'],shape:['rounded','soft','square'],size:['compact','normal','large']};
+const AP_DEFAULT={palette:'roil',theme:'auto',contrast:'normal',accent:'',status:'default',shape:'rounded',size:'normal',custom:null,customName:'',logLayout:'auto',whyOpen:false,afterPrompt:true,updated:''};
+const AP_OPTS={theme:['auto','light','dark'],contrast:['normal','high'],status:['default','cb'],shape:['rounded','soft','square'],size:['compact','normal','large'],logLayout:['auto','sections','summary','steps']};
 const ACCENTS=[['Teal','#0e6a5a'],['Blue','#1d5fbf'],['Indigo','#4b4fc4'],['Plum','#7b3f9e'],['Red','#b3261e'],['Orange','#b4530b'],['Green','#2e7d32'],['Graphite','#3d4650']];
 const PAL_KEYS=['bg','surface','ink','muted','line','accent','open','follow','good','bad'];
 const PAL_LABELS={bg:'Background',surface:'Cards',ink:'Text',muted:'Secondary text',line:'Lines',accent:'Accent',open:'Open',follow:'Follow-up',good:'Fixed',bad:'Delete & errors'};
@@ -414,6 +508,8 @@ function cleanAp(a){
     o.custom=cleanPal(a.custom);
     if(typeof a.customName==='string')o.customName=a.customName.slice(0,60);
     if(a.palette==='custom'&&o.custom)o.palette='custom';else if(PALETTES[a.palette])o.palette=a.palette;
+    if(typeof a.whyOpen==='boolean')o.whyOpen=a.whyOpen;
+    if(typeof a.afterPrompt==='boolean')o.afterPrompt=a.afterPrompt;
     if(typeof a.updated==='string')o.updated=a.updated.slice(0,40);
   }
   return o;
@@ -474,6 +570,7 @@ function setAp(patch,save=true){
   ap=cleanAp({...ap,...patch,updated:new Date().toISOString()});
   if(save)ls.set('roil.appearance',ap);
   applyAp();
+  if(('logLayout' in patch||'whyOpen' in patch)&&typeof renderLog==='function'&&loaded)renderLog();
 }
 /* The colors currently on screen, as a palette: the starting point for a custom theme. */
 function paletteOnScreen(){
@@ -661,10 +758,13 @@ let loaded=false;
 let view='log';
 let hf=ls.get('roil.hf',{range:'30',dept:'',issue:'',status:'',q:''});
 let srange=ls.get('roil.srange','30');
-const form={photoFile:null,photoUrl:null,dept:'',sub:'',issue:'',source:null,cause:'',status:'Fixed',shift:''};
+const form={photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,dept:'',sub:'',issue:'',source:null,cause:'',status:'Open',shift:''};
 const last=ls.get('roil.last',{});
 form.dept=last.dept||'';form.sub=last.sub||'';form.shift=last.shift||'';
-const photoUrls=new Map(),thumbUrls=new Map();   // item id -> blob: URL for photos kept on this device
+const photoUrls=new Map(),thumbUrls=new Map(),afterUrls=new Map(),afterThumbUrls=new Map();   // item id -> blob: URL for photos kept on this device
+function setPhotoUrls(p){const set=(m,b)=>{const u=m.get(p.id);if(u)URL.revokeObjectURL(u);if(b)m.set(p.id,URL.createObjectURL(b));else m.delete(p.id)};
+  set(photoUrls,p.full);set(thumbUrls,p.thumb);set(afterUrls,p.after);set(afterThumbUrls,p.afterThumb)}
+function dropPhotoUrls(id){for(const m of[photoUrls,thumbUrls,afterUrls,afterThumbUrls]){const u=m.get(id);if(u){URL.revokeObjectURL(u);m.delete(id)}}}
 
 /* ---------- local database (IndexedDB, only on this device) ---------- */
 let idbP=null;
@@ -688,19 +788,19 @@ async function write(ops){
 function setItems(arr){items=arr.slice().sort((a,b)=>b.created<a.created?-1:1);renderAll()}
 function upsertLocal(n){setItems(items.filter(x=>x.id!==n.id).concat(n))}
 function dropLocal(id){
-  for(const m of[photoUrls,thumbUrls]){const u=m.get(id);if(u){URL.revokeObjectURL(u);m.delete(id)}}
+  dropPhotoUrls(id);
   setItems(items.filter(x=>x.id!==id));
 }
-const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','sourceId','causeId','shiftId','dept','planogram','issue','source','cause','shift','note','status','fixedAt','photo','rite','riteNo'];
+const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','sourceId','causeId','shiftId','dept','planogram','issue','source','cause','shift','note','status','fixedAt','photo','after','afterRev','rite','riteNo'];
 const REF_FIELDS=['deptId','planogramId','issueId','sourceId','causeId','shiftId'];
 function serverItem(it){const o={};for(const k of ITEM_FIELDS)o[k]=it[k]??(k==='fixedAt'?null:k==='photo'?false:'');o.photo=!!o.photo;return o}
 
 const store={
   async put(item,photo){
-    const ops=[{s:'items',v:item}];
-    if(photo)ops.push({s:'photos',v:{id:item.id,full:photo.full,thumb:photo.thumb}});
+    const ops=[{s:'items',v:item}];let rec=null;
+    if(photo){rec={id:item.id,...photo};ops.push({s:'photos',v:rec})}
     await write(ops);
-    if(photo){photoUrls.set(item.id,URL.createObjectURL(photo.full));thumbUrls.set(item.id,URL.createObjectURL(photo.thumb))}
+    if(rec)setPhotoUrls(rec);
     upsertLocal(item);markChanged();
   },
   async patch(id,p){
@@ -763,8 +863,10 @@ async function buildBackup(){
   const parts=[`{"format":"roil-backup","version":2,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"appearance":${JSON.stringify(ap)},"items":${JSON.stringify(its)},"photos":{`];
   let first=true;
   for(const p of phs){
-    const full=p.full||p.thumb;if(!full)continue;
-    parts.push(`${first?'':','}${JSON.stringify(p.id)}:{"full":"${await blobToB64(full)}","thumb":"${await blobToB64(p.thumb||full)}"}`);first=false;
+    const full=p.full||p.thumb,af=p.after||p.afterThumb;if(!full&&!af)continue;
+    const e=[];if(full)e.push(`"full":"${await blobToB64(full)}","thumb":"${await blobToB64(p.thumb||full)}"`);
+    if(af)e.push(`"after":"${await blobToB64(af)}","afterThumb":"${await blobToB64(p.afterThumb||af)}"`);
+    parts.push(`${first?'':','}${JSON.stringify(p.id)}:{${e.join(',')}}`);first=false;
   }
   parts.push('}}');
   return {blob:new Blob(parts,{type:'application/json'}),count:its.length,photos:phs.length};
@@ -796,14 +898,14 @@ async function mergeIncoming(data,opt={}){
       if(!newTombs[id]||t>newTombs[id])newTombs[id]=t;
       const cur=have.get(id);
       if(cur&&cur.updated<=t){ops.push({s:'items',del:id},{s:'photos',del:id});have.delete(id);removed++;
-        for(const m of[photoUrls,thumbUrls]){const u=m.get(id);if(u){URL.revokeObjectURL(u);m.delete(id)}}}
+        dropPhotoUrls(id);}
     }
   }
   for(const x of (Array.isArray(data.items)?data.items:[])){
     if(!x||typeof x!=='object'||!ID.test(x.id||'')||typeof x.dept!=='string'||typeof x.issue!=='string'||!STATUSES.includes(x.status))continue;
     const it={};for(const k of ITEM_FIELDS)it[k]=x[k]??(k==='fixedAt'?null:k==='photo'?false:'');it.photo=!!it.photo;
     for(const k of['dept','planogram','issue','source','cause','shift','created','updated'])it[k]=String(it[k]).slice(0,120);
-    it.rite=!!it.rite;it.riteNo=String(it.riteNo||'').slice(0,40);
+    it.rite=!!it.rite;it.riteNo=String(it.riteNo||'').slice(0,40);it.after=!!it.after;it.afterRev=/^[a-z0-9]{1,20}$/.test(String(it.afterRev||''))?String(it.afterRev):'';
     it.note=String(it.note).slice(0,2000);
     for(const k of REF_FIELDS)it[k]=ENTRY_ID.test(String(it[k]))?String(it[k]):'';
     link(it);
@@ -812,17 +914,17 @@ async function mergeIncoming(data,opt={}){
     if(newTombs[it.id]&&newTombs[it.id]>=it.updated)continue;   // deleted after this version was saved
     ops.push({s:'items',v:it});have.set(it.id,it);cur?updated++:added++;
     const p=opt.photos&&data.photos&&data.photos[it.id];
-    if(it.photo&&p&&typeof p.full==='string'){
-      try{const full=b64ToBlob(p.full,'image/jpeg');const thumb=typeof p.thumb==='string'?b64ToBlob(p.thumb,'image/jpeg'):full;
-        ops.push({s:'photos',v:{id:it.id,full,thumb}});photos++;
-        for(const m of[photoUrls,thumbUrls]){const u=m.get(it.id);if(u)URL.revokeObjectURL(u)}
-        photoUrls.set(it.id,URL.createObjectURL(full));thumbUrls.set(it.id,URL.createObjectURL(thumb));
+    if(p&&(typeof p.full==='string'||typeof p.after==='string')){
+      try{const cur=await getOne('photos',it.id).catch(()=>null)||{id:it.id};const rec={...cur,id:it.id};
+        if(it.photo&&typeof p.full==='string'){rec.full=b64ToBlob(p.full,'image/jpeg');rec.thumb=typeof p.thumb==='string'?b64ToBlob(p.thumb,'image/jpeg'):rec.full}
+        if(it.after&&typeof p.after==='string'){rec.after=b64ToBlob(p.after,'image/jpeg');rec.afterThumb=typeof p.afterThumb==='string'?b64ToBlob(p.afterThumb,'image/jpeg'):rec.after;rec.afterRev=it.afterRev}
+        ops.push({s:'photos',v:rec});photos++;setPhotoUrls(rec);
       }catch(e){}
     }
   }
   relinkAll([...have.values()]);ops.push({s:'meta',v:listsBody(lists),k:'lists'});buildForm();
   let apChanged=false;
-  if(opt.appearance&&data.appearance&&typeof data.appearance==='object'){const inc=cleanAp(data.appearance);if((inc.updated||'')>(ap.updated||'')){ap=inc;ls.set('roil.appearance',ap);applyAp();apChanged=true}}
+  if(opt.appearance&&data.appearance&&typeof data.appearance==='object'){const inc=cleanAp(data.appearance);if((inc.updated||'')>(ap.updated||'')){ap=inc;ls.set('roil.appearance',ap);applyAp();apChanged=true;if(loaded)renderLog()}}
   ops.push({s:'meta',v:newTombs,k:'deleted'});
   await write(ops);
   tombs=newTombs;
@@ -859,7 +961,7 @@ const redirectUri=()=>location.origin+location.pathname.replace(/index\.html$/,'
 function gToken(){const t=ls.get('roil.gtoken',null);return t&&t.token&&t.exp>Date.now()+60000?t.token:null}
 function markChanged(){syncDirty++;ls.set('roil.syncDirty',syncDirty);scheduleSync(4000)}
 function scheduleSync(ms){if(syncCfg.dest!=='drive')return;clearTimeout(syncTimer);syncTimer=setTimeout(()=>runSync(),ms)}
-function formBusy(){return !!(form.photoFile||$('#fNote').value.trim())}
+function formBusy(){return !!(form.photoFile||form.afterFile||$('#fNote').value.trim())}
 function driveConnect(){
   if(formBusy()){toast('Save or clear the issue you\'re logging first. Signing in leaves ROIL for a moment.');setView('log');return}
   const st=Math.random().toString(36).slice(2)+Date.now().toString(36);
@@ -931,21 +1033,26 @@ function syncDocText(){
 }
 async function syncPhotos(folder,files){
   const phs=await getAll('photos');const have=new Map(phs.map(p=>[p.id,p]));
-  const live=new Set(items.filter(i=>i.photo).map(i=>i.id));let got=0;
-  for(const p of phs){
-    if(!live.has(p.id))continue;
-    if(p.full&&!files.has(`photo-${p.id}.jpg`)){const f=await Drive.create(folder,`photo-${p.id}.jpg`,p.full,'image/jpeg');files.set(f.name,f)}
-    if(p.thumb&&!files.has(`thumb-${p.id}.jpg`)){const f=await Drive.create(folder,`thumb-${p.id}.jpg`,p.thumb,'image/jpeg');files.set(f.name,f)}
+  const byId=new Map(items.map(i=>[i.id,i]));let got=0;
+  const up=async(name,blob)=>{if(blob&&!files.has(name)){const f=await Drive.create(folder,name,blob,'image/jpeg');files.set(f.name,f)}};
+  for(const p of phs){const it=byId.get(p.id);if(!it)continue;
+    if(it.photo){await up(`photo-${p.id}.jpg`,p.full);await up(`thumb-${p.id}.jpg`,p.thumb)}
+    if(it.after&&it.afterRev&&p.afterRev===it.afterRev){await up(`after-${p.id}-${it.afterRev}.jpg`,p.after);await up(`afterthumb-${p.id}-${it.afterRev}.jpg`,p.afterThumb)}
   }
-  for(const id of live){   // photos logged on another device: fetch the small version now, the full one when you open the issue
-    if(have.has(id))continue;
-    const f=files.get(`thumb-${id}.jpg`)||files.get(`photo-${id}.jpg`);if(!f)continue;
-    const blob=await (await Drive.read(f.id)).blob();
-    const rec={id,thumb:blob,full:f.name.startsWith('photo-')?blob:null};
-    await write([{s:'photos',v:rec}]);
-    thumbUrls.set(id,URL.createObjectURL(blob));if(rec.full)photoUrls.set(id,URL.createObjectURL(blob));got++;
+  for(const it of items){   // photos from other devices: small versions now, full ones when you open the issue
+    const p=have.get(it.id),rec=p?{...p}:{id:it.id};let changed=false;
+    if(it.photo&&!rec.thumb){const f=files.get(`thumb-${it.id}.jpg`)||files.get(`photo-${it.id}.jpg`);
+      if(f){const b=await (await Drive.read(f.id)).blob();rec.thumb=b;if(f.name.startsWith('photo-'))rec.full=b;changed=true}}
+    if(it.after&&it.afterRev&&rec.afterRev!==it.afterRev){const f=files.get(`afterthumb-${it.id}-${it.afterRev}.jpg`)||files.get(`after-${it.id}-${it.afterRev}.jpg`);
+      if(f){const b=await (await Drive.read(f.id)).blob();rec.afterThumb=b;rec.after=f.name.startsWith('after-')?b:null;rec.afterRev=it.afterRev;changed=true}}
+    if(changed){await write([{s:'photos',v:rec}]);setPhotoUrls(rec);got++}
   }
-  for(const id of Object.keys(tombs))for(const n of[`photo-${id}.jpg`,`thumb-${id}.jpg`]){const f=files.get(n);if(f){await Drive.trash(f.id);files.delete(n)}}
+  for(const [name,f] of [...files]){   // tidy Drive: photos of deleted issues, and after photos that were replaced
+    const m=name.match(/^(photo|thumb|after|afterthumb)-([a-z0-9]+)(?:-([a-z0-9]+))?\.jpg$/);if(!m)continue;
+    const it=byId.get(m[2]);
+    const stale=it?(m[1].startsWith('after')&&m[3]!==it.afterRev):!!tombs[m[2]];
+    if(stale){await Drive.trash(f.id);files.delete(name)}
+  }
   if(got)renderAll();
 }
 async function runSync(manual){
@@ -990,18 +1097,20 @@ async function runSync(manual){
   }
 }
 /* A full photo that came from another device is downloaded the first time it's needed. */
-async function ensureFull(id){
-  const p=await getOne('photos',id).catch(()=>null);
-  if(p&&p.full)return p.full;
-  if(syncCfg.dest==='drive'&&gToken()&&navigator.onLine){
+async function ensureFull(id,which='before'){
+  const A=which==='after',p=await getOne('photos',id).catch(()=>null);
+  if(p&&(A?p.after:p.full))return A?p.after:p.full;
+  const it=items.find(i=>i.id===id);
+  if(syncCfg.dest==='drive'&&gToken()&&navigator.onLine&&it){
     try{
-      let f=driveFiles.get(`photo-${id}.jpg`);
-      if(!f){driveFiles=await Drive.list(await Drive.folder());f=driveFiles.get(`photo-${id}.jpg`)}
-      if(f){const blob=await (await Drive.read(f.id)).blob();await write([{s:'photos',v:{id,thumb:p&&p.thumb?p.thumb:blob,full:blob}}]);
-        const u=photoUrls.get(id);if(u)URL.revokeObjectURL(u);photoUrls.set(id,URL.createObjectURL(blob));return blob}
+      const name=A?`after-${id}-${it.afterRev}.jpg`:`photo-${id}.jpg`;
+      let f=driveFiles.get(name);
+      if(!f){driveFiles=await Drive.list(await Drive.folder());f=driveFiles.get(name)}
+      if(f){const blob=await (await Drive.read(f.id)).blob();const rec={...(p||{id}),id};if(A){rec.after=blob;rec.afterRev=it.afterRev;if(!rec.afterThumb)rec.afterThumb=blob}else{rec.full=blob;if(!rec.thumb)rec.thumb=blob}
+        await write([{s:'photos',v:rec}]);setPhotoUrls(rec);return blob}
     }catch(e){}
   }
-  return p?(p.thumb||null):null;
+  return p?(A?p.afterThumb:p.thumb)||null:null;
 }
 function syncHtml(){
   const d=syncCfg.dest,tok=!!gToken();
@@ -1031,16 +1140,16 @@ function syncHtml(){
 
 async function boot(){
   handleOAuthReturn();
-  buildForm();renderAll();tick();setInterval(tick,30000);setSync();
+  buildForm();showPhotos();renderLog();renderAll();tick();setInterval(tick,30000);setSync();
   try{
     const [its,phs,l,dl]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists'),getOne('meta','deleted')]);
-    for(const p of phs){if(p.full)photoUrls.set(p.id,URL.createObjectURL(p.full));if(p.thumb)thumbUrls.set(p.id,URL.createObjectURL(p.thumb))}
+    for(const p of phs)setPhotoUrls(p);
     if(l)lists=normLists(l);
     if(dl&&typeof dl==='object')tombs=dl;
     const legacy=!l||!l.v||its.some(i=>!('deptId' in i));
     const ch=relinkAll(its);
     if(legacy||ch)await write([{s:'meta',v:listsBody(lists),k:'lists'},...its.map(v=>({s:'items',v}))]);
-    loaded=true;buildForm();setItems(its);
+    loaded=true;buildForm();setItems(its);renderLog();
   }catch(e){loaded=true;renderAll();toast('Your browser won\'t let ROIL store data. Make sure you\'re not in a private or Incognito window.')}
   if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
   if(navigator.storage&&navigator.storage.persist){try{await navigator.storage.persist()}catch(e){}}
@@ -1080,57 +1189,90 @@ function buildForm(){
   $('#fCause').innerHTML=chipHtml(activeOf(lists.causes),form.cause);
   $('#fStatus').innerHTML=segHtml(STATUSES,form.status);
   $('#fShift').innerHTML=segHtml(activeOf(lists.shifts),form.shift);
+  if(typeof updateLogUI==='function'&&$('#logBody'))updateLogUI();
 }
 /* Issue chips grouped by category, so a long list stays easy to scan. */
-function issueChipsHtml(sel){
+/* Issue choices: one tab per category, so you see a short list instead of every issue type. */
+let issueTab=ls.get('roil.issueTab','');
+function issueGroups(){
   const act=activeOf(lists.issues),cats=activeOf(lists.categories),groups=[];
-  for(const c of cats){const g=act.filter(e=>e.cat===c.id);if(g.length)groups.push([c.name,g])}
-  const rest=act.filter(e=>!e.cat||!cats.some(c=>c.id===e.cat));if(rest.length)groups.push([groups.length?'Other':'',rest]);
-  if(groups.length<=1)return `<div class="chips">${chipHtml(act,sel)}</div>`;
-  return groups.map(([n,g])=>`<div class="cgroup"><span class="cglabel">${esc(n)}</span><div class="chips">${chipHtml(g,sel)}</div></div>`).join('');
+  for(const c of cats){const g=act.filter(e=>e.cat===c.id);if(g.length)groups.push({key:c.id,name:c.name,items:g})}
+  const rest=act.filter(e=>!e.cat||!cats.some(c=>c.id===e.cat));if(rest.length)groups.push({key:'_other',name:groups.length?'Other':'',items:rest});
+  return groups;
 }
+function issueChipsHtml(sel){
+  const groups=issueGroups();
+  if(groups.length<=1)return `<div class="chips">${chipHtml(groups[0]?groups[0].items:[],sel)}</div>`;
+  const cur=(sel&&groups.find(g=>g.items.some(e=>e.id===sel)))||groups.find(g=>g.key===issueTab)||groups[0];
+  return `<div class="ctabs" role="tablist">${groups.map(g=>`<button type="button" class="ctab" role="tab" data-tab="${g.key}" aria-selected="${g===cur}">${esc(g.name)}</button>`).join('')}</div>
+    <div class="chips" role="tabpanel">${chipHtml(cur.items,sel)}</div>`;
+}
+$('#fIssue').addEventListener('click',e=>{const t=e.target.closest('.ctab');if(!t)return;issueTab=t.dataset.tab;ls.set('roil.issueTab',issueTab);
+  const groups=issueGroups(),g=groups.find(x=>x.key===issueTab);
+  const sel=g&&g.items.some(x=>x.id===form.issue)?form.issue:'';
+  $('#fIssue').innerHTML=`<div class="ctabs" role="tablist">${groups.map(x=>`<button type="button" class="ctab" role="tab" data-tab="${x.key}" aria-selected="${x===g}">${esc(x.name)}</button>`).join('')}</div><div class="chips" role="tabpanel">${chipHtml(g?g.items:[],form.issue)}</div>`;
+});
 const catName=issueId=>{const e=IX.issues.get(issueId),c=e&&e.cat&&IX.categories.get(e.cat);return c?c.name:'Uncategorized'};
 const isDemoIssue=id=>{const e=IX.issues.get(id);return !!(e&&e.cat===DEMO_CAT())};
 function showRite(){const on=isDemoIssue(form.issue);$('#fRiteWrap').hidden=!on;if(!on){$('#fRite').checked=false;$('#fRiteNo').value=''}}
 function tick(){$('#when').textContent=form.photoFile?'Photo taken · '+fmtDT(form.takenAt):'Logged as '+fmtDT(new Date().toISOString());if(view==='follow')renderFollow()}
 function bindChoice(id,key,toggle){
-  $(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;
+  $(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.classList.contains('ctab'))return;const v=b.dataset.v;
     form[key]=(toggle&&form[key]===v)?'':v;
     $(id).querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===form[key]));
     if(key==='issue'){$('#reqIssue').hidden=true;showRite()}
     if(key==='shift')saveLast();
+    onFormChoice(key);
   });
 }
 bindChoice('#fIssue','issue',true);bindChoice('#fSource','source',true);bindChoice('#fCause','cause',true);bindChoice('#fStatus','status',false);bindChoice('#fShift','shift',true);
 function saveLast(){ls.set('roil.last',{dept:form.dept,sub:form.sub,shift:form.shift})}
-$('#fDept').addEventListener('change',e=>{form.dept=e.target.value;form.sub='';$('#fSub').innerHTML=subOptions(form.dept,'');$('#reqDept').hidden=true;saveLast()});
-$('#fSub').addEventListener('change',e=>{form.sub=e.target.value;saveLast()});
-function setPhoto(f){
+$('#fDept').addEventListener('change',e=>{form.dept=e.target.value;form.sub='';$('#fSub').innerHTML=subOptions(form.dept,'');$('#reqDept').hidden=true;saveLast();updateLogUI()});
+$('#fSub').addEventListener('change',e=>{form.sub=e.target.value;saveLast();updateLogUI()});
+/* ---------- photos on the Log screen: Before and After ---------- */
+function setPhoto(f,which='before'){
   if(!f||!/^image\//.test(f.type||'image/')){toast('That isn\'t a photo. Use a JPEG, PNG or WebP image.');return}
-  if(form.photoUrl)URL.revokeObjectURL(form.photoUrl);
-  form.photoFile=f;form.photoUrl=URL.createObjectURL(f);form.takenAt=new Date().toISOString();
-  showPhoto();tick();
+  if(which==='after'){
+    if(form.afterUrl)URL.revokeObjectURL(form.afterUrl);
+    form.afterFile=f;form.afterUrl=URL.createObjectURL(f);
+    if(form.status!=='Fixed'){form.status='Fixed';$('#fStatus').innerHTML=segHtml(STATUSES,form.status);toast('Status set to Fixed.')}
+  }else{
+    if(form.photoUrl)URL.revokeObjectURL(form.photoUrl);
+    form.photoFile=f;form.photoUrl=URL.createObjectURL(f);form.takenAt=new Date().toISOString();
+  }
+  showPhotos();tick();updateLogUI();
+  if(which==='after'&&form.saveAfterPhoto){form.saveAfterPhoto=false;doSave(true)}
 }
-$('#photoIn').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)setPhoto(f)});
+$('#photoIn').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)setPhoto(f,'before')});
+$('#afterIn').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)setPhoto(f,'after')});
 (function photoExtras(){
-  const drop=$('#photoDrop');
-  if(!dev.mobile){$('strong',drop).textContent='Add a photo';$('span',drop).textContent='Click to choose, drag one here, or paste with Ctrl+V';}
-  drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});
-  drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
-  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)setPhoto(f)});
+  for(const [id,which] of [['#photoDrop','before'],['#afterDrop','after']]){
+    const drop=$(id);
+    drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});
+    drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+    drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)setPhoto(f,which)});
+  }
   document.addEventListener('paste',e=>{
     if(view!=='log'||$('#sheetHost').innerHTML)return;
     const it=[...(e.clipboardData?e.clipboardData.items:[])].find(i=>i.kind==='file'&&/^image\//.test(i.type));
     if(!it)return;               // plain text pastes into the note as usual
-    e.preventDefault();setPhoto(it.getAsFile());toast('Photo added from clipboard.');
+    e.preventDefault();const which=form.photoFile?'after':'before';setPhoto(it.getAsFile(),which);toast(which==='after'?'After photo added from clipboard.':'Photo added from clipboard.');
   });
 })();
-function showPhoto(){
-  const drop=$('#photoDrop');
-  if(form.photoFile){drop.classList.add('has');drop.querySelectorAll('svg,strong,span').forEach(x=>x.hidden=true);let img=$('img',drop);if(!img){img=document.createElement('img');img.alt='Issue photo';drop.prepend(img)}img.src=form.photoUrl;$('#clearPhoto').hidden=false;}
-  else{drop.classList.remove('has');const img=$('img',drop);if(img)img.remove();drop.querySelectorAll('svg,strong,span').forEach(x=>x.hidden=false);$('#clearPhoto').hidden=true;$('#photoIn').value='';}
+function showBox(drop,url,clearBtn,input){
+  if(url){drop.classList.add('has');drop.querySelectorAll('svg,strong,span').forEach(x=>x.toggleAttribute('hidden',true));let img=$('img',drop);if(!img){img=document.createElement('img');img.alt='';drop.prepend(img)}img.src=url;clearBtn.hidden=false}
+  else{drop.classList.remove('has');const img=$('img',drop);if(img)img.remove();drop.querySelectorAll('svg,strong,span').forEach(x=>x.toggleAttribute('hidden',false));clearBtn.hidden=true;input.value=''}
 }
-$('#clearPhoto').addEventListener('click',e=>{e.preventDefault();if(form.photoUrl)URL.revokeObjectURL(form.photoUrl);form.photoFile=null;form.photoUrl=null;showPhoto();tick()});
+function showPhotos(){
+  showBox($('#photoDrop'),form.photoUrl,$('#clearPhoto'),$('#photoIn'));
+  showBox($('#afterDrop'),form.afterUrl,$('#clearAfter'),$('#afterIn'));
+  $('#beforeHint').textContent=dev.mobile?'Take photo':'Click, drop or paste';
+  $('#afterHint').textContent=form.status==='Fixed'?(dev.mobile?'Take photo':'Click, drop or paste'):'Add when fixed';
+  $('#afterDrop').classList.toggle('off',form.status!=='Fixed'&&!form.afterFile);
+  $('#afterDrop').classList.toggle('unsaved',form.status!=='Fixed'&&!!form.afterFile);
+}
+$('#clearPhoto').addEventListener('click',()=>{if(form.photoUrl)URL.revokeObjectURL(form.photoUrl);form.photoFile=null;form.photoUrl=null;form.takenAt=null;showPhotos();tick();updateLogUI()});
+$('#clearAfter').addEventListener('click',()=>{if(form.afterUrl)URL.revokeObjectURL(form.afterUrl);form.afterFile=null;form.afterUrl=null;showPhotos();updateLogUI()});
 
 async function compress(file,max,q){
   const url=URL.createObjectURL(file);
@@ -1143,40 +1285,192 @@ async function compress(file,max,q){
   }finally{URL.revokeObjectURL(url)}
 }
 const blobToDataUrl=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b)});
+const newRev=()=>Date.now().toString(36);
 
-$('#saveBtn').addEventListener('click',async()=>{
+/* ---------- Log screen layouts ----------
+   The fields live once (in #logParts). Each layout moves them into place, so saving, checking
+   and syncing work the same whichever layout you use. Settings: Lists → Appearance → Log screen. */
+const PART_IDS=['photos','where','issue','source','cause','status','note','shift'];
+const PART=id=>document.getElementById('part-'+id);
+const IC_LOG={
+  photos:'<svg viewBox="0 0 24 24"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2l1.5-2h6l1.5 2h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.5" r="3.6"/></svg>',
+  where:'<svg viewBox="0 0 24 24"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>',
+  what:'<svg viewBox="0 0 24 24"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg>',
+  why:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .8-1 1.5v.6M12 16.9v.1"/></svg>',
+  finish:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.3l2.7 2.7L16 9.6"/></svg>'
+};
+const STEPS=[
+  {id:'photos',title:'Photos',parts:['photos'],skip:true},
+  {id:'where',title:'Where',parts:['where']},
+  {id:'what',title:'What\'s wrong',parts:['issue']},
+  {id:'why',title:'Why',parts:['source','cause'],skip:true},
+  {id:'finish',title:'Finish',parts:['status','note','shift']}
+];
+let step=0,whyOpenNow=false,partOpen=null;
+const logLayout=()=>{const l=ap.logLayout||'auto';return l==='auto'?(dev.mobile?'steps':'sections'):l};
+function parkParts(){const home=$('#logParts');for(const id of PART_IDS)home.appendChild(PART(id))}
+function nameOf(k,id){const e=id&&IX[k]&&IX[k].get(id);return e?e.name:''}
+function logValues(){
+  const d=IX.dept.get(form.dept),p=form.sub&&IX.pog.get(form.sub);
+  return {
+    photos:[form.photoFile?'Before':'',form.afterFile?'After':''].filter(Boolean).join(' + ')||'',
+    where:d?d.name+(p?' › '+p.p.name:''):'',
+    what:nameOf('issues',form.issue),
+    source:nameOf('sources',form.source),cause:nameOf('causes',form.cause),
+    why:[nameOf('sources',form.source)||'No source',nameOf('causes',form.cause)||'cause not set'].join(' · '),
+    note:$('#fNote').value.trim(),status:form.status==='Needs follow-up'?'Follow-up':form.status
+  };
+}
+function card(key,title,parts,body){
+  const c=document.createElement('section');c.className='lcard';c.dataset.card=key;
+  c.innerHTML=`<header class="lch">${IC_LOG[key]||''}<h3>${title}</h3></header><div class="lcb stack"></div>`;
+  const b=$('.lcb',c);if(body)b.innerHTML=body;for(const id of parts)b.appendChild(PART(id));return c;
+}
+function renderLog(){
+  if(!$('#logParts'))return;
+  closePart(true);parkParts();
+  const L=logLayout(),body=$('#logBody');body.innerHTML='';body.className='stack log-'+L;
+  $('#logSteps').hidden=L!=='steps';
+  if(L==='sections'){
+    body.append(card('photos','Photos',['photos']),card('where','Where',['where']),card('what','What\'s wrong',['issue']));
+    const why=card('why','Why',[]);why.id='whyCard';body.append(why);
+    body.append(card('finish','Details',['status','note','shift']));
+    fillWhy();
+  }else if(L==='summary'){
+    body.append(PART('photos'));
+    const rows=document.createElement('div');rows.className='srows';rows.id='sRows';body.append(rows);
+    body.append(PART('status'));
+  }else{
+    step=Math.max(0,Math.min(step,STEPS.length-1));
+    const s=STEPS[step];body.append(card(s.id,s.title,s.parts));
+  }
+  updateLogUI();
+}
+/* The Why card stays compact (current source and cause on one line) unless you open it,
+   or turn on "Always show Source and Cause". */
+function fillWhy(){
+  const why=$('#whyCard');if(!why)return;const b=$('.lcb',why);
+  const open=ap.whyOpen||whyOpenNow;
+  for(const id of['source','cause'])if(PART(id).parentNode===b)$('#logParts').appendChild(PART(id));
+  b.innerHTML='';
+  if(open){b.append(PART('source'),PART('cause'));if(!ap.whyOpen){const t=document.createElement('button');t.type='button';t.className='btn small ghost';t.textContent='Done';t.onclick=()=>{whyOpenNow=false;fillWhy()};b.append(t)}}
+  else{const v=logValues();const r=document.createElement('button');r.type='button';r.className='whyrow';
+    r.innerHTML=`<span><span class="k">Source</span> ${esc(v.source||'Not set')}</span><span><span class="k">Cause</span> ${esc(v.cause||'Not set')}</span><span class="chg">Change</span>`;
+    r.onclick=()=>{whyOpenNow=true;fillWhy()};b.append(r)}
+}
+function updateLogUI(){
+  const L=logLayout(),v=logValues();
+  if(L==='sections'&&!(ap.whyOpen||whyOpenNow))fillWhy();
+  if(L==='summary'){
+    const rows=$('#sRows');if(rows){
+      const R=[['where','Where',v.where,['where'],true],['what','What\'s wrong',v.what,['issue'],true],['source','Source',v.source,['source'],false],['cause','Cause',v.cause,['cause'],false],['note','Note',v.note,['note'],false]];
+      if(lists.showShift)R.push(['shift','Shift',nameOf('shifts',form.shift),['shift'],false]);
+      rows.innerHTML=R.map(([k,label,val,,req])=>`<button type="button" class="srow" data-row="${k}"><span class="k">${label}</span><span class="v${val?'':req?' need':' unset'}">${esc(val||(req?'Choose…':'Not set'))}</span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>`).join('');
+      rows.querySelectorAll('.srow').forEach(b=>b.onclick=()=>{const r=R.find(x=>x[0]===b.dataset.row);openPart(r[1],r[3],r[0])});
+    }
+  }
+  if(L==='steps'){
+    $('#logSteps').innerHTML=STEPS.map((s,i)=>{const val=s.id==='why'?(v.source||v.cause?v.why:''):s.id==='finish'?v.status:v[s.id];
+      return `<button type="button" class="stp${val?' done':''}" data-step="${i}" ${i===step?'aria-current="step"':''}><b>${i+1}. ${s.title}</b><span>${esc(val||'—')}</span></button>`}).join('');
+    $('#logSteps').querySelectorAll('.stp').forEach(b=>b.onclick=()=>goStep(+b.dataset.step));
+  }
+  const last=L!=='steps'||step===STEPS.length-1;
+  $('#stepBack').hidden=L!=='steps'||step===0;
+  $('#stepSkip').hidden=L!=='steps'||last||!STEPS[step].skip;
+  $('#stepNext').hidden=L!=='steps'||last;
+  $('#saveBtn').hidden=!last;
+}
+function goStep(i){step=Math.max(0,Math.min(i,STEPS.length-1));renderLog();window.scrollTo({top:0})}
+$('#stepNext').onclick=()=>{
+  const s=STEPS[step];
+  if(s.id==='where'&&!form.dept){$('#reqDept').hidden=false;toast('Pick a department first.');return}
+  if(s.id==='what'&&!form.issue){$('#reqIssue').hidden=false;toast('Pick what\'s wrong first.');return}
+  goStep(step+1);
+};
+$('#stepBack').onclick=()=>goStep(step-1);
+$('#stepSkip').onclick=()=>goStep(step+1);
+/* Summary rows open a field in a bottom sheet. Single-choice fields close themselves when you pick. */
+function openPart(title,ids,key){
+  closePart(true);
+  const host=$('#partHost');
+  host.innerHTML=`<div class="overlay"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="head"><h2>${esc(title)}</h2><button class="btn small primary" type="button" id="partDone">Done</button></div><div class="stack" id="partBody"></div></div></div>`;
+  for(const id of ids)$('#partBody').appendChild(PART(id));
+  partOpen={key};
+  $('#partDone').onclick=()=>closePart();
+  $('.overlay',host).addEventListener('click',e=>{if(e.target.classList.contains('overlay'))closePart()});
+  if(key==='note')setTimeout(()=>$('#fNote').focus(),50);
+}
+function closePart(quiet){
+  if(!partOpen)return;partOpen=null;
+  parkParts();$('#partHost').innerHTML='';
+  if(!quiet)renderLog();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&partOpen)closePart()});
+/* Called after any choice on the form: moves you along where that saves a tap. */
+function onFormChoice(key){
+  updateLogUI();
+  if(key==='status')showPhotos();
+  const demo=key==='issue'&&isDemoIssue(form.issue);
+  if(partOpen&&['issue','source','cause','shift'].includes(key)&&form[key]&&!demo&&partOpen.key===({issue:'what'}[key]||key))setTimeout(()=>closePart(),180);
+  if(logLayout()==='steps'&&key==='issue'&&form.issue&&!demo&&STEPS[step].id==='what')setTimeout(()=>goStep(step+1),220);
+}
+$('#fNote').addEventListener('input',()=>{if(logLayout()!=='sections')updateLogUI()});
+
+/* ---------- saving ---------- */
+$('#saveBtn').addEventListener('click',()=>{form.saveAfterPhoto=false;doSave(false)});
+$('#afterIn').addEventListener('cancel',()=>{form.saveAfterPhoto=false});
+async function doSave(skipAfterCheck){
   let bad=false;
   if(!form.dept){$('#reqDept').hidden=false;bad=true}
   if(!form.issue){$('#reqIssue').hidden=false;bad=true}
-  if(bad){toast('Pick a department and an issue to save.');return}
+  if(bad){
+    toast('Pick a department and what\'s wrong to save.');
+    if(logLayout()==='steps')goStep(form.dept?2:1);
+    else if(logLayout()==='summary')openPart(form.dept?'What\'s wrong':'Where',[form.dept?'issue':'where'],form.dept?'what':'where');
+    return;
+  }
   if(!loaded){toast('Still loading. Try again in a moment.');return}
+  if(form.status==='Fixed'&&!form.afterFile&&ap.afterPrompt&&!skipAfterCheck){askAfterOnSave();return}
   const btn=$('#saveBtn');btn.disabled=true;
   const now=new Date().toISOString();
   const created=form.takenAt&&form.photoFile?form.takenAt:now;
-  const demo=isDemoIssue(form.issue);
+  const demo=isDemoIssue(form.issue),withAfter=form.status==='Fixed'&&!!form.afterFile;
   const item={id:newId(),created,updated:now,deptId:form.dept,planogramId:form.sub||'',issueId:form.issue,sourceId:form.source||'',causeId:form.cause||'',
     shiftId:lists.showShift?(form.shift||''):'',dept:'',planogram:'',issue:'',source:'',cause:'',shift:'',
     rite:demo&&$('#fRite').checked,riteNo:demo?$('#fRiteNo').value.trim().slice(0,40):'',
-    note:$('#fNote').value.trim(),status:form.status,fixedAt:form.status==='Fixed'?now:null,photo:false};
+    note:$('#fNote').value.trim(),status:form.status,fixedAt:form.status==='Fixed'?now:null,photo:false,after:false,afterRev:''};
   link(item);
   let photo=null;
   try{
-    if(form.photoFile){
-      btn.textContent='Saving photo…';
-      photo={full:await compress(form.photoFile,2048,.85),thumb:await compress(form.photoFile,480,.75)};item.photo=true;
+    if(form.photoFile||withAfter){
+      btn.textContent='Saving photos…';photo={};
+      if(form.photoFile){photo.full=await compress(form.photoFile,2048,.85);photo.thumb=await compress(form.photoFile,480,.75);item.photo=true}
+      if(withAfter){photo.after=await compress(form.afterFile,2048,.85);photo.afterThumb=await compress(form.afterFile,480,.75);item.after=true;item.afterRev=photo.afterRev=newRev()}
     }
     btn.textContent='Saving…';
     await store.put(item,photo);
-    const fileP=photo?Promise.resolve(new File([photo.full],photoName(item),{type:'image/jpeg'})):null;
-    if(form.photoUrl)URL.revokeObjectURL(form.photoUrl);
-    form.photoFile=null;form.photoUrl=null;form.takenAt=null;form.issue='';form.source=null;form.cause='';form.status='Fixed';$('#fRite').checked=false;$('#fRiteNo').value='';
-    $('#fNote').value='';showPhoto();buildForm();tick();
-    window.scrollTo({top:0,behavior:'smooth'});
-    toast(item.status==='Fixed'?'Saved as fixed.':'Saved. It\'s on your follow-up list.',[['Share',()=>shareItem(item,fileP)],['Copy',()=>copyItem(item)]]);
+    const fileP=photo&&photo.full?Promise.resolve(new File([photo.full],photoName(item),{type:'image/jpeg'})):null;
+    resetForm();
+    toast(item.status==='Fixed'?'Saved as fixed.':'Saved. It\'s on your Open list.',[['Share',()=>shareItem(item,fileP)],['Copy',()=>copyItem(item)]]);
   }catch(e){
     toast(e&&e.name==='QuotaExceededError'?'This device is out of space for ROIL. Free up storage, then tap Save again.':e&&e.message==='Could not read that photo'?'Couldn\'t read that photo. Take it again.':'Couldn\'t save. Tap Save again.');
   }finally{btn.disabled=false;btn.textContent='Save issue'}
-});
+}
+function resetForm(){
+  for(const u of[form.photoUrl,form.afterUrl])if(u)URL.revokeObjectURL(u);
+  Object.assign(form,{photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,takenAt:null,issue:'',source:null,cause:'',status:'Open',saveAfterPhoto:false});
+  $('#fRite').checked=false;$('#fRiteNo').value='';$('#fNote').value='';whyOpenNow=false;step=0;
+  showPhotos();buildForm();tick();renderLog();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+/* Saving as Fixed without an after photo: a reminder (turn it off in Lists → Appearance → Log screen). */
+function askAfterOnSave(){
+  openSheet(`<div class="head"><h2>Add an after photo?</h2><button class="btn small" data-close>Cancel</button></div>
+  <p class="note" style="margin:0">It's marked Fixed. A photo of the fixed spot shows the team what right looks like.</p>
+  <div class="row"><button class="btn primary" type="button" id="askTake">Take after photo</button><button class="btn" type="button" id="askSkip">Save without it</button></div>`);
+  $('#askTake').onclick=()=>{closeSheet();form.saveAfterPhoto=true;$('#afterIn').click()};
+  $('#askSkip').onclick=()=>{closeSheet();doSave(true)};
+}
 
 /* ---------- photos & sharing ---------- */
 const photoSrc=it=>it.photo?(photoUrls.get(it.id)||thumbUrls.get(it.id)||''):'';
@@ -1209,9 +1503,12 @@ async function shareItem(it,fileP){
   const text=cardText(it);
   let copied=false;try{await navigator.clipboard.writeText(text);copied=true}catch(e){}
   if(!navigator.share){toast(copied?'This browser can\'t open the share menu. The details are copied.':'This browser can\'t open the share menu.');return}
-  const file=fileP?await fileP.catch(()=>null):null;
+  if(!fileP&&it.photo)fileP=photoFile(it);
+  const file=fileP?await Promise.resolve(fileP).catch(()=>null):null;
+  const af=it.after?await ensureFull(it.id,'after').then(b=>b?new File([b],photoName(it).replace(/\.jpg$/,' after.jpg'),{type:'image/jpeg'}):null).catch(()=>null):null;
   const data={title:`ROIL · ${it.issue}`,text};
-  if(file&&navigator.canShare&&navigator.canShare({files:[file]}))data.files=[file];
+  const files=[file,af].filter(Boolean);
+  if(files.length&&navigator.canShare&&navigator.canShare({files}))data.files=files;
   try{await navigator.share(data);if(copied)toast('Shared. If the text didn\'t come through, paste it. It\'s on your clipboard.')}
   catch(e){if(e&&e.name==='AbortError')return;toast(copied?'Couldn\'t open the share menu. The details are copied, so use Copy photo too.':'Couldn\'t open the share menu.')}
 }
@@ -1270,6 +1567,8 @@ function setView(v){
   renderAll();window.scrollTo({top:0});
 }
 $('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setView(b.dataset.v)});
+/* the Log screen's save bar sits just above the tab bar on phones */
+(function navHeight(){const n=$('#tabs'),set=()=>document.documentElement.style.setProperty('--navh',n.offsetHeight+'px');set();try{new ResizeObserver(set).observe(n)}catch(e){}})();
 const openItems=()=>items.filter(i=>i.status!=='Fixed').sort((a,b)=>a.created<b.created?-1:1);
 
 function renderAll(){
@@ -1280,7 +1579,7 @@ function renderAll(){
   if(view==='stats')renderStats();
   if(view==='lists')renderLists();
 }
-function thumb(it){const s=thumbSrc(it);return s?`<img class="thumb" src="${esc(s)}" alt="" loading="lazy">`:`<span class="thumb">NO PHOTO</span>`}
+function thumb(it){const b=thumbSrc(it),a=it.after?afterThumbUrls.get(it.id)||'':'';if(b&&a)return `<span class="thumb ba"><img src="${esc(b)}" alt=""><img src="${esc(a)}" alt=""></span>`;const x=b||a;return x?`<img class="thumb" src="${esc(x)}" alt="" loading="lazy">`:`<span class="thumb">${it.photo?'PHOTO':'NO PHOTO'}</span>`}
 function itemCard(it,extra=''){
   if(isDemoIssue(it.issueId)&&!it.rite)extra+='<span class="pill Needs">RITE not submitted</span>';
   return `<button class="item" data-id="${esc(it.id)}">${thumb(it)}<span class="body">
@@ -1298,7 +1597,7 @@ function renderFollow(){
   ${!loaded?emptyState('Loading your log…','Open issues appear here.'):arr.length?`<div class="list">${arr.map(it=>`<div class="fu">${itemCard(it,`<span class="age">${age(it.created)}</span>`)}<div class="actions"><button class="btn small primary" data-fix="${esc(it.id)}">Mark fixed</button><button class="btn small" data-share="${esc(it.id)}">Share</button><button class="btn small" data-copy="${esc(it.id)}">Copy for Teams</button></div></div>`).join('')}</div>`
   :emptyState('Nothing to come back to','Issues you save as Open or Follow-up are listed here, oldest first, until you mark them fixed.')}`;
   bindItemClicks(el);
-  el.querySelectorAll('[data-fix]').forEach(b=>b.addEventListener('click',async()=>{b.disabled=true;try{const now=new Date().toISOString();await store.patch(b.dataset.fix,{status:'Fixed',fixedAt:now,updated:now});toast('Marked fixed.')}catch(e){b.disabled=false;toast('Couldn\'t update. Try again.')}}));
+  el.querySelectorAll('[data-fix]').forEach(b=>b.addEventListener('click',()=>markFixed(b.dataset.fix)));
   el.querySelectorAll('[data-share]').forEach(b=>b.addEventListener('click',()=>{const it=items.find(i=>i.id===b.dataset.share);shareItem(it,photoFile(it))}));
   el.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>copyItem(items.find(i=>i.id===b.dataset.copy))));
   const co=$('#copyOpen');if(co)co.addEventListener('click',()=>copyText(openListText(arr)));
@@ -1424,16 +1723,18 @@ function exportCsv(arr){
 async function exportReport(arr){
   toast('Building report…');
   const imgs={};
-  for(const it of arr){const s=thumbSrc(it);if(!s)continue;
-    try{imgs[it.id]=await blobToDataUrl(await (await fetch(s)).blob())}catch(e){}}
+  const aimgs={};
+  for(const it of arr){const s=thumbSrc(it),a=it.after&&afterThumbUrls.get(it.id);
+    if(s)try{imgs[it.id]=await blobToDataUrl(await (await fetch(s)).blob())}catch(e){}
+    if(a)try{aimgs[it.id]=await blobToDataUrl(await (await fetch(a)).blob())}catch(e){}}
   const open=arr.filter(i=>i.status!=='Fixed').length;
   const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ROIL report ${fmtD(new Date())}</title>
 <style>body{font:15px/1.45 system-ui,sans-serif;color:#16201c;background:#fff;max-width:900px;margin:0 auto;padding:20px 16px}h1{font-size:24px;margin:0 0 4px}p.m{color:#5a6a64;margin:0 0 20px}
-.it{display:grid;grid-template-columns:200px 1fr;gap:16px;border-top:1px solid #d3dcd8;padding:14px 0}.it img{width:200px;border-radius:6px}.np{width:200px;height:120px;background:#eef2f0;border-radius:6px;display:grid;place-items:center;color:#5a6a64;font-size:12px}
+.it{display:grid;grid-template-columns:200px 1fr;gap:16px;border-top:1px solid #d3dcd8;padding:14px 0}.it img{width:200px;border-radius:6px;display:block}.ph{display:grid;gap:6px;align-content:start}.cap{font-size:12px;color:#5a6a64}.np{width:200px;height:120px;background:#eef2f0;border-radius:6px;display:grid;place-items:center;color:#5a6a64;font-size:12px}
 h2{font-size:17px;margin:0 0 4px}.s{display:inline-block;font-size:12px;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:2px}.Fixed{background:#dcf0e3;color:#1c7443}.Open{background:#fbe9d6;color:#a85507}.Needs{background:#efe1f6;color:#8a3fb0}
 dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:6px 0 0;font-size:14px}dt{color:#5a6a64}dd{margin:0}@media(max-width:560px){.it{grid-template-columns:1fr}.it img,.np{width:100%}}</style></head><body>
 <h1>Floor issue report</h1><p class="m">${arr.length} issues · ${open} still open · created ${esc(fmtDT(new Date().toISOString()))}</p>
-${arr.map(it=>`<div class="it">${imgs[it.id]?`<img src="${imgs[it.id]}" alt="">`:'<div class="np">No photo</div>'}<div><h2>${esc(it.issue)}<span class="s ${pillCls(it.status)}">${esc(it.status)}</span></h2>
+${arr.map(it=>`<div class="it"><div class="ph">${imgs[it.id]?`<img src="${imgs[it.id]}" alt="Before">`:'<div class="np">No photo</div>'}${aimgs[it.id]?`<img src="${aimgs[it.id]}" alt="After"><span class="cap">Before · After</span>`:''}</div><div><h2>${esc(it.issue)}<span class="s ${pillCls(it.status)}">${esc(it.status)}</span></h2>
 <dl><dt>When</dt><dd>${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</dd><dt>Department</dt><dd>${esc(it.dept)}</dd>${it.planogram?`<dt>Planogram</dt><dd>${esc(it.planogram)}</dd>`:''}${it.source?`<dt>Source</dt><dd>${esc(it.source)}</dd>`:''}${it.cause?`<dt>Cause</dt><dd>${esc(it.cause)}</dd>`:''}${it.fixedAt?`<dt>Fixed</dt><dd>${esc(fmtDT(it.fixedAt))}</dd>`:''}${it.note?`<dt>Note</dt><dd>${esc(it.note)}</dd>`:''}</dl></div></div>`).join('')}
 </body></html>`;
   await save(`ROIL report ${localDay(new Date())}.html`,html);
@@ -1454,7 +1755,9 @@ function openDetail(id){
   const it=items.find(i=>i.id===id);if(!it)return;
   const src=photoSrc(it);
   openSheet(`<div class="head"><div><h2>${esc(it.issue)}</h2><span class="mono muted" style="font-size:13px">${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</span></div><button class="btn small" data-close>Close</button></div>
-  ${src?`<img id="dImg" src="${esc(src)}" alt="Issue photo">`:''}
+  <div class="ba2"><figure>${src?`<img id="dImg" src="${esc(src)}" alt="Before">`:'<div class="np2">No before photo</div>'}<figcaption>Before</figcaption></figure>
+    <figure>${it.after?`<img id="dAfterImg" src="${esc(afterUrls.get(it.id)||afterThumbUrls.get(it.id)||'')}" alt="After">`:`<label class="np2 addafter" for="dAfterIn">+ Add after photo</label>`}<figcaption>After${it.after?` · <label class="linkish" for="dAfterIn">Replace</label>`:''}</figcaption></figure></div>
+  <input type="file" id="dAfterIn" accept="image/*" capture="environment" hidden>
   <div class="row"><button class="btn small primary" id="dShare">Share to Teams</button><button class="btn small" id="dCopy">Copy for Teams</button><button class="btn small" id="dText">Copy text</button>${src?'<button class="btn small" id="dPng">Copy photo</button>':''}</div>
   <div><span class="label">Status</span><div class="seg status" id="dStatus">${segHtml(STATUSES,it.status)}</div></div>
   <div class="two collapse"><div><label class="label" for="dDept">Department</label><select id="dDept">${deptOptions(it.deptId)}</select></div><div><label class="label" for="dSub">Planogram</label><select id="dSub">${subOptions(it.deptId,it.planogramId)}</select></div></div>
@@ -1471,6 +1774,8 @@ function openDetail(id){
   $('#dIssue').onchange=e=>{$('#dRiteWrap').hidden=!isDemoIssue(e.target.value)};
   const fileP=it.photo?photoFile(it):null;if(fileP)fileP.catch(()=>{});
   if(it.photo&&!photoUrls.has(it.id))ensureFull(it.id).then(()=>{const im=$('#dImg'),u=photoUrls.get(it.id);if(im&&u)im.src=u});
+  if(it.after&&!afterUrls.has(it.id))ensureFull(it.id,'after').then(()=>{const im=$('#dAfterImg'),u=afterUrls.get(it.id);if(im&&u)im.src=u});
+  $('#dAfterIn').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;closeSheet();await addAfterPhoto(it.id,f);openDetail(it.id)};
   $('#dShare').onclick=()=>shareItem(it,fileP);
   $('#dCopy').onclick=()=>copyItem(it);
   $('#dText').onclick=()=>copyText(cardText(it));
@@ -1483,8 +1788,35 @@ function openDetail(id){
     const now=new Date().toISOString();
     const demo=isDemoIssue($('#dIssue').value);const p={status:st,deptId:dept,issueId:$('#dIssue').value,sourceId:$('#dSource').value,causeId:$('#dCause').value,rite:demo&&$('#dRite').checked,riteNo:demo?$('#dRiteNo').value.trim().slice(0,40):'',planogramId:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
     if(st==='Fixed'&&it.status!=='Fixed')p.fixedAt=now;if(st!=='Fixed')p.fixedAt=null;
-    try{await store.patch(it.id,p);closeSheet();toast('Saved.')}catch(e){toast('Couldn\'t save. Try again.')}
+    const nowFixed=st==='Fixed'&&it.status!=='Fixed';
+    try{await store.patch(it.id,p);closeSheet();toast('Saved.');if(nowFixed&&!it.after&&ap.afterPrompt)askAfterFor(it.id,true)}catch(e){toast('Couldn\'t save. Try again.')}
   };
+}
+/* After photos for issues already logged */
+async function addAfterPhoto(id,file){
+  const it=items.find(i=>i.id===id);if(!it)return;
+  try{
+    const after=await compress(file,2048,.85),afterThumb=await compress(file,480,.75),rev=newRev();
+    const p=await getOne('photos',id).catch(()=>null)||{id};const rec={...p,id,after,afterThumb,afterRev:rev};
+    await write([{s:'photos',v:rec}]);setPhotoUrls(rec);
+    const patch={after:true,afterRev:rev};if(it.status!=='Fixed'){patch.status='Fixed';patch.fixedAt=new Date().toISOString()}
+    await store.patch(id,patch);
+    toast(patch.status?'After photo added. Marked fixed.':'After photo added.');
+  }catch(e){toast('Couldn\'t save that photo. Try again.')}
+}
+async function markFixed(id){
+  const it=items.find(i=>i.id===id);if(!it)return;
+  if(ap.afterPrompt&&!it.after){askAfterFor(id,false);return}
+  try{const now=new Date().toISOString();await store.patch(id,{status:'Fixed',fixedAt:now});toast('Marked fixed.')}catch(e){toast('Couldn\'t update. Try again.')}
+}
+/* alreadyFixed: the status was just saved as Fixed, so skipping only skips the photo. */
+function askAfterFor(id,alreadyFixed){
+  openSheet(`<div class="head"><h2>Add an after photo?</h2><button class="btn small" data-close>${alreadyFixed?'Not now':'Cancel'}</button></div>
+  <p class="note" style="margin:0">A photo of the fixed spot shows the team what right looks like.</p>
+  <div class="row"><label class="btn primary" for="afIn">Take after photo</label>${alreadyFixed?'':'<button class="btn" type="button" id="afSkip">Mark fixed without photo</button>'}</div>
+  <input type="file" id="afIn" accept="image/*" capture="environment" hidden>`);
+  $('#afIn').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;closeSheet();await addAfterPhoto(id,f)};
+  const sk=$('#afSkip');if(sk)sk.onclick=async()=>{closeSheet();try{await store.patch(id,{status:'Fixed',fixedAt:new Date().toISOString()});toast('Marked fixed.')}catch(e){toast('Couldn\'t update. Try again.')}};
 }
 
 /* ---------- lists editor ---------- */
@@ -1523,6 +1855,10 @@ function appearanceHtml(){
     <div class="row" style="margin-top:8px"><span class="pill Open">Open</span><span class="pill Needs">Needs follow-up</span><span class="pill Fixed">Fixed</span></div></div>
   <div><span class="label">Shape</span>${seg('shape',[['rounded','Rounded'],['soft','Soft'],['square','Square']])}</div>
   <div><span class="label">Size</span>${seg('size',[['compact','Compact'],['normal','Normal'],['large','Large']])}</div>
+  <div class="logset"><span class="label">Log screen layout</span>${seg('logLayout',[['auto','Auto'],['sections','Sections'],['summary','Summary'],['steps','Steps']])}
+    <p class="note" style="margin:6px 0 0">${{auto:`Auto uses Steps on phones and Sections on computers (this device: ${dev.mobile?'Steps':'Sections'}).`,sections:'Sections: every field on one screen, in cards.',summary:'Summary: one row per field. Tap a row to fill it in.',steps:'Steps: one card at a time, with Next and Save at the bottom.'}[ap.logLayout]}</p>
+    <label class="switch" style="margin-top:10px"><input type="checkbox" id="apWhy" ${ap.whyOpen?'checked':''}><span>Always show Source and Cause</span></label>
+    <label class="switch" style="margin-top:8px"><input type="checkbox" id="apAfter" ${ap.afterPrompt?'checked':''}><span>Ask for an after photo when saving as Fixed</span></label></div>
   <p class="note" style="margin:0">Saved on this device and included in backups, so a restore brings your look along.</p>
   </section>`;
 }
@@ -1547,7 +1883,7 @@ function importThemeText(text,fallbackName){
       renderLists();return}
     if(e.target.closest('#apCustomize')){setAp({palette:'custom',custom:paletteOnScreen(),customName:'Custom',accent:''});renderLists();toast('Copied the current colors into Custom. Change any of them below.');return}
     if(e.target.closest('#apImport')){$('#apImportFile').click();return}
-    if(e.target.closest('#apReset')){setAp({...AP_DEFAULT,custom:ap.custom,customName:ap.customName});renderLists();toast('Appearance reset to default. Your custom theme is kept under Custom.')}
+    if(e.target.closest('#apReset')){setAp({...AP_DEFAULT,custom:ap.custom,customName:ap.customName,logLayout:ap.logLayout,whyOpen:ap.whyOpen,afterPrompt:ap.afterPrompt});renderLists();toast('Appearance reset to default. Your custom theme and Log screen settings are kept.')}
   });
   // live preview while dragging a color picker; saved when the picker closes
   el.addEventListener('input',e=>{
@@ -1559,6 +1895,8 @@ function importThemeText(text,fallbackName){
     const t=e.target;
     if(t.id==='apColor'){setAp({accent:t.value});renderLists()}
     else if(t.dataset.ck&&ap.custom){setAp({custom:{...ap.custom,[t.dataset.ck]:t.value}});renderLists()}
+    else if(t.id==='apWhy'){setAp({whyOpen:t.checked});toast(t.checked?'Source and Cause will always show.':'Source and Cause fold into one row until you tap it.')}
+    else if(t.id==='apAfter'){setAp({afterPrompt:t.checked})}
     else if(t.id==='apImportFile'){const f=t.files&&t.files[0];t.value='';if(f)f.text().then(x=>importThemeText(x,f.name.replace(/\.jsonc?$/i,'')))}
   });
 })();
