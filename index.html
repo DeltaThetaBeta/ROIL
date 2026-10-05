@@ -211,6 +211,11 @@ button.sync{border:0;background:none;cursor:pointer;padding:6px 0}
 .pk{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
 
+details.arch{border-top:1px dashed var(--line);padding-top:8px}
+details.arch>summary{cursor:pointer;font-size:14px;color:var(--muted);padding:4px 0}
+details.arch .lrows{margin-top:8px}
+.arow{display:grid;grid-template-columns:minmax(0,1fr) auto auto 40px;gap:8px;align-items:center}
+.arow .an{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 /* ---------- Appearance settings (Lists → Appearance). Set as attributes on <html>. ---------- */
 :root[data-shape="soft"]{--r:6px;--r-sm:5px;--r-pill:8px;--r-lg:8px}
 :root[data-shape="square"]{--r:2px;--r-sm:2px;--r-pill:2px;--r-lg:2px}
@@ -402,19 +407,117 @@ function age(iso){const m=(Date.now()-new Date(iso))/60000;if(m<60)return Math.m
 function dur(ms){const h=ms/3600000;if(h<1)return Math.round(ms/60000)+' min';if(h<48)return h.toFixed(1)+' h';return (h/24).toFixed(1)+' d'}
 const pillCls=s=>s==='Needs follow-up'?'Needs':s;
 const newId=()=>'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+/* ---------- list entries & references ----------
+   Every list entry has a permanent id. Issues store those ids (deptId, planogramId, issueId,
+   causeId, shiftId) plus a copy of the names as a fallback. The names shown are always looked
+   up from the lists, so renaming an entry updates every issue that uses it.
+   Starter and migrated entries get ids derived from their names, so two devices agree on them. */
+function hash36(s){let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)}return (h>>>0).toString(36)}
+const sid=(p,key)=>p+hash36(String(key).trim().toLowerCase());
+const rid=p=>p+'_'+Date.now().toString(36).slice(-5)+Math.random().toString(36).slice(2,7);
+const ENTRY_ID=/^[a-z0-9_]{1,40}$/;
+const KINDS={issues:{p:'i',field:'issueId',name:'issue',noun:'issue type'},causes:{p:'c',field:'causeId',name:'cause',noun:'cause'},shifts:{p:'s',field:'shiftId',name:'shift',noun:'shift'}};
+function ent(x,p,key){
+  if(typeof x==='string'){const n=x.trim().slice(0,120);return n?{id:sid(p,key||n),name:n,archived:false}:null}
+  if(x&&typeof x==='object'&&typeof x.name==='string'&&x.name.trim()){const n=x.name.trim().slice(0,120);return {id:ENTRY_ID.test(x.id||'')?x.id:sid(p,key||n),name:n,archived:!!x.archived}}
+  return null;
+}
+/* Accepts every lists format ROIL has used (plain names, or entries with ids) and returns entries with ids. */
 function normLists(d){
-  const l=JSON.parse(JSON.stringify(DEFAULT_LISTS));
-  if(!d)return l;
-  if(Array.isArray(d.departments)&&d.departments.length)l.departments=d.departments.map(x=>{if(Array.isArray(x))return [String(x[0]),Array.isArray(x[1])?x[1].map(String):[]];const p=x.planograms||x.subs;return [String(x.name),Array.isArray(p)?p.map(String):[]]});
-  l.showShift=d.showShift===true;
-  l.updated=typeof d.updated==='string'?d.updated:'';
-  for(const k of['issues','causes','shifts'])if(Array.isArray(d[k])&&d[k].length)l[k]=d[k].map(String);
+  const has=d&&typeof d==='object';
+  const l={v:2,departments:[],issues:[],causes:[],shifts:[],showShift:has&&d.showShift===true,updated:has&&typeof d.updated==='string'?d.updated:'',
+    removed:has&&Array.isArray(d.removed)?d.removed.filter(x=>ENTRY_ID.test(x)).slice(-2000):[],moved:{}};
+  if(has&&d.moved&&typeof d.moved==='object')for(const [a,b] of Object.entries(d.moved))if(ENTRY_ID.test(a)&&ENTRY_ID.test(b))l.moved[a]=b;
+  const deps=has&&Array.isArray(d.departments)&&d.departments.length?d.departments:DEFAULT_LISTS.departments;
+  for(const x of deps){
+    let name='',pogs=[],id='',arch=false;
+    if(Array.isArray(x)){name=String(x[0]||'');pogs=Array.isArray(x[1])?x[1]:[]}
+    else if(x&&typeof x==='object'){name=String(x.name||'');pogs=x.planograms||x.subs||[];id=x.id;arch=!!x.archived}
+    name=name.trim().slice(0,120);if(!name)continue;
+    const dep={id:ENTRY_ID.test(id||'')?id:sid('d',name),name,archived:arch,planograms:[]};
+    for(const p of (Array.isArray(pogs)?pogs:[])){
+      const e=ent(p,'p',name+'\u0001'+(typeof p==='string'?p:(p&&p.name)||''));
+      if(e&&!dep.planograms.some(q=>q.id===e.id))dep.planograms.push(e);
+    }
+    if(!l.departments.some(q=>q.id===dep.id))l.departments.push(dep);
+  }
+  for(const k in KINDS){
+    const arr=has&&Array.isArray(d[k])&&d[k].length?d[k]:DEFAULT_LISTS[k];
+    for(const x of arr){const e=ent(x,KINDS[k].p);if(e&&!l[k].some(q=>q.id===e.id))l[k].push(e)}
+  }
   return l;
+}
+function listsBody(l){return JSON.parse(JSON.stringify({v:2,departments:l.departments,issues:l.issues,causes:l.causes,shifts:l.shifts,showShift:!!l.showShift,updated:l.updated||'',removed:l.removed||[],moved:l.moved||{}}))}
+let IX={dept:new Map(),pog:new Map(),issues:new Map(),causes:new Map(),shifts:new Map()};
+function reindex(){
+  IX={dept:new Map(),pog:new Map(),issues:new Map(),causes:new Map(),shifts:new Map()};
+  for(const d of lists.departments){IX.dept.set(d.id,d);for(const p of d.planograms)IX.pog.set(p.id,{p,d})}
+  for(const k in KINDS)for(const e of lists[k])IX[k].set(e.id,e);
+}
+const activeOf=a=>a.filter(e=>!e.archived);
+const byName=(arr,name)=>{const n=String(name||'').trim().toLowerCase();return n?arr.find(e=>e.name.toLowerCase()===n):null};
+function follow(id){let n=0;while(id&&lists.moved[id]&&n++<10)id=lists.moved[id];return id}
+/* Link one issue to list entries and refresh its names. A reference the lists don't know
+   (old data, or a backup from a device with different lists) becomes an archived entry,
+   so nothing ever shows blank. Returns true if the lists had to change. */
+function link(it){
+  let changed=false;
+  it.deptId=follow(it.deptId||'');it.planogramId=follow(it.planogramId||'');
+  let d=it.deptId&&IX.dept.get(it.deptId);
+  if(!d&&(it.dept||it.deptId)){
+    d=byName(lists.departments,it.dept);
+    if(!d){d={id:ENTRY_ID.test(it.deptId)?it.deptId:sid('d',it.dept||'?'),name:String(it.dept||'Unknown department').slice(0,120),archived:true,planograms:[]};lists.departments.push(d);IX.dept.set(d.id,d);changed=true}
+  }
+  it.deptId=d?d.id:'';it.dept=d?d.name:'';
+  let pg=it.planogramId&&IX.pog.get(it.planogramId);
+  if(!pg&&(it.planogram||it.planogramId)&&d){
+    let p=byName(d.planograms,it.planogram);
+    if(!p){p={id:ENTRY_ID.test(it.planogramId)?it.planogramId:sid('p',d.name+'\u0001'+(it.planogram||'?')),name:String(it.planogram||'Unknown planogram').slice(0,120),archived:true};d.planograms.push(p);changed=true}
+    pg={p,d};IX.pog.set(p.id,pg);
+  }
+  it.planogramId=pg?pg.p.id:'';it.planogram=pg?pg.p.name:'';
+  for(const k in KINDS){
+    const K=KINDS[k];it[K.field]=follow(it[K.field]||'');
+    let e=it[K.field]&&IX[k].get(it[K.field]);
+    if(!e&&(it[K.name]||it[K.field])){
+      e=byName(lists[k],it[K.name]);
+      if(!e){e={id:ENTRY_ID.test(it[K.field])?it[K.field]:sid(K.p,it[K.name]||'?'),name:String(it[K.name]||'Unknown').slice(0,120),archived:true};lists[k].push(e);IX[k].set(e.id,e);changed=true}
+    }
+    it[K.field]=e?e.id:'';it[K.name]=e?e.name:'';
+  }
+  return changed;
+}
+function relinkAll(arr=items){reindex();let ch=false;for(const it of arr)ch=link(it)||ch;return ch}
+function usageCounts(){
+  const u=new Map();const inc=id=>{if(id)u.set(id,(u.get(id)||0)+1)};
+  for(const it of items){inc(it.deptId);inc(it.planogramId);inc(it.issueId);inc(it.causeId);inc(it.shiftId)}
+  return u;
+}
+/* Merge two versions of the lists: renames and order from the newer one; entries added on
+   either side are kept; entries deleted or merged away on either side stay gone. */
+function mergeLists(a,b){
+  const [newer,older]=(b.updated||'')>(a.updated||'')?[b,a]:[a,b];
+  const out=normLists(listsBody(newer));
+  out.removed=[...new Set([...(a.removed||[]),...(b.removed||[])])].slice(-2000);
+  out.moved={...(older.moved||{}),...(newer.moved||{})};
+  const gone=new Set([...out.removed,...Object.keys(out.moved)]);
+  const keep=arr=>arr.filter(e=>!gone.has(e.id));
+  out.departments=keep(out.departments);for(const d of out.departments)d.planograms=keep(d.planograms);
+  const pogIds=new Set(out.departments.flatMap(d=>d.planograms.map(p=>p.id)));
+  for(const od of older.departments){
+    if(gone.has(od.id))continue;
+    let d=out.departments.find(x=>x.id===od.id);
+    if(!d){d={...od,planograms:[]};out.departments.push(d)}
+    for(const p of od.planograms)if(!gone.has(p.id)&&!pogIds.has(p.id)){d.planograms.push({...p});pogIds.add(p.id)}
+  }
+  for(const k in KINDS){out[k]=keep(out[k]);for(const e of older[k])if(!gone.has(e.id)&&!out[k].some(x=>x.id===e.id))out[k].push({...e})}
+  out.updated=newer.updated||'';
+  return out;
 }
 
 /* ---------- state ---------- */
 let items=[];            // newest first
-let lists=normLists(null);
+let lists=normLists(null);reindex();
 let loaded=false;
 let view='log';
 let hf=ls.get('roil.hf',{range:'30',dept:'',issue:'',status:'',q:''});
@@ -449,9 +552,9 @@ function dropLocal(id){
   for(const m of[photoUrls,thumbUrls]){const u=m.get(id);if(u){URL.revokeObjectURL(u);m.delete(id)}}
   setItems(items.filter(x=>x.id!==id));
 }
-const ITEM_FIELDS=['id','created','updated','dept','planogram','issue','cause','shift','note','status','fixedAt','photo'];
+const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','causeId','shiftId','dept','planogram','issue','cause','shift','note','status','fixedAt','photo'];
+const REF_FIELDS=['deptId','planogramId','issueId','causeId','shiftId'];
 function serverItem(it){const o={};for(const k of ITEM_FIELDS)o[k]=it[k]??(k==='fixedAt'?null:k==='photo'?false:'');o.photo=!!o.photo;return o}
-function listsBody(l){return {departments:l.departments.map(([n,s])=>({name:n,planograms:s})),issues:l.issues,causes:l.causes,shifts:l.shifts,showShift:!!l.showShift,updated:l.updated||''}}
 
 const store={
   async put(item,photo){
@@ -463,7 +566,7 @@ const store={
   },
   async patch(id,p){
     const it=items.find(i=>i.id===id);if(!it)return;
-    const n={...it,...p,updated:new Date().toISOString()};
+    const n={...it,...p,updated:new Date().toISOString()};link(n);
     await write([{s:'items',v:n}]);
     upsertLocal(n);
   },
@@ -508,8 +611,8 @@ function b64ToBlob(s,type){const bin=atob(s);const a=new Uint8Array(bin.length);
 /* One JSON file with every issue, your lists and all photos. Built in parts so a big log
    doesn't need one giant string. Same item format the server version uses. */
 async function buildBackup(){
-  const [its,phs,l]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists')]);
-  const parts=[`{"format":"roil-backup","version":1,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"appearance":${JSON.stringify(ap)},"items":${JSON.stringify(its)},"photos":{`];
+  const phs=await getAll('photos');const its=items.map(x=>({...x}));const l=listsBody(lists);
+  const parts=[`{"format":"roil-backup","version":2,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"appearance":${JSON.stringify(ap)},"items":${JSON.stringify(its)},"photos":{`];
   let first=true;
   for(const p of phs){
     parts.push(`${first?'':','}${JSON.stringify(p.id)}:{"full":"${await blobToB64(p.full)}","thumb":"${await blobToB64(p.thumb)}"}`);first=false;
@@ -537,6 +640,7 @@ async function doRestore(file){
   let data;
   try{data=JSON.parse(await file.text())}catch(e){toast('That file isn\'t a ROIL backup.');return}
   if(!data||data.format!=='roil-backup'||!Array.isArray(data.items)){toast('That file isn\'t a ROIL backup.');return}
+  if(data.lists&&typeof data.lists==='object'){lists=mergeLists(lists,normLists(data.lists));relinkAll()}
   const ID=/^[a-z0-9]{6,40}$/;const have=new Map(items.map(i=>[i.id,i]));const ops=[];let added=0,updated=0,photos=0,removed=0;
   const newTombs={...tombs};
   if(data.deleted&&typeof data.deleted==='object'){
@@ -553,6 +657,8 @@ async function doRestore(file){
     const it={};for(const k of ITEM_FIELDS)it[k]=x[k]??(k==='fixedAt'?null:k==='photo'?false:'');it.photo=!!it.photo;
     for(const k of['dept','planogram','issue','cause','shift','created','updated'])it[k]=String(it[k]).slice(0,120);
     it.note=String(it.note).slice(0,2000);
+    for(const k of REF_FIELDS)it[k]=ENTRY_ID.test(String(it[k]))?String(it[k]):'';
+    link(it);
     const cur=have.get(it.id);
     if(cur&&cur.updated>=it.updated)continue;
     if(newTombs[it.id]&&newTombs[it.id]>=it.updated)continue;   // deleted after this version was saved
@@ -566,9 +672,7 @@ async function doRestore(file){
       }catch(e){}
     }
   }
-  if(data.lists&&Array.isArray(data.lists.departments)&&(data.lists.updated||'')>(lists.updated||'')){
-    lists=normLists(data.lists);ops.push({s:'meta',v:listsBody(lists),k:'lists'});buildForm();
-  }
+  relinkAll([...have.values()]);ops.push({s:'meta',v:listsBody(lists),k:'lists'});buildForm();
   let apChanged=false;
   if(data.appearance&&typeof data.appearance==='object'){const inc=cleanAp(data.appearance);if((inc.updated||'')>(ap.updated||'')){ap=inc;ls.set('roil.appearance',ap);applyAp();apChanged=true}}
   ops.push({s:'meta',v:newTombs,k:'deleted'});
@@ -586,6 +690,9 @@ async function boot(){
     for(const p of phs){photoUrls.set(p.id,URL.createObjectURL(p.full));thumbUrls.set(p.id,URL.createObjectURL(p.thumb))}
     if(l)lists=normLists(l);
     if(dl&&typeof dl==='object')tombs=dl;
+    const legacy=!l||!l.v||its.some(i=>!('deptId' in i));
+    const ch=relinkAll(its);
+    if(legacy||ch)await write([{s:'meta',v:listsBody(lists),k:'lists'},...its.map(v=>({s:'items',v}))]);
     loaded=true;buildForm();setItems(its);
   }catch(e){loaded=true;renderAll();toast('Your browser won\'t let ROIL store data. Make sure you\'re not in a private or Incognito window.')}
   if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
@@ -594,24 +701,30 @@ async function boot(){
 }
 
 /* ---------- capture form ---------- */
-function chipHtml(arr,sel){return arr.map(v=>`<button type="button" class="chip" data-v="${esc(v)}" aria-pressed="${v===sel}">${esc(v)}</button>`).join('')}
-function segHtml(arr,sel){return arr.map(v=>`<button type="button" data-v="${esc(v)}" aria-pressed="${v===sel}">${esc(v==='Needs follow-up'?'Follow-up':v)}</button>`).join('')}
-function deptOptions(sel){return '<option value="">Department…</option>'+lists.departments.map(([n])=>`<option${n===sel?' selected':''}>${esc(n)}</option>`).join('')}
-function subOptions(dept,sel){const d=lists.departments.find(x=>x[0]===dept);const subs=d?d[1].slice():[];if(sel&&!subs.includes(sel))subs.push(sel);return `<option value="">${subs.length?'Planogram (optional)':dept?'No planograms listed':'Planogram…'}</option>`+subs.map(s=>`<option${s===sel?' selected':''}>${esc(s)}</option>`).join('')}
+function chipHtml(arr,sel){return arr.map(e=>`<button type="button" class="chip" data-v="${esc(e.id)}" aria-pressed="${e.id===sel}">${esc(e.name)}</button>`).join('')}
+function segHtml(arr,sel){return arr.map(x=>{const v=typeof x==='string'?x:x.id,n=typeof x==='string'?x:x.name;return `<button type="button" data-v="${esc(v)}" aria-pressed="${v===sel}">${esc(n==='Needs follow-up'?'Follow-up':n)}</button>`}).join('')}
+const optLabel=e=>esc(e.name)+(e.archived?' (archived)':'');
+function deptOptions(sel){return '<option value="">Department…</option>'+lists.departments.filter(d=>!d.archived||d.id===sel).map(d=>`<option value="${d.id}"${d.id===sel?' selected':''}>${optLabel(d)}</option>`).join('')}
+function subOptions(deptId,sel){const d=IX.dept.get(deptId);const subs=d?d.planograms.filter(p=>!p.archived||p.id===sel):[];
+  return `<option value="">${subs.length?'Planogram (optional)':deptId?'No planograms listed':'Planogram…'}</option>`+subs.map(p=>`<option value="${p.id}"${p.id===sel?' selected':''}>${optLabel(p)}</option>`).join('')}
+function entryOptions(arr,sel,blank){return (blank?`<option value="">${blank}</option>`:'')+arr.filter(e=>!e.archived||e.id===sel).map(e=>`<option value="${e.id}"${e.id===sel?' selected':''}>${optLabel(e)}</option>`).join('')}
+/* Form choices are entry ids. Older saved choices were names, so those are looked up once. */
+function toEntryId(map,arr,v){return !v?'':map.has(v)?v:((byName(arr,v)||{}).id||'')}
 function buildForm(){
-  if(!lists.departments.some(d=>d[0]===form.dept)){form.dept='';form.sub='';}
-  else if(form.sub&&!lists.departments.find(d=>d[0]===form.dept)[1].includes(form.sub))form.sub='';
+  reindex();
+  form.dept=toEntryId(IX.dept,lists.departments,form.dept);
+  const d=IX.dept.get(form.dept);
+  if(!d||d.archived){form.dept='';form.sub=''}
+  else{form.sub=toEntryId(new Map(d.planograms.map(p=>[p.id,p])),d.planograms,form.sub);const p=d.planograms.find(x=>x.id===form.sub);if(!p||p.archived)form.sub=''}
   if(!lists.showShift)form.shift='';
+  for(const [f,k] of [['issue','issues'],['cause','causes'],['shift','shifts']]){form[f]=toEntryId(IX[k],lists[k],form[f]);if(form[f]&&IX[k].get(form[f]).archived)form[f]=''}
   $('#shiftWrap').hidden=!lists.showShift;
   $('#fDept').innerHTML=deptOptions(form.dept);
   $('#fSub').innerHTML=subOptions(form.dept,form.sub);
-  if(!lists.issues.includes(form.issue))form.issue='';
-  if(!lists.causes.includes(form.cause))form.cause='';
-  if(form.shift&&!lists.shifts.includes(form.shift))form.shift='';
-  $('#fIssue').innerHTML=chipHtml(lists.issues,form.issue);
-  $('#fCause').innerHTML=chipHtml(lists.causes,form.cause);
+  $('#fIssue').innerHTML=chipHtml(activeOf(lists.issues),form.issue);
+  $('#fCause').innerHTML=chipHtml(activeOf(lists.causes),form.cause);
   $('#fStatus').innerHTML=segHtml(STATUSES,form.status);
-  $('#fShift').innerHTML=segHtml(lists.shifts,form.shift);
+  $('#fShift').innerHTML=segHtml(activeOf(lists.shifts),form.shift);
 }
 function tick(){$('#when').textContent=form.photoFile?'Photo taken · '+fmtDT(form.takenAt):'Logged as '+fmtDT(new Date().toISOString());if(view==='follow')renderFollow()}
 function bindChoice(id,key,toggle){
@@ -674,9 +787,10 @@ $('#saveBtn').addEventListener('click',async()=>{
   const btn=$('#saveBtn');btn.disabled=true;
   const now=new Date().toISOString();
   const created=form.takenAt&&form.photoFile?form.takenAt:now;
-  const item={id:newId(),created,updated:now,dept:form.dept,issue:form.issue,cause:form.cause||'',
-    planogram:form.sub||'',note:$('#fNote').value.trim(),status:form.status,shift:lists.showShift?(form.shift||''):'',
-    fixedAt:form.status==='Fixed'?now:null,photo:false};
+  const item={id:newId(),created,updated:now,deptId:form.dept,planogramId:form.sub||'',issueId:form.issue,causeId:form.cause||'',
+    shiftId:lists.showShift?(form.shift||''):'',dept:'',planogram:'',issue:'',cause:'',shift:'',
+    note:$('#fNote').value.trim(),status:form.status,fixedAt:form.status==='Fixed'?now:null,photo:false};
+  link(item);
   let photo=null;
   try{
     if(form.photoFile){
@@ -823,18 +937,19 @@ function inRange(it,r){if(r==='all')return true;return Date.now()-new Date(it.cr
 function rangeOpts(sel){return [['1','Today (24 h)'],['7','Last 7 days'],['30','Last 30 days'],['90','Last 90 days'],['all','All time']].map(([v,t])=>`<option value="${v}"${v===sel?' selected':''}>${t}</option>`).join('')}
 function historyFiltered(){
   const q=hf.q.trim().toLowerCase();
-  return items.filter(it=>inRange(it,hf.range)&&(!hf.dept||it.dept===hf.dept)&&(!hf.issue||it.issue===hf.issue)&&(!hf.status||it.status===hf.status)
+  return items.filter(it=>inRange(it,hf.range)&&(!hf.dept||it.deptId===hf.dept)&&(!hf.issue||it.issueId===hf.issue)&&(!hf.status||it.status===hf.status)
     &&(!q||[it.note,it.planogram,it.sub,it.cause].join(' ').toLowerCase().includes(q)));
 }
 function renderHistory(){
+  hf.dept=toEntryId(IX.dept,lists.departments,hf.dept);hf.issue=toEntryId(IX.issues,lists.issues,hf.issue);
   const el=$('#v-history');const arr=historyFiltered();
   const focused=document.activeElement&&document.activeElement.id==='hq';
   el.innerHTML=`<h2>History</h2>
   <div class="filters">
     <select id="hRange" aria-label="Date range">${rangeOpts(hf.range)}</select>
     <select id="hStatus" aria-label="Status"><option value="">Any status</option>${STATUSES.map(s=>`<option${s===hf.status?' selected':''}>${esc(s)}</option>`).join('')}</select>
-    <select id="hDept" aria-label="Department"><option value="">All departments</option>${lists.departments.map(([n])=>`<option${n===hf.dept?' selected':''}>${esc(n)}</option>`).join('')}</select>
-    <select id="hIssue" aria-label="Issue"><option value="">All issues</option>${lists.issues.map(n=>`<option${n===hf.issue?' selected':''}>${esc(n)}</option>`).join('')}</select>
+    <select id="hDept" aria-label="Department"><option value="">All departments</option>${lists.departments.map(d=>`<option value="${d.id}"${d.id===hf.dept?' selected':''}>${optLabel(d)}</option>`).join('')}</select>
+    <select id="hIssue" aria-label="Issue"><option value="">All issues</option>${lists.issues.map(e=>`<option value="${e.id}"${e.id===hf.issue?' selected':''}>${optLabel(e)}</option>`).join('')}</select>
     <input class="wide" type="search" id="hq" placeholder="Search notes, planograms, categories" value="${esc(hf.q)}">
   </div>
   <div class="row" style="justify-content:space-between"><span class="muted">${arr.length} issue${arr.length===1?'':'s'}</span>
@@ -879,7 +994,7 @@ function renderStats(){
   const combos=countBy(arr,i=>`${i.dept}${i.planogram?' › '+i.planogram:''} · ${i.issue}`).filter(x=>x[1]>1).slice(0,8);
   const pogs=countBy(arr.filter(i=>i.planogram),i=>`${i.planogram.trim()} (${i.dept})`).filter(x=>x[1]>1).slice(0,8);
   const causes=countBy(arr,i=>i.cause);
-  const coach=arr.filter(i=>i.cause==='Training / process gap'||i.cause==='Planogram not followed');
+  const COACH=[sid('c','Training / process gap'),sid('c','Planogram not followed')];const coach=arr.filter(i=>COACH.includes(i.causeId));
   const coachIssues=countBy(coach,i=>i.issue).slice(0,3);
   const coachShift=lists.showShift&&countBy(coach.filter(i=>i.shift),i=>i.shift)[0];
   let insight='';
@@ -968,9 +1083,9 @@ function openDetail(id){
   ${src?`<img src="${esc(src)}" alt="Issue photo">`:''}
   <div class="row"><button class="btn small primary" id="dShare">Share to Teams</button><button class="btn small" id="dCopy">Copy for Teams</button><button class="btn small" id="dText">Copy text</button>${src?'<button class="btn small" id="dPng">Copy photo</button>':''}</div>
   <div><span class="label">Status</span><div class="seg status" id="dStatus">${segHtml(STATUSES,it.status)}</div></div>
-  <div class="two collapse"><div><label class="label" for="dDept">Department</label><select id="dDept">${deptOptions(it.dept)}</select></div><div><label class="label" for="dSub">Planogram</label><select id="dSub">${subOptions(it.dept,it.planogram)}</select></div></div>
-  <div class="two collapse"><div><label class="label" for="dIssue">Issue</label><select id="dIssue">${lists.issues.concat(lists.issues.includes(it.issue)?[]:[it.issue]).map(v=>`<option${v===it.issue?' selected':''}>${esc(v)}</option>`).join('')}</select></div>
-  <div><label class="label" for="dCause">Likely cause</label><select id="dCause"><option value="">Not set</option>${lists.causes.concat(!it.cause||lists.causes.includes(it.cause)?[]:[it.cause]).map(v=>`<option${v===it.cause?' selected':''}>${esc(v)}</option>`).join('')}</select></div></div>
+  <div class="two collapse"><div><label class="label" for="dDept">Department</label><select id="dDept">${deptOptions(it.deptId)}</select></div><div><label class="label" for="dSub">Planogram</label><select id="dSub">${subOptions(it.deptId,it.planogramId)}</select></div></div>
+  <div class="two collapse"><div><label class="label" for="dIssue">Issue</label><select id="dIssue">${entryOptions(lists.issues,it.issueId)}</select></div>
+  <div><label class="label" for="dCause">Likely cause</label><select id="dCause">${entryOptions(lists.causes,it.causeId,'Not set')}</select></div></div>
   <div><label class="label" for="dNote">Note</label><textarea id="dNote">${esc(it.note)}</textarea></div>
   ${it.fixedAt?`<p class="note" style="margin:0">Fixed ${esc(fmtDT(it.fixedAt))}${new Date(it.fixedAt)-new Date(it.created)>=600000?' · took '+dur(new Date(it.fixedAt)-new Date(it.created)):' · on the spot'}</p>`:''}
   <div class="row" style="justify-content:space-between"><button class="btn danger small" id="dDel">Delete</button><button class="btn primary" id="dSave">Save changes</button></div>`);
@@ -988,7 +1103,7 @@ function openDetail(id){
   $('#dSave').onclick=async()=>{
     const dept=$('#dDept').value;if(!dept){toast('Pick a department.');return}
     const now=new Date().toISOString();
-    const p={status:st,dept,issue:$('#dIssue').value,cause:$('#dCause').value,planogram:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
+    const p={status:st,deptId:dept,issueId:$('#dIssue').value,causeId:$('#dCause').value,planogramId:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
     if(st==='Fixed'&&it.status!=='Fixed')p.fixedAt=now;if(st!=='Fixed')p.fixedAt=null;
     try{await store.patch(it.id,p);closeSheet();toast('Saved.')}catch(e){toast('Couldn\'t save. Try again.')}
   };
@@ -1033,10 +1148,10 @@ function backupHtml(){
   </section>`;
 }
 
-let listsPending=false,listsSaveT=null;const openDepts=new Set();let armedKey=null,armedT=null;
+let listsPending=false,listsSaveT=null;const openDepts=new Set(),openArch=new Set();let armedKey=null,armedT=null;
 const IC={up:'<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',down:'<svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',del:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>'};
 function commitLists(msg){
-  buildForm();renderAll();
+  relinkAll();buildForm();renderAll();
   listsPending=true;clearTimeout(listsSaveT);setSaving('Saving…');
   listsSaveT=setTimeout(async()=>{
     try{await store.saveLists(lists);setSaving('Saved');if(msg)toast(msg)}
@@ -1045,83 +1160,147 @@ function commitLists(msg){
   },500);
 }
 function setSaving(t){const e=$('#lSaving');if(e)e.textContent=t}
-function getArr(k){return k.startsWith('pog:')?lists.departments[+k.slice(4)][1]:lists[k]}
-function rowsHtml(k,arr,noun){
-  return `<ul class="lrows">${arr.map((v,i)=>`<li class="lrow">
-    <input type="text" id="li-${k}-${i}" data-k="${k}" data-i="${i}" value="${esc(v)}" aria-label="${esc(noun)} ${i+1}">
-    <button class="ib" data-act="up" data-k="${k}" data-i="${i}" ${i?'':'disabled'} aria-label="Move up">${IC.up}</button>
-    <button class="ib" data-act="down" data-k="${k}" data-i="${i}" ${i<arr.length-1?'':'disabled'} aria-label="Move down">${IC.down}</button>
-    <button class="ib del${armedKey===k+':'+i?' armed':''}" data-act="del" data-k="${k}" data-i="${i}" aria-label="Delete ${esc(v)}">${IC.del}</button></li>`).join('')}</ul>
-  <div class="ladd"><input type="text" id="add-${k}" data-add="${k}" placeholder="Add ${esc(noun.toLowerCase())}" aria-label="New ${esc(noun.toLowerCase())}"><button class="btn small" data-act="add" data-k="${k}">Add</button></div>`;
+/* k: 'dept', 'pog:<department id>', 'issues', 'causes' or 'shifts' */
+function getArr(k){if(k==='dept')return lists.departments;if(k.startsWith('pog:')){const d=IX.dept.get(k.slice(4));return d?d.planograms:[]}return lists[k]||[]}
+const nounOf=k=>k==='dept'?'department':k.startsWith('pog:')?'planogram':KINDS[k].noun;
+const prefixOf=k=>k==='dept'?'d':k.startsWith('pog:')?'p':KINDS[k].p;
+const usedText=n=>n?`${n} issue${n===1?'':'s'}`:'unused';
+function archivedHtml(k,arc,U){
+  if(!arc.length)return '';
+  return `<details class="arch" data-arch="${k}" ${openArch.has(k)?'open':''}><summary>Archived (${arc.length})</summary><ul class="lrows">${arc.map(e=>`<li class="arow">
+    <span class="an">${esc(e.name)}</span><span class="note">${usedText(U.get(e.id)||0)}</span>
+    <button class="btn small" data-act="restore" data-k="${k}" data-id="${e.id}">Restore</button>
+    <button class="ib del${armedKey===k+':'+e.id?' armed':''}" data-act="del" data-k="${k}" data-id="${e.id}" aria-label="Delete ${esc(e.name)}">${IC.del}</button></li>`).join('')}</ul></details>`;
+}
+function rowsHtml(k,arr,U){
+  const act=activeOf(arr),noun=nounOf(k);
+  return `<ul class="lrows">${act.map((e,i)=>`<li class="lrow">
+    <input type="text" id="li-${k}-${e.id}" data-k="${k}" data-id="${e.id}" value="${esc(e.name)}" aria-label="Rename ${esc(e.name)}">
+    <button class="ib" data-act="up" data-k="${k}" data-id="${e.id}" ${i?'':'disabled'} aria-label="Move up">${IC.up}</button>
+    <button class="ib" data-act="down" data-k="${k}" data-id="${e.id}" ${i<act.length-1?'':'disabled'} aria-label="Move down">${IC.down}</button>
+    <button class="ib del${armedKey===k+':'+e.id?' armed':''}" data-act="del" data-k="${k}" data-id="${e.id}" aria-label="Delete ${esc(e.name)}" title="Used by ${usedText(U.get(e.id)||0)}">${IC.del}</button></li>`).join('')}</ul>
+  <div class="ladd"><input type="text" id="add-${k}" data-add="${k}" placeholder="Add ${noun}" aria-label="New ${noun}"><button class="btn small" data-act="add" data-k="${k}">Add</button></div>
+  ${archivedHtml(k,arr.filter(e=>e.archived),U)}`;
 }
 function renderLists(){
   const el=$('#v-lists');
   const fid=document.activeElement&&el.contains(document.activeElement)?document.activeElement.id:null;
+  const U=usageCounts();const deps=activeOf(lists.departments);
   el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Lists</h2><span class="saving" id="lSaving"></span></div>
-  <p class="note" style="margin:0">These are the choices on the Log screen. Changes save as you make them. Renaming or deleting here doesn't change issues you've already logged.</p>
-  <section class="panel lsec"><header><h3>Departments &amp; planograms</h3><span class="muted mono" style="font-size:12px">${lists.departments.length}</span></header>
-    <div class="lrows">${lists.departments.map(([n,p],di)=>`<details class="dept" data-di="${di}" ${openDepts.has(n)?'open':''}><summary>${esc(n)}<span class="cnt">${p.length} planogram${p.length===1?'':'s'}</span></summary>
+  <p class="note" style="margin:0">These are the choices on the Log screen. Changes save as you make them. Renaming an entry updates every issue that uses it. Deleting one that's in use lets you archive it or merge it into another.</p>
+  <section class="panel lsec"><header><h3>Departments &amp; planograms</h3><span class="muted mono" style="font-size:12px">${deps.length}</span></header>
+    <div class="lrows">${deps.map(d=>{const np=activeOf(d.planograms).length;return `<details class="dept" data-id="${d.id}" ${openDepts.has(d.id)?'open':''}><summary>${esc(d.name)}<span class="cnt">${np} planogram${np===1?'':'s'}${U.get(d.id)?' · '+usedText(U.get(d.id)):''}</span></summary>
       <div class="dbody">
-        <div><label class="label" for="dn-${di}">Department name</label><div class="ladd"><input type="text" id="dn-${di}" data-dept="${di}" value="${esc(n)}"><button class="btn small danger${armedKey==='dept:'+di?' armed':''}" data-act="deldept" data-di="${di}">${armedKey==='dept:'+di?'Tap again':'Delete'}</button></div></div>
-        <div><span class="label">Planograms</span>${rowsHtml('pog:'+di,p,'Planogram')}</div>
-      </div></details>`).join('')}</div>
-    <div class="ladd"><input type="text" id="add-dept" data-add="dept" placeholder="Add department" aria-label="New department"><button class="btn small" data-act="adddept">Add</button></div>
+        <div><label class="label" for="dn-${d.id}">Department name</label><div class="ladd"><input type="text" id="dn-${d.id}" data-k="dept" data-id="${d.id}" value="${esc(d.name)}"><button class="btn small danger${armedKey==='dept:'+d.id?' armed':''}" data-act="del" data-k="dept" data-id="${d.id}">${armedKey==='dept:'+d.id?'Tap again':'Delete'}</button></div></div>
+        <div><span class="label">Planograms</span>${rowsHtml('pog:'+d.id,d.planograms,U)}</div>
+      </div></details>`}).join('')}</div>
+    <div class="ladd"><input type="text" id="add-dept" data-add="dept" placeholder="Add department" aria-label="New department"><button class="btn small" data-act="add" data-k="dept">Add</button></div>
+    ${archivedHtml('dept',lists.departments.filter(d=>d.archived),U)}
   </section>
-  <section class="panel lsec"><header><h3>Issue types</h3><span class="muted mono" style="font-size:12px">${lists.issues.length}</span></header>${rowsHtml('issues',lists.issues,'Issue type')}</section>
-  <section class="panel lsec"><header><h3>Likely causes</h3><span class="muted mono" style="font-size:12px">${lists.causes.length}</span></header>${rowsHtml('causes',lists.causes,'Cause')}</section>
+  <section class="panel lsec"><header><h3>Issue types</h3><span class="muted mono" style="font-size:12px">${activeOf(lists.issues).length}</span></header>${rowsHtml('issues',lists.issues,U)}</section>
+  <section class="panel lsec"><header><h3>Likely causes</h3><span class="muted mono" style="font-size:12px">${activeOf(lists.causes).length}</span></header>${rowsHtml('causes',lists.causes,U)}</section>
   <section class="panel lsec"><header><h3>Statuses</h3></header><p class="note" style="margin:0">Fixed (the default), Open and Needs follow-up. These stay as they are, since the Open tab depends on them.</p></section>
   <section class="panel lsec"><header><h3>Archived features</h3></header>
     <label class="switch"><input type="checkbox" id="tShift" ${lists.showShift?'checked':''}><span><b>Shift selector</b><br><span class="note">Adds a shift choice to the Log screen and a By shift chart to Stats.</span></span></label>
-    ${lists.showShift?`<div><span class="label">Shifts</span>${rowsHtml('shifts',lists.shifts,'Shift')}</div>`:''}
+    ${lists.showShift?`<div><span class="label">Shifts</span>${rowsHtml('shifts',lists.shifts,U)}</div>`:''}
   </section>
   ${appearanceHtml()}
   ${backupHtml()}
-  <div><button class="btn small ghost${armedKey==='reset'?' danger':''}" data-act="reset">${armedKey==='reset'?'Tap again to replace all lists':'Restore starter lists'}</button></div>`;
+  <div><button class="btn small ghost${armedKey==='reset'?' danger':''}" data-act="reset">${armedKey==='reset'?'Tap again to restore starter lists':'Restore starter lists'}</button></div>`;
   if(fid){const f=document.getElementById(fid);if(f){f.focus();if(f.setSelectionRange&&f.type==='text')f.setSelectionRange(f.value.length,f.value.length)}}
 }
 function arm(key){armedKey=key;clearTimeout(armedT);armedT=setTimeout(()=>{armedKey=null;if(view==='lists')renderLists()},4000);renderLists()}
 function addTo(k,input){
-  const v=input.value.trim();if(!v)return;
-  const arr=k==='dept'?lists.departments.map(d=>d[0]):getArr(k);
-  if(arr.some(x=>x.toLowerCase()===v.toLowerCase())){toast(`"${v}" is already in this list.`);return}
-  if(k==='dept'){lists.departments.push([v,[]]);openDepts.add(v)}else getArr(k).push(v);
-  input.value='';commitLists();
+  const v=input.value.trim().slice(0,120);if(!v)return;
+  const arr=getArr(k);const ex=byName(arr,v);
+  if(ex){if(ex.archived){ex.archived=false;input.value='';commitLists(`Restored “${ex.name}” from Archived.`)}else toast(`“${v}” is already in this list.`);return}
+  const e={id:rid(prefixOf(k)),name:v,archived:false};
+  if(k==='dept'){e.planograms=[];openDepts.add(e.id)}
+  arr.push(e);input.value='';commitLists();
   const again=document.getElementById(input.id);if(again)again.focus();
+}
+function moveEntry(k,id,dir){
+  const arr=getArr(k),act=activeOf(arr);const i=act.findIndex(e=>e.id===id),j=i+dir;
+  if(i<0||j<0||j>=act.length)return;
+  const a=arr.indexOf(act[i]),b=arr.indexOf(act[j]);[arr[a],arr[b]]=[arr[b],arr[a]];commitLists();
+}
+function removeEntry(k,id){
+  const arr=getArr(k);const i=arr.findIndex(x=>x.id===id);if(i<0)return;
+  if(k==='dept')for(const p of arr[i].planograms)lists.removed.push(p.id);
+  arr.splice(i,1);lists.removed.push(id);openDepts.delete(id);
+}
+function delEntry(k,id){
+  const arr=getArr(k);const e=arr.find(x=>x.id===id);if(!e)return;
+  const n=usageCounts().get(id)||0;
+  if(!e.archived&&(k==='dept'||k==='issues')&&activeOf(arr).length<=1){toast(`Keep at least one ${nounOf(k)}.`);return}
+  if(!n){
+    if(armedKey!==k+':'+id){arm(k+':'+id);return}
+    armedKey=null;removeEntry(k,id);commitLists(`Deleted “${e.name}”.`);return;
+  }
+  openUsedSheet(k,e,n);
+}
+/* An entry that logged issues use can't just vanish: archive it, or merge it into another. */
+function openUsedSheet(k,e,n){
+  const noun=nounOf(k),targets=activeOf(getArr(k)).filter(x=>x.id!==e.id);
+  openSheet(`<div class="head"><h2>“${esc(e.name)}” is in use</h2><button class="btn small" data-close>Cancel</button></div>
+  <p class="note" style="margin:0">${n} logged issue${n===1?' uses':'s use'} this ${noun}. Choose what happens to ${n===1?'it':'them'}.</p>
+  ${e.archived?'':`<div class="panel stack" style="gap:8px"><b>Archive it</b><span class="note">Hidden from new issues. Past issues keep it, and Stats still count it. You can restore it from Archived any time.</span><div><button class="btn primary" id="uArch" type="button">Archive</button></div></div>`}
+  <div class="panel stack" style="gap:8px"><b>Merge into another ${noun}</b><span class="note">Moves ${n===1?'that issue':'all '+n+' issues'} to the ${noun} you pick, then removes “${esc(e.name)}”.${k==='dept'?' Its planograms move too.':''}</span>
+    ${targets.length?`<select id="uTarget" aria-label="Merge into"><option value="">Choose a ${noun}…</option>${targets.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select><div><button class="btn" id="uMerge" type="button">Merge</button></div>`
+      :`<span class="note">There's no other ${noun}${k.startsWith('pog:')?' in this department':''} to merge into.</span>`}</div>`);
+  const a=$('#uArch');if(a)a.onclick=()=>{e.archived=true;closeSheet();commitLists(`Archived “${e.name}”. Past issues keep it.`)};
+  const m=$('#uMerge');if(m)m.onclick=async()=>{const t=$('#uTarget').value;if(!t){toast(`Pick a ${noun} to merge into.`);return}
+    m.disabled=true;try{await mergeEntry(k,e.id,t);closeSheet()}catch(err){m.disabled=false;toast('Couldn\'t merge. Try again.')}};
+}
+async function mergeEntry(k,from,to){
+  const arr=getArr(k);const src=arr.find(x=>x.id===from),dst=arr.find(x=>x.id===to);if(!src||!dst)return;
+  if(k==='dept')for(const p of src.planograms){const same=byName(dst.planograms,p.name);if(same)lists.moved[p.id]=same.id;else dst.planograms.push(p)}
+  lists.moved[from]=to;arr.splice(arr.indexOf(src),1);openDepts.delete(from);
+  reindex();
+  const now=new Date().toISOString(),ops=[],next=[];let n=0;
+  for(const it of items){
+    const before=[it.deptId,it.planogramId,it.issueId,it.causeId,it.shiftId].join('|');
+    const c={...it};link(c);
+    if([c.deptId,c.planogramId,c.issueId,c.causeId,c.shiftId].join('|')!==before){c.updated=now;ops.push({s:'items',v:c});n++}
+    next.push(c);
+  }
+  if(ops.length)await write(ops);
+  items=next;
+  commitLists(`Merged “${src.name}” into “${dst.name}”: ${n} issue${n===1?'':'s'} moved.`);
 }
 (function bindLists(){
   const el=$('#v-lists');
-  el.addEventListener('toggle',e=>{const d=e.target.closest&&e.target.closest('details.dept');if(!d)return;const n=lists.departments[+d.dataset.di]?.[0];if(n)(d.open?openDepts.add(n):openDepts.delete(n))},true);
+  el.addEventListener('toggle',e=>{
+    const t=e.target;if(!t.closest)return;
+    const d=t.closest('details.dept');if(d&&t===d){d.open?openDepts.add(d.dataset.id):openDepts.delete(d.dataset.id);return}
+    const a=t.closest('details.arch');if(a&&t===a)a.open?openArch.add(a.dataset.arch):openArch.delete(a.dataset.arch);
+  },true);
   el.addEventListener('change',e=>{
     const t=e.target;
     if(t.id==='rFile'){const f=t.files&&t.files[0];t.value='';if(f)doRestore(f);return}
     if(t.id==='tShift'){lists.showShift=t.checked;commitLists(t.checked?'Shift selector turned on.':'Shift selector archived.');return}
-    if(t.dataset.dept!=null){const di=+t.dataset.dept,v=t.value.trim(),old=lists.departments[di][0];
-      if(!v||v===old){t.value=old;return}
-      if(lists.departments.some((d,i)=>i!==di&&d[0].toLowerCase()===v.toLowerCase())){toast(`"${v}" is already a department.`);t.value=old;return}
-      lists.departments[di][0]=v;if(openDepts.delete(old))openDepts.add(v);if(form.dept===old)form.dept=v;commitLists();return}
-    if(t.dataset.k&&t.dataset.i!=null){const arr=getArr(t.dataset.k),i=+t.dataset.i,v=t.value.trim();
-      if(!v||v===arr[i]){t.value=arr[i];return}
-      if(arr.some((x,j)=>j!==i&&x.toLowerCase()===v.toLowerCase())){toast(`"${v}" is already in this list.`);t.value=arr[i];return}
-      arr[i]=v;commitLists()}
+    if(t.dataset.k&&t.dataset.id){
+      const arr=getArr(t.dataset.k),e=arr.find(x=>x.id===t.dataset.id),v=t.value.trim().slice(0,120);
+      if(!e)return;
+      if(!v||v===e.name){t.value=e.name;return}
+      const clash=byName(arr,v);
+      if(clash&&clash!==e){toast(clash.archived?`“${clash.name}” is archived. Restore it from Archived, or merge into it.`:`“${v}” is already in this list.`);t.value=e.name;return}
+      e.name=v;commitLists(`Renamed. Issues using it now show “${v}”.`);
+    }
   });
   el.addEventListener('keydown',e=>{const t=e.target;if(e.key!=='Enter')return;
     if(t.dataset.add){e.preventDefault();addTo(t.dataset.add,t)}else if(t.matches('input[type=text]')){e.preventDefault();t.blur()}});
   el.addEventListener('click',e=>{
-    const b=e.target.closest('button[data-act]');if(!b)return;const act=b.dataset.act,k=b.dataset.k,i=+b.dataset.i;
+    const b=e.target.closest('button[data-act]');if(!b)return;const act=b.dataset.act,k=b.dataset.k,id=b.dataset.id;
     if(act==='add'){addTo(k,document.getElementById('add-'+k));return}
-    if(act==='adddept'){addTo('dept',$('#add-dept'));return}
-    if(act==='up'||act==='down'){const arr=getArr(k),j=act==='up'?i-1:i+1;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];commitLists();return}
-    if(act==='del'){const arr=getArr(k);
-      if((k==='issues')&&arr.length<=1){toast('Keep at least one issue type.');return}
-      if(armedKey!==k+':'+i){arm(k+':'+i);return}
-      armedKey=null;arr.splice(i,1);commitLists();return}
-    if(act==='deldept'){const di=+b.dataset.di;
-      if(lists.departments.length<=1){toast('Keep at least one department.');return}
-      if(armedKey!=='dept:'+di){arm('dept:'+di);return}
-      armedKey=null;const n=lists.departments[di][0];lists.departments.splice(di,1);openDepts.delete(n);commitLists(`Deleted ${n}.`);return}
+    if(act==='up'||act==='down'){moveEntry(k,id,act==='up'?-1:1);return}
+    if(act==='del'){delEntry(k,id);return}
+    if(act==='restore'){const x=getArr(k).find(q=>q.id===id);if(x){x.archived=false;commitLists(`Restored “${x.name}”.`)}return}
     if(act==='bk-dl'){doBackup(false);return}
     if(act==='bk-share'){doBackup(true);return}
-    if(act==='reset'){if(armedKey!=='reset'){arm('reset');return}armedKey=null;lists=normLists(null);commitLists('Starter lists restored.')}
+    if(act==='reset'){if(armedKey!=='reset'){arm('reset');return}armedKey=null;
+      const keep={removed:lists.removed,moved:lists.moved};lists=normLists(null);Object.assign(lists,keep);
+      commitLists('Starter lists restored. Entries your issues still use were kept as archived.')}
   });
 })();
 
