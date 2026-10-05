@@ -34,10 +34,15 @@ Three layouts, set in **Lists → Appearance → Log screen layout**:
 **Auto** (the default) uses Steps on phones and Sections on computers. The Save button stays at the bottom of the screen, within thumb reach.
 
 ## SKUs, items and lock-ups
-These are on the **Where** step or card:
-- **Location SKU:** the 7-digit SKU from the shelf tag (ESL). On Android, tap **Scan** and point the camera at the tag's QR code. You can also type it, or use a Bluetooth scanner. Once ROIL has seen a SKU, it fills in the department and planogram you used last time. You can add a product name, and **View on bestbuy.com** opens the product.
-- **Lock-up:** turn this on when customers can't reach the spot. If you pick Customer as the source for a lock-up issue, ROIL warns you. Stats shows lock-up issues separately, as employee-caused.
-- **Items found:** scan (**Scan items** keeps the camera open) or type the UPC of each product that's actually there. Scanning the same product again adds one to its quantity. Each item is marked:
+**Scan button:** on phones, the bottom bar has a **Scan** button on every step. It keeps the camera open:
+- A shelf tag's QR sets the location SKU (and fills in the department and planogram if ROIL knows the SKU).
+- Each product barcode adds an item found.
+
+So after taking the photo, you can scan the tag and the items in one go, then pick what's wrong.
+
+- **Location SKU** (top of the **Where** step): the 7-digit SKU from the shelf tag (ESL). On Android, tap **Scan** and point the camera at the tag's QR code. You can also type it, or use a Bluetooth scanner. Once ROIL has seen a SKU, it fills in the department and planogram you used last time. You can add a product name, and **View on bestbuy.com** opens the product.
+- **Lock-up** (under the SKU): turn this on when customers can't reach the spot. If you pick Customer as the source for a lock-up issue, ROIL warns you. Stats shows lock-up issues separately, as employee-caused.
+- **Items found** (on the **What's wrong** step): it opens automatically for Placement and Pricing & labels issues, or once you've scanned an item. For other issues, tap **+ Items found**. Scan (the camera stays open) or type the UPC of each product that's actually there. Scanning the same product again adds one to its quantity. Each item is marked:
   - **Correct:** it belongs to this location's SKU.
   - **Wrong item:** it belongs somewhere else.
   - **Not known yet:** tap **Belongs here** or **Different product**, and ROIL remembers your answer.
