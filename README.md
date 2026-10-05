@@ -21,7 +21,8 @@ Installing keeps your data from being cleared and opens ROIL like an app. Check 
 - **Saving as Fixed without an after photo** asks if you want to take one. You can turn this off.
 - **Source and Cause** fold into one **Why** row, already set to the default source. Tap it to change them.
 - **Issue types** are grouped in tabs by category (Placement, Pricing & labels, Demo units, and so on).
-- **Adding an after photo later:** open the issue and tap **+ Add after photo**, or tap **Mark fixed** on the Open tab.
+- **An after photo means Fixed.** While there's an after photo, **Open** and **Follow-up** are locked. Remove the after photo to change the status.
+- **Changing photos later:** open the issue. Each photo has **Replace** and **Remove** (tap Remove twice to confirm), and an empty slot has **+ Add before photo** or **+ Add after photo**. Photo changes save right away, and other devices pick them up on the next sync. **Mark fixed** on the Open tab also offers an after photo.
 
 Three layouts, set in **Lists → Appearance → Log screen layout**:
 | Layout | What it looks like |
