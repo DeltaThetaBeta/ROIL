@@ -7,6 +7,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: data:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0e6a5a">
+<script>/* apply saved appearance before the page draws */try{var a=JSON.parse(localStorage.getItem('roil.appearance')||'null');if(a){var r=document.documentElement;if(a.theme==='light'||a.theme==='dark')r.setAttribute('data-theme',a.theme);['contrast','status','shape','size'].forEach(function(k){if(typeof a[k]==='string')r.setAttribute('data-'+k,a[k])})}}catch(e){}</script>
 <title>Retail Operations Issue Log</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -24,7 +25,7 @@ img{max-width:100%}
   --f-display:"Roboto Condensed",sans-serif-condensed,"Arial Narrow",system-ui,sans-serif;
   --f-body:system-ui,Roboto,-apple-system,"Segoe UI",sans-serif;
   --f-mono:ui-monospace,"Roboto Mono","Droid Sans Mono",Menlo,Consolas,monospace;
-  --r:10px;
+  --r:10px;--r-sm:8px;--r-pill:999px;--r-lg:14px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0f1513; --surface:#18201d; --sunk:#111816; --ink:#e4ebe8; --muted:#93a39d; --line:#2b3632;
@@ -82,21 +83,21 @@ nav.tabs .badge{position:absolute;top:5px;left:calc(50% + 6px);background:var(--
 .photo-drop.has img{display:block;width:100%;max-height:340px;object-fit:cover}
 .photo-tools{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:14px}
 .when{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
-select,input[type=text],input[type=search],textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:11px 12px;min-height:46px}
+select,input[type=text],input[type=search],textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 12px;min-height:46px}
 textarea{min-height:76px;resize:vertical}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (max-width:460px){.two.collapse{grid-template-columns:1fr}}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 13px;cursor:pointer;font-size:15px;line-height:1.2;min-height:40px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-pill);padding:8px 13px;cursor:pointer;font-size:15px;line-height:1.2;min-height:40px}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
-.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;background:var(--surface)}
 .seg button{border:0;background:none;padding:11px 6px;cursor:pointer;font-weight:500;min-height:46px;border-left:1px solid var(--line)}
 .seg button:first-child{border-left:0}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:600}
 .seg.status button[data-v="Fixed"][aria-pressed="true"]{background:var(--good);color:var(--surface)}
 .seg.status button[data-v="Open"][aria-pressed="true"]{background:var(--open);color:var(--surface)}
 .seg.status button[data-v="Needs follow-up"][aria-pressed="true"]{background:var(--follow);color:var(--surface)}
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:600;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm);padding:10px 14px;cursor:pointer;font-weight:600;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.big{width:100%;font-family:var(--f-display);font-size:20px;letter-spacing:.06em;text-transform:uppercase;min-height:56px}
 .btn.small{min-height:36px;padding:6px 11px;font-size:14px}
@@ -158,9 +159,9 @@ textarea{min-height:76px;resize:vertical}
 
 /* sheet */
 .overlay{position:fixed;inset:0;background:rgba(10,16,14,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
-.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:14px 14px 0 0;padding:16px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));display:grid;gap:14px}
-@media (min-width:700px){.overlay{align-items:center}.sheet{border-radius:14px;max-height:88%}}
-.sheet img{width:100%;border-radius:8px;max-height:420px;object-fit:contain;background:var(--sunk)}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:var(--r-lg) var(--r-lg) 0 0;padding:16px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));display:grid;gap:14px}
+@media (min-width:700px){.overlay{align-items:center}.sheet{border-radius:var(--r-lg);max-height:88%}}
+.sheet img{width:100%;border-radius:var(--r-sm);max-height:420px;object-fit:contain;background:var(--sunk)}
 .sheet .head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
 .kv dt{color:var(--muted)} .kv dd{margin:0}
@@ -168,7 +169,7 @@ textarea{min-height:76px;resize:vertical}
 .toast .btn{background:transparent;color:var(--bg);border-color:color-mix(in srgb,var(--bg) 40%,transparent)}
 @media (min-width:900px){.toast{bottom:24px}}
 .note{font-size:14px;color:var(--muted)}
-.banner{background:var(--open-soft);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:14px}
+.banner{background:var(--open-soft);color:var(--ink);border-radius:var(--r-sm);padding:10px 12px;font-size:14px}
 code.ex{font-family:var(--f-mono);font-size:12px;background:var(--sunk);padding:1px 4px;border-radius:3px}
 .lsec{display:grid;gap:10px}
 .lsec>header{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -176,20 +177,20 @@ code.ex{font-family:var(--f-mono);font-size:12px;background:var(--sunk);padding:
 .lrows{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .lrow{display:grid;grid-template-columns:minmax(0,1fr) 40px 40px 40px;gap:4px;align-items:center}
 .lrow input[type=text],.ladd input[type=text]{min-height:42px;padding:8px 10px}
-.ib{width:40px;height:42px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;display:grid;place-items:center;padding:0}
+.ib{width:40px;height:42px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm);cursor:pointer;display:grid;place-items:center;padding:0}
 .ib svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ib:disabled{opacity:.3;cursor:default}
 .ib.del{color:var(--bad)}
 .ib.del.armed{background:var(--bad);color:var(--surface);border-color:var(--bad)}
 .ladd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}
-details.dept{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+details.dept{border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface)}
 details.dept>summary{padding:12px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:600;list-style:none}
 details.dept>summary::-webkit-details-marker{display:none}
 details.dept>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);flex:none;margin-left:4px}
 details.dept[open]>summary::after{transform:rotate(-135deg)}
 details.dept>summary .cnt{margin-left:auto;font-family:var(--f-mono);font-size:12px;color:var(--muted);font-weight:400}
 details.dept[open]>summary{border-bottom:1px solid var(--line)}
-.dbody{padding:12px;display:grid;gap:12px;background:var(--bg);border-radius:0 0 8px 8px}
+.dbody{padding:12px;display:grid;gap:12px;background:var(--bg);border-radius:0 0 var(--r-sm) var(--r-sm)}
 .switch{display:flex;align-items:center;gap:12px;cursor:pointer}
 .switch input{width:22px;height:22px;accent-color:var(--accent)}
 .saving{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
@@ -209,6 +210,28 @@ details.dept[open]>summary{border-bottom:1px solid var(--line)}
 button.sync{border:0;background:none;cursor:pointer;padding:6px 0}
 .pk{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+
+/* ---------- Appearance settings (Lists → Appearance). Set as attributes on <html>. ---------- */
+:root[data-shape="soft"]{--r:6px;--r-sm:5px;--r-pill:8px;--r-lg:8px}
+:root[data-shape="square"]{--r:2px;--r-sm:2px;--r-pill:2px;--r-lg:2px}
+:root[data-size="compact"] body{zoom:.9}
+:root[data-size="large"] body{zoom:1.15}
+/* High contrast: pure backgrounds, darker text and much stronger outlines */
+:root[data-contrast="high"]{--bg:#ffffff;--surface:#ffffff;--sunk:#eef1f0;--ink:#000000;--muted:#2b3632;--line:#6b7c76}
+@media (prefers-color-scheme: dark){:root[data-contrast="high"]:not([data-theme="light"]){--bg:#000000;--surface:#0b100e;--sunk:#141b18;--ink:#ffffff;--muted:#d3ddd9;--line:#7f918a}}
+:root[data-contrast="high"][data-theme="dark"]{--bg:#000000;--surface:#0b100e;--sunk:#141b18;--ink:#ffffff;--muted:#d3ddd9;--line:#7f918a}
+:root[data-contrast="high"] :focus-visible{outline-width:3px}
+:root[data-contrast="high"] .chip,:root[data-contrast="high"] .btn,:root[data-contrast="high"] .seg,:root[data-contrast="high"] .item,:root[data-contrast="high"] .panel{border-width:2px}
+/* Color-blind friendly statuses: orange / blue / slate instead of orange / purple / green */
+:root[data-status="cb"]{--open:#b84f00;--open-soft:#fde6d4;--follow:#1f5fbf;--follow-soft:#dde8fa;--good:#3d4f5c;--good-soft:#e1e7eb}
+@media (prefers-color-scheme: dark){:root[data-status="cb"]:not([data-theme="light"]){--open:#ff9e57;--open-soft:#3d2510;--follow:#8ab4ff;--follow-soft:#1a2a45;--good:#c2ced6;--good-soft:#27323a}}
+:root[data-status="cb"][data-theme="dark"]{--open:#ff9e57;--open-soft:#3d2510;--follow:#8ab4ff;--follow-soft:#1a2a45;--good:#c2ced6;--good-soft:#27323a}
+.swatches{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.sw{width:36px;height:36px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
+.swc{display:inline-flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;color:var(--muted)}
+.swc input{width:38px;height:38px;border:1px solid var(--line);border-radius:50%;padding:2px;background:var(--surface);cursor:pointer}
+.lsec>header .btn{margin-left:auto}
 </style>
 </head>
 <body>
@@ -324,11 +347,55 @@ const dev=(()=>{const ua=navigator.userAgent;const ios=/iPad|iPhone|iPod/.test(u
   const android=/Android/i.test(ua);let coarse=false;try{coarse=matchMedia('(pointer:coarse)').matches}catch(e){}
   return {ios,android,mobile:ios||android||coarse}})();
 const standalone=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}catch(e){return false}};
+/* ---------- appearance ---------- */
+const AP_DEFAULT={theme:'auto',contrast:'normal',accent:'#0e6a5a',status:'default',shape:'rounded',size:'normal',updated:''};
+const AP_OPTS={theme:['auto','light','dark'],contrast:['normal','high'],status:['default','cb'],shape:['rounded','soft','square'],size:['compact','normal','large']};
+const ACCENTS=[['Teal','#0e6a5a'],['Blue','#1d5fbf'],['Indigo','#4b4fc4'],['Plum','#7b3f9e'],['Red','#b3261e'],['Orange','#b4530b'],['Green','#2e7d32'],['Graphite','#3d4650']];
+function cleanAp(a){
+  const o={...AP_DEFAULT};
+  if(a&&typeof a==='object'){
+    for(const k in AP_OPTS)if(AP_OPTS[k].includes(a[k]))o[k]=a[k];
+    if(/^#[0-9a-f]{6}$/i.test(a.accent||''))o.accent=a.accent.toLowerCase();
+    if(typeof a.updated==='string')o.updated=a.updated.slice(0,40);
+  }
+  return o;
+}
+/* Any accent stays readable: it's darkened or lightened until it contrasts with the surfaces
+   it sits on, and button text switches between white and near-black as needed. */
+const hexRgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const rgbHex=a=>'#'+a.map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+const lum=h=>{const c=hexRgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:((v+.055)/1.055)**2.4});return .2126*c[0]+.7152*c[1]+.0722*c[2]};
+const contrastRatio=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+const mixHex=(a,b,t)=>{const x=hexRgb(a),y=hexRgb(b);return rgbHex(x.map((v,i)=>v+(y[i]-v)*t))};
+function fitHex(c,bg,target,toward){for(let i=0;i<25&&contrastRatio(c,bg)<target;i++)c=mixHex(c,toward,.12);return c}
+function accentVars(hex){
+  const l=fitHex(hex,'#ffffff',3.2,'#000000'),d=fitHex(hex,'#18201d',4.2,'#ffffff');
+  return {l,li:contrastRatio(l,'#ffffff')>=4.5?'#ffffff':'#0b0f0d',ls:mixHex(l,'#ffffff',.84),
+          d,di:contrastRatio(d,'#ffffff')>=4.5?'#ffffff':'#06120f',ds:mixHex(d,'#18201d',.75)};
+}
+let ap={...AP_DEFAULT};   // loaded from this device's storage just below the storage helper
+function applyAp(){
+  const r=document.documentElement;
+  if(ap.theme==='auto')r.removeAttribute('data-theme');else r.setAttribute('data-theme',ap.theme);
+  for(const k of['contrast','status','shape','size'])r.setAttribute('data-'+k,ap[k]);
+  let st=document.getElementById('apStyle');
+  if(!st){st=document.createElement('style');st.id='apStyle';document.head.appendChild(st)}
+  if(ap.accent===AP_DEFAULT.accent)st.textContent='';
+  else{const v=accentVars(ap.accent);const L=`--accent:${v.l};--accent-ink:${v.li};--accent-soft:${v.ls}`,D=`--accent:${v.d};--accent-ink:${v.di};--accent-soft:${v.ds}`;
+    st.textContent=`:root{${L}}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${D}}}:root[data-theme="dark"]{${D}}`}
+  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=ap.accent;
+}
+function setAp(patch,save=true){
+  ap=cleanAp({...ap,...patch,updated:new Date().toISOString()});
+  if(save)ls.set('roil.appearance',ap);
+  applyAp();
+}
 const installHint=()=>dev.ios?'in Safari, tap Share → Add to Home Screen':dev.android?'in the Chrome menu, tap Add to home screen':'use the install icon in the address bar, or the browser menu → Install ROIL';
 const localDay=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const $=(s,el=document)=>el.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+ap=cleanAp(ls.get('roil.appearance',null));applyAp();
 const fmtDT=iso=>{const d=new Date(iso);return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})+', '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})};
 const fmtD=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
 function age(iso){const m=(Date.now()-new Date(iso))/60000;if(m<60)return Math.max(1,Math.round(m))+' min';const h=m/60;if(h<24)return Math.round(h)+' h';return Math.round(h/24)+' d'}
@@ -442,7 +509,7 @@ function b64ToBlob(s,type){const bin=atob(s);const a=new Uint8Array(bin.length);
    doesn't need one giant string. Same item format the server version uses. */
 async function buildBackup(){
   const [its,phs,l]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists')]);
-  const parts=[`{"format":"roil-backup","version":1,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"items":${JSON.stringify(its)},"photos":{`];
+  const parts=[`{"format":"roil-backup","version":1,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"appearance":${JSON.stringify(ap)},"items":${JSON.stringify(its)},"photos":{`];
   let first=true;
   for(const p of phs){
     parts.push(`${first?'':','}${JSON.stringify(p.id)}:{"full":"${await blobToB64(p.full)}","thumb":"${await blobToB64(p.thumb)}"}`);first=false;
@@ -502,12 +569,14 @@ async function doRestore(file){
   if(data.lists&&Array.isArray(data.lists.departments)&&(data.lists.updated||'')>(lists.updated||'')){
     lists=normLists(data.lists);ops.push({s:'meta',v:listsBody(lists),k:'lists'});buildForm();
   }
+  let apChanged=false;
+  if(data.appearance&&typeof data.appearance==='object'){const inc=cleanAp(data.appearance);if((inc.updated||'')>(ap.updated||'')){ap=inc;ls.set('roil.appearance',ap);applyAp();apChanged=true}}
   ops.push({s:'meta',v:newTombs,k:'deleted'});
   try{await write(ops)}catch(e){toast(e&&e.name==='QuotaExceededError'?'Not enough space on this device to restore.':'Couldn\'t restore. Try again.');return}
   tombs=newTombs;
   setItems([...have.values()]);
-  const bits=[];if(added)bits.push(`${added} new`);if(updated)bits.push(`${updated} updated`);if(removed)bits.push(`${removed} removed`);
-  toast(bits.length?`Merged backup: ${bits.join(', ')} (${photos} photo${photos===1?'':'s'}).`:'Nothing new in that backup. Your log already has everything in it.');
+  const bits=[];if(added)bits.push(`${added} new`);if(updated)bits.push(`${updated} updated`);if(removed)bits.push(`${removed} removed`);if(apChanged)bits.push('appearance settings');
+  toast(bits.length?`Merged backup: ${bits.join(', ')}${added||updated?` (${photos} photo${photos===1?'':'s'})`:''}.`:'Nothing new in that backup. Your log already has everything in it.');
 }
 
 async function boot(){
@@ -926,6 +995,34 @@ function openDetail(id){
 }
 
 /* ---------- lists editor ---------- */
+function appearanceHtml(){
+  const seg=(k,opts)=>`<div class="seg" data-ap="${k}" role="group">${opts.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="${ap[k]===v}">${t}</button>`).join('')}</div>`;
+  const custom=!ACCENTS.some(([,c])=>c===ap.accent);
+  return `<section class="panel lsec" id="apPanel"><header><h3>Appearance</h3><button class="btn small ghost" type="button" id="apReset">Reset to default</button></header>
+  <div><span class="label">Theme</span>${seg('theme',[['auto','Auto'],['light','Light'],['dark','Dark']])}</div>
+  <div><span class="label">Accent color</span><div class="swatches">${ACCENTS.map(([n,c])=>`<button type="button" class="sw" data-accent="${c}" style="background:${c}" aria-label="${n}" title="${n}" aria-pressed="${ap.accent===c}"></button>`).join('')}
+    <label class="swc"><input type="color" id="apColor" value="${ap.accent}" aria-label="Custom accent color"><span>${custom?'Custom':'Custom…'}</span></label></div></div>
+  <div><span class="label">Contrast</span>${seg('contrast',[['normal','Normal'],['high','High']])}</div>
+  <div><span class="label">Status colors</span>${seg('status',[['default','Default'],['cb','Color-blind friendly']])}
+    <div class="row" style="margin-top:8px"><span class="pill Open">Open</span><span class="pill Needs">Needs follow-up</span><span class="pill Fixed">Fixed</span></div></div>
+  <div><span class="label">Shape</span>${seg('shape',[['rounded','Rounded'],['soft','Soft'],['square','Square']])}</div>
+  <div><span class="label">Size</span>${seg('size',[['compact','Compact'],['normal','Normal'],['large','Large']])}</div>
+  <p class="note" style="margin:0">Saved on this device and included in backups, so a restore brings your look along.</p>
+  </section>`;
+}
+(function bindAppearance(){
+  const el=$('#v-lists');
+  el.addEventListener('click',e=>{
+    const b=e.target.closest('#apPanel [data-ap] button');
+    if(b){setAp({[b.closest('[data-ap]').dataset.ap]:b.dataset.v});renderLists();return}
+    const sw=e.target.closest('#apPanel [data-accent]');
+    if(sw){setAp({accent:sw.dataset.accent});renderLists();return}
+    if(e.target.closest('#apReset')){setAp({...AP_DEFAULT});renderLists();toast('Appearance reset to default.')}
+  });
+  // live preview while dragging in the color picker; saved when the picker closes
+  el.addEventListener('input',e=>{if(e.target.id==='apColor')setAp({accent:e.target.value},false)});
+  el.addEventListener('change',e=>{if(e.target.id==='apColor'){setAp({accent:e.target.value});renderLists()}});
+})();
 function backupHtml(){
   const d=backupAgeDays();
   return `<section class="panel lsec"><header><h3>Backup &amp; storage</h3></header>
@@ -977,6 +1074,7 @@ function renderLists(){
     <label class="switch"><input type="checkbox" id="tShift" ${lists.showShift?'checked':''}><span><b>Shift selector</b><br><span class="note">Adds a shift choice to the Log screen and a By shift chart to Stats.</span></span></label>
     ${lists.showShift?`<div><span class="label">Shifts</span>${rowsHtml('shifts',lists.shifts,'Shift')}</div>`:''}
   </section>
+  ${appearanceHtml()}
   ${backupHtml()}
   <div><button class="btn small ghost${armedKey==='reset'?' danger':''}" data-act="reset">${armedKey==='reset'?'Tap again to replace all lists':'Restore starter lists'}</button></div>`;
   if(fid){const f=document.getElementById(fid);if(f){f.focus();if(f.setSelectionRange&&f.type==='text')f.setSelectionRange(f.value.length,f.value.length)}}
