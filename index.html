@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<!-- Everything stays on this phone: the page may only load its own files, and can't send data anywhere. -->
+<!-- Everything stays on this device: the page may only load its own files, and can't send data anywhere. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: data:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0e6a5a">
@@ -65,7 +65,11 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
 nav.tabs .badge{position:absolute;top:5px;left:calc(50% + 6px);background:var(--open);color:var(--surface);font-family:var(--f-mono);font-size:10px;border-radius:9px;padding:0 5px;line-height:16px;min-width:16px;text-align:center}
 @media (min-width:900px){
   nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);bottom:auto;border-top:0;border-bottom:1px solid var(--line);max-width:760px;margin:0 auto;border-radius:0 0 var(--r) var(--r);border-inline:1px solid var(--line)}
-  nav.tabs button{grid-auto-flow:column;gap:8px;padding:12px 4px}
+  nav.tabs button{grid-auto-flow:column;justify-content:center;align-items:center;gap:8px;padding:12px 4px}
+  nav.tabs .badge{position:static;margin-left:-2px}
+  body{display:flex;flex-direction:column}
+  nav.tabs{order:-1;width:100%}
+  .wrap{width:100%}
   .wrap{padding-block:16px 40px}
 }
 
@@ -189,6 +193,17 @@ details.dept[open]>summary{border-bottom:1px solid var(--line)}
 .switch{display:flex;align-items:center;gap:12px;cursor:pointer}
 .switch input{width:22px;height:22px;accent-color:var(--accent)}
 .saving{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+/* Wider screens: more room for lists, the form stays readable */
+@media (min-width:1000px){
+  .wrap{max-width:1120px}
+  nav.tabs{max-width:1120px}
+  #v-log,#v-lists{max-width:680px;width:100%;margin-inline:auto}
+  .list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  .sheet{max-width:820px}
+}
+@media (min-width:1400px){.list{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.photo-drop.drag{border-color:var(--accent);background:var(--accent-soft)}
+.banner .btn{flex:none}
 @media (prefers-reduced-motion:no-preference){.toast{animation:up .18s ease-out}@keyframes up{from{opacity:0;transform:translate(-50%,8px)}}}
 
 button.sync{border:0;background:none;cursor:pointer;padding:6px 0}
@@ -305,6 +320,11 @@ const DEFAULT_LISTS = {
 const STATUSES=["Fixed","Open","Needs follow-up"];
 
 /* ---------- helpers ---------- */
+const dev=(()=>{const ua=navigator.userAgent;const ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const android=/Android/i.test(ua);let coarse=false;try{coarse=matchMedia('(pointer:coarse)').matches}catch(e){}
+  return {ios,android,mobile:ios||android||coarse}})();
+const standalone=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}catch(e){return false}};
+const installHint=()=>dev.ios?'in Safari, tap Share → Add to Home Screen':dev.android?'in the Chrome menu, tap Add to home screen':'use the install icon in the address bar, or the browser menu → Install ROIL';
 const localDay=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const $=(s,el=document)=>el.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -335,9 +355,9 @@ let srange=ls.get('roil.srange','30');
 const form={photoFile:null,photoUrl:null,dept:'',sub:'',issue:'',cause:'',status:'Fixed',shift:''};
 const last=ls.get('roil.last',{});
 form.dept=last.dept||'';form.sub=last.sub||'';form.shift=last.shift||'';
-const photoUrls=new Map(),thumbUrls=new Map();   // item id -> blob: URL for photos kept on this phone
+const photoUrls=new Map(),thumbUrls=new Map();   // item id -> blob: URL for photos kept on this device
 
-/* ---------- local database (IndexedDB, only on this phone) ---------- */
+/* ---------- local database (IndexedDB, only on this device) ---------- */
 let idbP=null;
 function idb(){
   if(!idbP)idbP=new Promise((res,rej)=>{const r=indexedDB.open('roil',1);
@@ -381,7 +401,8 @@ const store={
     upsertLocal(n);
   },
   async remove(it){
-    await write([{s:'items',del:it.id},{s:'photos',del:it.id}]);
+    tombs[it.id]=new Date().toISOString();
+    await write([{s:'items',del:it.id},{s:'photos',del:it.id},{s:'meta',v:tombs,k:'deleted'}]);
     dropLocal(it.id);
   },
   async saveLists(l){
@@ -391,7 +412,8 @@ const store={
 };
 
 /* ---------- backup, restore & storage status ---------- */
-let lastBackup=ls.get('roil.lastBackup',null);   // ISO time of the last backup file made on this phone
+let tombs={};   // id -> time deleted, so merging a backup from another device doesn't bring deleted issues back
+let lastBackup=ls.get('roil.lastBackup',null);   // ISO time of the last backup file made on this device
 let store_={persisted:null,usage:null,quota:null};
 async function refreshStorage(){
   try{store_.persisted=navigator.storage&&navigator.storage.persisted?await navigator.storage.persisted():null}catch(e){}
@@ -403,8 +425,14 @@ function backupAgeDays(){return lastBackup?(Date.now()-new Date(lastBackup))/864
 function setSync(){
   const el=$('#sync');const d=backupAgeDays();const stale=items.length&&d>7;
   el.className='sync '+(stale?'local':'on');
-  $('span',el).textContent=!loaded?'Starting…':!items.length?'On this phone':lastBackup?`Backed up ${d<1?'today':Math.round(d)+' d ago'}`:'No backup yet';
-  $('#banner').innerHTML=store_.persisted===false&&items.length?`<div class="banner">Chrome may clear ROIL's data if your phone runs low on space. Add ROIL to your home screen (Chrome menu → Add to home screen) to keep it safe.</div>`:'';
+  $('span',el).textContent=!loaded?'Starting…':!items.length?'On this device':lastBackup?`Backed up ${d<1?'today':Math.round(d)+' d ago'}`:'No backup yet';
+  let msg='',canHide=false;
+  if(items.length&&!standalone()){
+    if(dev.ios)msg='On iPhone and iPad, Safari erases ROIL\'s data if you don\'t open it for 7 days. To keep it, '+installHint()+'.';
+    else if(store_.persisted===false&&!ls.get('roil.hideInstall',false)){msg='Your browser may clear ROIL\'s data if this device runs low on space. To keep it, '+installHint()+'.';canHide=true}
+  }
+  $('#banner').innerHTML=msg?`<div class="banner"><span>${esc(msg)}</span>${canHide?'<button class="btn small" id="hideInstall" type="button">Got it</button>':''}</div>`:'';
+  const h=$('#hideInstall');if(h)h.onclick=()=>{ls.set('roil.hideInstall',true);setSync()};
 }
 $('#sync').addEventListener('click',()=>setView('lists'));
 
@@ -414,7 +442,7 @@ function b64ToBlob(s,type){const bin=atob(s);const a=new Uint8Array(bin.length);
    doesn't need one giant string. Same item format the server version uses. */
 async function buildBackup(){
   const [its,phs,l]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists')]);
-  const parts=[`{"format":"roil-backup","version":1,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"items":${JSON.stringify(its)},"photos":{`];
+  const parts=[`{"format":"roil-backup","version":1,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"items":${JSON.stringify(its)},"photos":{`];
   let first=true;
   for(const p of phs){
     parts.push(`${first?'':','}${JSON.stringify(p.id)}:{"full":"${await blobToB64(p.full)}","thumb":"${await blobToB64(p.thumb)}"}`);first=false;
@@ -429,19 +457,30 @@ async function doBackup(shareIt){
     const b=await buildBackup();
     if(shareIt){
       const f=new File([b.blob],backupName(),{type:'application/json'});
-      if(!(navigator.canShare&&navigator.canShare({files:[f]}))){toast('This phone can\'t share the backup file. Use Download backup instead.');return}
+      if(!(navigator.canShare&&navigator.canShare({files:[f]}))){toast('This device can\'t share the backup file. Use Download backup instead.');return}
       await navigator.share({files:[f],title:'ROIL backup'});
     }else save(backupName(),b.blob);
     lastBackup=new Date().toISOString();ls.set('roil.lastBackup',lastBackup);setSync();if(view==='lists')renderLists();
-    toast(`Backup ${shareIt?'shared':'saved to Downloads'}: ${b.count} issue${b.count===1?'':'s'}, ${b.photos} photo${b.photos===1?'':'s'}.`);
+    toast(`Backup ${shareIt?'shared':'saved'}: ${b.count} issue${b.count===1?'':'s'}, ${b.photos} photo${b.photos===1?'':'s'}.`);
   }catch(e){if(e&&e.name==='AbortError')return;toast('Couldn\'t make the backup. Try again.')}
 }
-/* Restore merges: an issue in the file replaces the one on the phone only if it was edited more recently. */
+/* Restore merges: an issue in the file replaces the one here only if it was edited more recently.
+   Deletions travel too: an issue deleted on either device stays deleted, unless it was edited after the deletion. */
 async function doRestore(file){
   let data;
   try{data=JSON.parse(await file.text())}catch(e){toast('That file isn\'t a ROIL backup.');return}
   if(!data||data.format!=='roil-backup'||!Array.isArray(data.items)){toast('That file isn\'t a ROIL backup.');return}
-  const ID=/^[a-z0-9]{6,40}$/;const have=new Map(items.map(i=>[i.id,i]));const ops=[];let added=0,updated=0,photos=0;
+  const ID=/^[a-z0-9]{6,40}$/;const have=new Map(items.map(i=>[i.id,i]));const ops=[];let added=0,updated=0,photos=0,removed=0;
+  const newTombs={...tombs};
+  if(data.deleted&&typeof data.deleted==='object'){
+    for(const [id,t] of Object.entries(data.deleted)){
+      if(!ID.test(id)||typeof t!=='string'||t.length>40)continue;
+      if(!newTombs[id]||t>newTombs[id])newTombs[id]=t;
+      const cur=have.get(id);
+      if(cur&&cur.updated<=t){ops.push({s:'items',del:id},{s:'photos',del:id});have.delete(id);removed++;
+        for(const m of[photoUrls,thumbUrls]){const u=m.get(id);if(u){URL.revokeObjectURL(u);m.delete(id)}}}
+    }
+  }
   for(const x of data.items){
     if(!x||typeof x!=='object'||!ID.test(x.id||'')||typeof x.dept!=='string'||typeof x.issue!=='string'||!STATUSES.includes(x.status))continue;
     const it={};for(const k of ITEM_FIELDS)it[k]=x[k]??(k==='fixedAt'?null:k==='photo'?false:'');it.photo=!!it.photo;
@@ -449,6 +488,7 @@ async function doRestore(file){
     it.note=String(it.note).slice(0,2000);
     const cur=have.get(it.id);
     if(cur&&cur.updated>=it.updated)continue;
+    if(newTombs[it.id]&&newTombs[it.id]>=it.updated)continue;   // deleted after this version was saved
     ops.push({s:'items',v:it});have.set(it.id,it);cur?updated++:added++;
     const p=data.photos&&data.photos[it.id];
     if(it.photo&&p&&typeof p.full==='string'){
@@ -462,19 +502,23 @@ async function doRestore(file){
   if(data.lists&&Array.isArray(data.lists.departments)&&(data.lists.updated||'')>(lists.updated||'')){
     lists=normLists(data.lists);ops.push({s:'meta',v:listsBody(lists),k:'lists'});buildForm();
   }
-  try{if(ops.length)await write(ops)}catch(e){toast(e&&e.name==='QuotaExceededError'?'Not enough space on your phone to restore.':'Couldn\'t restore. Try again.');return}
+  ops.push({s:'meta',v:newTombs,k:'deleted'});
+  try{await write(ops)}catch(e){toast(e&&e.name==='QuotaExceededError'?'Not enough space on this device to restore.':'Couldn\'t restore. Try again.');return}
+  tombs=newTombs;
   setItems([...have.values()]);
-  toast(added||updated?`Restored ${added} new and ${updated} updated issue${added+updated===1?'':'s'} (${photos} photo${photos===1?'':'s'}).`:'Nothing new in that backup. Your log already has everything in it.');
+  const bits=[];if(added)bits.push(`${added} new`);if(updated)bits.push(`${updated} updated`);if(removed)bits.push(`${removed} removed`);
+  toast(bits.length?`Merged backup: ${bits.join(', ')} (${photos} photo${photos===1?'':'s'}).`:'Nothing new in that backup. Your log already has everything in it.');
 }
 
 async function boot(){
   buildForm();renderAll();tick();setInterval(tick,30000);setSync();
   try{
-    const [its,phs,l]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists')]);
+    const [its,phs,l,dl]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists'),getOne('meta','deleted')]);
     for(const p of phs){photoUrls.set(p.id,URL.createObjectURL(p.full));thumbUrls.set(p.id,URL.createObjectURL(p.thumb))}
     if(l)lists=normLists(l);
+    if(dl&&typeof dl==='object')tombs=dl;
     loaded=true;buildForm();setItems(its);
-  }catch(e){loaded=true;renderAll();toast('Chrome won\'t let ROIL store data. Make sure you\'re not in Incognito mode.')}
+  }catch(e){loaded=true;renderAll();toast('Your browser won\'t let ROIL store data. Make sure you\'re not in a private or Incognito window.')}
   if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
   if(navigator.storage&&navigator.storage.persist){try{await navigator.storage.persist()}catch(e){}}
   await refreshStorage();
@@ -513,12 +557,26 @@ bindChoice('#fIssue','issue',true);bindChoice('#fCause','cause',true);bindChoice
 function saveLast(){ls.set('roil.last',{dept:form.dept,sub:form.sub,shift:form.shift})}
 $('#fDept').addEventListener('change',e=>{form.dept=e.target.value;form.sub='';$('#fSub').innerHTML=subOptions(form.dept,'');$('#reqDept').hidden=true;saveLast()});
 $('#fSub').addEventListener('change',e=>{form.sub=e.target.value;saveLast()});
-$('#photoIn').addEventListener('change',e=>{
-  const f=e.target.files&&e.target.files[0];if(!f)return;
+function setPhoto(f){
+  if(!f||!/^image\//.test(f.type||'image/')){toast('That isn\'t a photo. Use a JPEG, PNG or WebP image.');return}
   if(form.photoUrl)URL.revokeObjectURL(form.photoUrl);
   form.photoFile=f;form.photoUrl=URL.createObjectURL(f);form.takenAt=new Date().toISOString();
   showPhoto();tick();
-});
+}
+$('#photoIn').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)setPhoto(f)});
+(function photoExtras(){
+  const drop=$('#photoDrop');
+  if(!dev.mobile){$('strong',drop).textContent='Add a photo';$('span',drop).textContent='Click to choose, drag one here, or paste with Ctrl+V';}
+  drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('drag')});
+  drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+  drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('drag');const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)setPhoto(f)});
+  document.addEventListener('paste',e=>{
+    if(view!=='log'||$('#sheetHost').innerHTML)return;
+    const it=[...(e.clipboardData?e.clipboardData.items:[])].find(i=>i.kind==='file'&&/^image\//.test(i.type));
+    if(!it)return;               // plain text pastes into the note as usual
+    e.preventDefault();setPhoto(it.getAsFile());toast('Photo added from clipboard.');
+  });
+})();
 function showPhoto(){
   const drop=$('#photoDrop');
   if(form.photoFile){drop.classList.add('has');drop.querySelectorAll('svg,strong,span').forEach(x=>x.hidden=true);let img=$('img',drop);if(!img){img=document.createElement('img');img.alt='Issue photo';drop.prepend(img)}img.src=form.photoUrl;$('#clearPhoto').hidden=false;}
@@ -565,7 +623,7 @@ $('#saveBtn').addEventListener('click',async()=>{
     window.scrollTo({top:0,behavior:'smooth'});
     toast(item.status==='Fixed'?'Saved as fixed.':'Saved. It\'s on your follow-up list.',[['Share',()=>shareItem(item,fileP)],['Copy',()=>copyItem(item)]]);
   }catch(e){
-    toast(e&&e.name==='QuotaExceededError'?'Your phone is out of space for ROIL. Free up storage, then tap Save again.':e&&e.message==='Could not read that photo'?'Couldn\'t read that photo. Take it again.':'Couldn\'t save. Tap Save again.');
+    toast(e&&e.name==='QuotaExceededError'?'This device is out of space for ROIL. Free up storage, then tap Save again.':e&&e.message==='Could not read that photo'?'Couldn\'t read that photo. Take it again.':'Couldn\'t save. Tap Save again.');
   }finally{btn.disabled=false;btn.textContent='Save issue'}
 });
 
@@ -871,10 +929,10 @@ function openDetail(id){
 function backupHtml(){
   const d=backupAgeDays();
   return `<section class="panel lsec"><header><h3>Backup &amp; storage</h3></header>
-  <p class="note" style="margin:0">Everything is stored only on this phone. A backup file holds every issue, photo and list, so you can restore it on a new phone or move it to your server later.</p>
+  <p class="note" style="margin:0">Everything is stored only on this device, in this browser. A backup file holds every issue, photo, list and deletion. Use it to move to a new device, or to merge logs between devices: make a backup on one and restore it on the other. Restoring never erases newer work.</p>
   <p style="margin:0"><b>${lastBackup?'Last backup: '+esc(fmtDT(lastBackup)):'No backup made yet'}</b>${items.length&&d>7?' <span class="pill Open">Due</span>':''}</p>
-  <div class="row"><button class="btn small primary" data-act="bk-dl">Download backup</button><button class="btn small" data-act="bk-share">Share backup</button><label class="btn small ghost" for="rFile">Restore from backup</label><input type="file" id="rFile" accept="application/json,.json" hidden></div>
-  <p class="note" style="margin:0">Storage: ${store_.persisted===true?'kept permanently':store_.persisted===false?'Chrome may clear it if space runs low. Add ROIL to your home screen to keep it':'unknown'}. Using ${fmtMB(store_.usage)}.</p>
+  <div class="row"><button class="btn small primary" data-act="bk-dl">Download backup</button><button class="btn small" data-act="bk-share">Share backup</button><label class="btn small ghost" for="rFile">Restore or merge a backup</label><input type="file" id="rFile" accept="application/json,.json" hidden></div>
+  <p class="note" style="margin:0">Storage: ${store_.persisted===true?'kept permanently':store_.persisted===false?(dev.ios?'Safari erases it after 7 days without a visit unless ROIL is on your Home Screen. To keep it, '+installHint():'your browser may clear it if space runs low. To keep it, '+installHint()):'unknown'}. Using ${fmtMB(store_.usage)}.</p>
   </section>`;
 }
 
