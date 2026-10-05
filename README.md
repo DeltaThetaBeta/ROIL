@@ -1,27 +1,41 @@
-# ROIL on GitHub Pages (phone only)
+# ROIL: Retail Operations Issue Log
 
-Everything you log stays in Chrome on your phone. GitHub only hosts these app files.
+Log floor issues with a photo, follow up on open ones, share them to Teams, and see what goes wrong most and where. Works on Android, iPhone, tablets and computers, in Chrome, Edge or Safari.
 
-## Put it online (one time, about 10 minutes)
-1. Sign in to github.com, or create a free account. The username becomes part of the web address, so pick a neutral one. Keep ROIL as the only Pages site on this account.
-2. Create a repository: **+ → New repository**, name it `roil`, set it to **Public**, then **Create repository**.
-3. Click **uploading an existing file**, drag in all the files from this folder (`index.html`, `sw.js`, `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `README.md`), then **Commit changes**.
-4. Go to **Settings → Pages**. Under *Build and deployment*, choose **Deploy from a branch**, then branch **main**, folder **/ (root)**, then **Save**.
-5. After a minute or two, the address appears at the top of that page: `https://<username>.github.io/roil/`.
+**Everything you log stays on the device you log it on**, in that browser. GitHub only hosts the app's files; it never sees your issues or photos.
 
-## Set up your phone
-1. Open that address in **Chrome** on your Android phone.
-2. In the Chrome menu, tap **Add to home screen** (or **Install app**), then open ROIL from the icon from now on. This also stops Chrome clearing your data.
-3. Open the **Lists** tab and check *Backup & storage* says **kept permanently**.
+Live at: https://deltathetabeta.github.io/ROIL/ (the capital `ROIL` matters)
+
+## Install it on each device
+| Device | How |
+|---|---|
+| Android | Open the address in Chrome, then Chrome menu → **Add to home screen** (or **Install app**) |
+| iPhone / iPad | Open it in Safari, then **Share → Add to Home Screen**. **Required on iPhone:** otherwise Safari erases the data after 7 days without a visit. |
+| Windows / Mac | Open it in Chrome or Edge, then the **install icon** in the address bar (or browser menu → Install ROIL) |
+
+Installing keeps your data from being cleared and opens ROIL like an app. Check **Lists → Backup & storage** says **kept permanently**.
+
+## More than one device
+Each device keeps its own log. There's no automatic sync. To combine them, use a backup file:
+1. On device A: **Lists → Share backup** (to yourself in Teams or Google Drive), or **Download backup**.
+2. On device B: **Lists → Restore or merge a backup**, then pick the file.
+
+Merging is safe to repeat in either direction:
+- It adds new issues and keeps whichever version of an issue was edited most recently.
+- Deletions carry over, unless the issue was edited after it was deleted.
+- An older backup never brings back something you deleted.
 
 ## Backups (do one weekly)
-- In **Lists → Backup & storage**:
-  - **Download backup** saves one file with every issue, photo and list to Downloads.
-  - **Share backup** sends it somewhere, like your own Teams chat or Google Drive.
-  - **Restore from backup** brings it back. It only adds or updates, so it never erases.
+- **Download backup** / **Share backup** saves one file with every issue, photo, list and deletion.
 - The chip at the top shows how long ago you last backed up. It turns orange after 7 days.
-- Uninstalling Chrome, clearing its site data, or changing phones without a backup would lose the log.
+- Clearing the browser's site data, uninstalling the browser, or replacing a device without a backup would lose that device's log.
 
-## Updating the app later
-1. Upload the new files over the old ones (**Add file → Upload files → Commit**). Your data isn't touched.
-2. The phone switches to the new version the second time you open it with a signal.
+## On a computer
+To add a photo, click the photo box, drag a picture onto it, or paste a screenshot with **Ctrl+V**.
+
+## Updating the app
+1. Commit and push the changed files, and bump `VERSION` in `sw.js` with each release.
+2. GitHub Pages republishes within a minute or two.
+3. Each device switches to the new version the second time it opens ROIL with a connection.
+
+Your data isn't touched by updates.
