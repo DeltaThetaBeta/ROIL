@@ -41,10 +41,15 @@ Departments, planograms, issue types and causes are edited in **Lists**. Issues 
 
 ## Appearance
 **Lists → Appearance** has these settings, saved per device and carried in backups:
-- **Theme:** Auto, Light or Dark.
+- **Color theme:**
+  - **ROIL**, which follows your device's light or dark setting.
+  - Editor-style themes: GitHub Light and Dark, Solarized Light and Dark, Catppuccin Latte and Mocha, One Dark, Dracula, Nord, Monokai, Gruvbox Dark and Tokyo Night.
+  - **Custom:** pick every color yourself (background, cards, text, secondary text, lines, accent and the status colors). **Customize these colors** starts from whatever theme is showing, and ROIL warns you if text would be hard to read.
+- **Import VS Code theme:** load a VS Code color theme `.json` file to use its colors as your Custom theme.
+- **Theme:** Auto, Light or Dark, for the ROIL theme.
 - **Accent color:** 8 presets or any custom color. ROIL adjusts it automatically if needed so text stays readable.
 - **Contrast:** Normal or High, for bright store lighting.
-- **Status colors:** Default or Color-blind friendly.
+- **Status colors:** the theme's own colors, or Color-blind friendly.
 - **Shape:** Rounded, Soft or Square.
 - **Size:** Compact, Normal or Large.
 
