@@ -15,8 +15,25 @@ Live at: https://deltathetabeta.github.io/ROIL/ (the capital `ROIL` matters)
 
 Installing keeps your data from being cleared and opens ROIL like an app. Check **Lists → Backup & storage** says **kept permanently**.
 
+## Logging an issue
+- **Before and After photos.** Take the Before photo when you find it. The After box turns on when the status is **Fixed**, and adding an After photo sets the status to Fixed for you.
+- **New issues start as Open.** Pick **Fixed** if you fixed it on the spot.
+- **Saving as Fixed without an after photo** asks if you want to take one. You can turn this off.
+- **Source and Cause** fold into one **Why** row, already set to the default source. Tap it to change them.
+- **Issue types** are grouped in tabs by category (Placement, Pricing & labels, Demo units, and so on).
+- **Adding an after photo later:** open the issue and tap **+ Add after photo**, or tap **Mark fixed** on the Open tab.
+
+Three layouts, set in **Lists → Appearance → Log screen layout**:
+| Layout | What it looks like |
+|---|---|
+| **Steps** | One card at a time (Photos, Where, What's wrong, Why, Finish), with Back, Skip, Next and Save at the bottom of the screen. Picking an issue moves you to the next step. |
+| **Sections** | Everything on one screen, in cards. |
+| **Summary** | Photos, then one row per field. Tap a row to fill it in. |
+
+**Auto** (the default) uses Steps on phones and Sections on computers. The Save button stays at the bottom of the screen, within thumb reach.
+
 ## More than one device
-Each device keeps its own log. There's no automatic sync. To combine them, use a backup file:
+The easy way is **Sync with Google Drive** (below), which keeps every device in step automatically. Without sync, each device keeps its own log, and you can combine them with a backup file:
 1. On device A: **Lists → Share backup** (to yourself in Teams or Google Drive), or **Download backup**.
 2. On device B: **Lists → Restore or merge a backup**, then pick the file.
 
@@ -81,9 +98,10 @@ All of these are edited in **Lists**. Issues link to these entries, so:
 - **Status colors:** the theme's own colors, or Color-blind friendly.
 - **Shape:** Rounded, Soft or Square.
 - **Size:** Compact, Normal or Large.
+- **Log screen:** the layout (Auto, Sections, Summary or Steps), **Always show Source and Cause**, and **Ask for an after photo when saving as Fixed**. **Reset to default** leaves these alone.
 
 ## On a computer
-To add a photo, click the photo box, drag a picture onto it, or paste a screenshot with **Ctrl+V**.
+To add a photo, click a photo box or drag a picture onto it. To paste a screenshot, press **Ctrl+V**. The first paste goes to Before and the next to After.
 
 ## Updating the app
 1. Commit and push the changed files, and bump `VERSION` in `sw.js` with each release.
