@@ -72,6 +72,13 @@ A shelf-tag QR sets the location SKU, and a product barcode adds an item. For sh
 
 On computers, Chrome can't use the camera to scan, so type codes or use a scanner there.
 
+## Notes for later
+Tap **Note** at the top of any screen to jot down a bug, an improvement or a feature idea while you're on the floor. You can also tap the mic on the phone's keyboard and talk instead of typing.
+- **Context is saved with each note:** the screen you were on and the app version.
+- **Read them in Lists → Notes for later.** Tick off the ones that are done, or **Copy** or **Share** them (for example, to paste into a chat).
+- **Notes sync to your other devices** and are included in backups.
+- **What you've typed is kept if you close the note without saving.**
+
 ## More than one device
 The easy way is **Sync with Google Drive** (below), which keeps every device in step automatically. Without sync, each device keeps its own log, and you can combine them with a backup file:
 1. On device A: **Lists → Share backup** (to yourself in Teams or Google Drive), or **Download backup**.
@@ -144,7 +151,7 @@ All of these are edited in **Lists**. Issues link to these entries, so:
 To add a photo, click a photo box or drag a picture onto it. To paste a screenshot, press **Ctrl+V**. The first paste goes to Before and the next to After.
 
 ## Updating the app
-1. Commit and push the changed files, and bump `VERSION` in `sw.js` with each release.
+1. Commit and push the changed files. With each release, bump `VERSION` in `sw.js` and `APP_VERSION` in `index.html` to the same value.
 2. GitHub Pages republishes within a minute or two.
 3. Each device switches to the new version the second time it opens ROIL with a connection.
 
