@@ -1,0 +1,984 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- Everything stays on this phone: the page may only load its own files, and can't send data anywhere. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: data:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0e6a5a">
+<title>Retail Operations Issue Log</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Same reset the Claude artifact skeleton provided */
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px}
+img{max-width:100%}
+/* Layout: single phone-first column (max 760px); fixed bottom tab bar on phones, top tab bar on wide screens. Inspection-tag feel: condensed labels, mono data. */
+:root{
+  --bg:#eef2f0; --surface:#ffffff; --sunk:#e3e9e6; --ink:#16201c; --muted:#5a6a64; --line:#d3dcd8;
+  --accent:#0e6a5a; --accent-ink:#ffffff; --accent-soft:#d5ebe5;
+  --open:#a85507; --open-soft:#fbe9d6; --follow:#8a3fb0; --follow-soft:#efe1f6; --good:#1c7443; --good-soft:#dcf0e3; --bad:#b3261e;
+  --f-display:"Roboto Condensed",sans-serif-condensed,"Arial Narrow",system-ui,sans-serif;
+  --f-body:system-ui,Roboto,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:ui-monospace,"Roboto Mono","Droid Sans Mono",Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1513; --surface:#18201d; --sunk:#111816; --ink:#e4ebe8; --muted:#93a39d; --line:#2b3632;
+  --accent:#43b89e; --accent-ink:#04211b; --accent-soft:#18332c;
+  --open:#e9a159; --open-soft:#3a2914; --follow:#c99ae3; --follow-soft:#33233d; --good:#62cb8e; --good-soft:#173525; --bad:#f2786e;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1513; --surface:#18201d; --sunk:#111816; --ink:#e4ebe8; --muted:#93a39d; --line:#2b3632;
+  --accent:#43b89e; --accent-ink:#04211b; --accent-soft:#18332c;
+  --open:#e9a159; --open-soft:#3a2914; --follow:#c99ae3; --follow-soft:#33233d; --good:#62cb8e; --good-soft:#173525; --bad:#f2786e;
+  color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:12px 110px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:6px 14px}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+.brand b{font-family:var(--f-display);font-size:28px;letter-spacing:.06em;line-height:1}
+.brand span{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sync{font-family:var(--f-mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.sync.on i{background:var(--good)} .sync.local i{background:var(--open)}
+h2{font-family:var(--f-display);font-size:22px;letter-spacing:.03em;margin:0;text-wrap:balance}
+.label{font-family:var(--f-display);font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
+.stack{display:grid;gap:18px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)} .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+
+/* nav */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);
+  display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs button{background:none;border:0;padding:10px 2px 9px;display:grid;justify-items:center;gap:3px;cursor:pointer;color:var(--muted);font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.05em;text-transform:uppercase;position:relative;white-space:nowrap}
+nav.tabs svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs button[aria-current="page"]{color:var(--accent)}
+nav.tabs .badge{position:absolute;top:5px;left:calc(50% + 6px);background:var(--open);color:var(--surface);font-family:var(--f-mono);font-size:10px;border-radius:9px;padding:0 5px;line-height:16px;min-width:16px;text-align:center}
+@media (min-width:900px){
+  nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);bottom:auto;border-top:0;border-bottom:1px solid var(--line);max-width:760px;margin:0 auto;border-radius:0 0 var(--r) var(--r);border-inline:1px solid var(--line)}
+  nav.tabs button{grid-auto-flow:column;gap:8px;padding:12px 4px}
+  .wrap{padding-block:16px 40px}
+}
+
+/* capture */
+.photo-drop{display:grid;place-items:center;gap:6px;border:2px dashed var(--line);border-radius:var(--r);background:var(--sunk);min-height:150px;cursor:pointer;text-align:center;padding:16px;position:relative;overflow:hidden}
+.photo-drop svg{width:40px;height:40px;stroke:var(--accent);fill:none;stroke-width:1.6}
+.photo-drop strong{font-family:var(--f-display);font-size:20px;letter-spacing:.04em}
+.photo-drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.photo-drop.has{padding:0;border-style:solid;min-height:0}
+.photo-drop.has img{display:block;width:100%;max-height:340px;object-fit:cover}
+.photo-tools{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:14px}
+.when{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+select,input[type=text],input[type=search],textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:11px 12px;min-height:46px}
+textarea{min-height:76px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:460px){.two.collapse{grid-template-columns:1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 13px;cursor:pointer;font-size:15px;line-height:1.2;min-height:40px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:11px 6px;cursor:pointer;font-weight:500;min-height:46px;border-left:1px solid var(--line)}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:600}
+.seg.status button[data-v="Fixed"][aria-pressed="true"]{background:var(--good);color:var(--surface)}
+.seg.status button[data-v="Open"][aria-pressed="true"]{background:var(--open);color:var(--surface)}
+.seg.status button[data-v="Needs follow-up"][aria-pressed="true"]{background:var(--follow);color:var(--surface)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:600;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.big{width:100%;font-family:var(--f-display);font-size:20px;letter-spacing:.06em;text-transform:uppercase;min-height:56px}
+.btn.small{min-height:36px;padding:6px 11px;font-size:14px}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--bad);border-color:currentColor}
+.btn:disabled{opacity:.55;cursor:default}
+.req{color:var(--bad);font-size:13px;font-family:var(--f-body);text-transform:none;letter-spacing:0;margin-left:6px}
+
+/* items */
+.list{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:64px 1fr;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px;cursor:pointer;text-align:left;width:100%}
+.item .thumb{width:64px;height:64px;border-radius:6px;background:var(--sunk);object-fit:cover;display:grid;place-items:center;color:var(--muted);font-family:var(--f-mono);font-size:10px}
+.item .body{min-width:0;display:grid;gap:3px}
+.item .t{font-weight:600;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.item .s{font-size:14px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .n{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{font-family:var(--f-mono);font-size:11px;font-weight:500;border-radius:4px;padding:2px 6px;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
+.pill.Open{background:var(--open-soft);color:var(--open)}
+.pill.Needs{background:var(--follow-soft);color:var(--follow)}
+.pill.Fixed{background:var(--good-soft);color:var(--good)}
+.age{font-family:var(--f-mono);font-size:12px;color:var(--open)}
+.fu{display:grid;gap:8px}
+.fu .actions{display:flex;gap:8px;flex-wrap:wrap}
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:24px 18px;text-align:center;color:var(--muted);display:grid;gap:8px;justify-items:center}
+.empty strong{color:var(--ink);font-family:var(--f-display);font-size:20px;letter-spacing:.03em}
+.filters{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.filters .wide{grid-column:1/-1}
+@media (min-width:640px){.filters{grid-template-columns:repeat(4,1fr)}}
+
+/* stats */
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media (min-width:640px){.tiles{grid-template-columns:repeat(4,1fr)}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:grid;gap:2px}
+.tile .v{font-family:var(--f-display);font-size:34px;line-height:1;font-weight:700}
+.tile .k{font-size:13px;color:var(--muted)}
+.tile.warn .v{color:var(--open)}
+.bars{display:grid;gap:7px}
+.bar{display:grid;grid-template-columns:minmax(0,9.5em) 1fr 2.6em;gap:10px;align-items:center;font-size:14px}
+.bar .bl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .bt{height:14px;background:var(--sunk);border-radius:3px;overflow:hidden;display:flex}
+.bar .bt i{display:block;height:100%;background:var(--accent)}
+.bar .bt i.o{background:var(--open)}
+.bar .bn{font-family:var(--f-mono);font-size:13px;text-align:right}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.trend{display:flex;align-items:flex-end;gap:4px;height:130px;border-bottom:1px solid var(--line);padding-top:16px}
+.trend .c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0;position:relative}
+.trend .c i{display:block;width:100%;max-width:28px;background:var(--accent);border-radius:3px 3px 0 0;min-height:1px}
+.trend .c b{font-family:var(--f-mono);font-size:10px;font-weight:400;color:var(--muted);position:absolute;top:-14px}
+.tlabels{display:flex;gap:4px;margin-top:4px}
+.tlabels span{flex:1;font-family:var(--f-mono);font-size:10px;color:var(--muted);text-align:center;min-width:0;overflow:hidden;white-space:nowrap}
+.hot{display:grid;gap:6px}
+.hot div{display:grid;grid-template-columns:2.2em 1fr;gap:10px;align-items:baseline;font-size:15px}
+.hot b{font-family:var(--f-mono);font-weight:500;color:var(--open);text-align:right}
+.insight{border-left:3px solid var(--accent);padding:4px 0 4px 12px;font-size:15px}
+.stats-grid{display:grid;gap:12px}
+@media (min-width:700px){.stats-grid{grid-template-columns:1fr 1fr}}
+.stats-grid .full{grid-column:1/-1}
+
+/* sheet */
+.overlay{position:fixed;inset:0;background:rgba(10,16,14,.55);z-index:40;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:14px 14px 0 0;padding:16px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));display:grid;gap:14px}
+@media (min-width:700px){.overlay{align-items:center}.sheet{border-radius:14px;max-height:88%}}
+.sheet img{width:100%;border-radius:8px;max-height:420px;object-fit:contain;background:var(--sunk)}
+.sheet .head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:50;background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 12px 10px 16px;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:15px}
+.toast .btn{background:transparent;color:var(--bg);border-color:color-mix(in srgb,var(--bg) 40%,transparent)}
+@media (min-width:900px){.toast{bottom:24px}}
+.note{font-size:14px;color:var(--muted)}
+.banner{background:var(--open-soft);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:14px}
+code.ex{font-family:var(--f-mono);font-size:12px;background:var(--sunk);padding:1px 4px;border-radius:3px}
+.lsec{display:grid;gap:10px}
+.lsec>header{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.lsec h3{font-family:var(--f-display);font-size:19px;letter-spacing:.03em;margin:0}
+.lrows{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.lrow{display:grid;grid-template-columns:minmax(0,1fr) 40px 40px 40px;gap:4px;align-items:center}
+.lrow input[type=text],.ladd input[type=text]{min-height:42px;padding:8px 10px}
+.ib{width:40px;height:42px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;display:grid;place-items:center;padding:0}
+.ib svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ib:disabled{opacity:.3;cursor:default}
+.ib.del{color:var(--bad)}
+.ib.del.armed{background:var(--bad);color:var(--surface);border-color:var(--bad)}
+.ladd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}
+details.dept{border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+details.dept>summary{padding:12px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:600;list-style:none}
+details.dept>summary::-webkit-details-marker{display:none}
+details.dept>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);flex:none;margin-left:4px}
+details.dept[open]>summary::after{transform:rotate(-135deg)}
+details.dept>summary .cnt{margin-left:auto;font-family:var(--f-mono);font-size:12px;color:var(--muted);font-weight:400}
+details.dept[open]>summary{border-bottom:1px solid var(--line)}
+.dbody{padding:12px;display:grid;gap:12px;background:var(--bg);border-radius:0 0 8px 8px}
+.switch{display:flex;align-items:center;gap:12px;cursor:pointer}
+.switch input{width:22px;height:22px;accent-color:var(--accent)}
+.saving{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.toast{animation:up .18s ease-out}@keyframes up{from{opacity:0;transform:translate(-50%,8px)}}}
+
+button.sync{border:0;background:none;cursor:pointer;padding:6px 0}
+.pk{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.banner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><b>ROIL</b><span>Retail Operations Issue Log</span></div>
+    <button class="sync" id="sync" type="button"><i></i><span>Starting…</span></button>
+  </header>
+  <div id="banner"></div>
+
+  <!-- LOG -->
+  <section id="v-log" class="stack">
+    <div>
+      <label class="photo-drop" id="photoDrop" for="photoIn">
+        <svg viewBox="0 0 24 24"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h2l1.5-2h6l1.5 2h2A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.5" r="3.6"/></svg>
+        <strong>Take photo</strong>
+        <span class="muted" style="font-size:14px">Opens your camera</span>
+        <input id="photoIn" type="file" accept="image/*" capture="environment">
+      </label>
+      <div class="photo-tools"><span class="when" id="when"></span><button class="btn small ghost" id="clearPhoto" hidden>Remove photo</button></div>
+    </div>
+
+    <div>
+      <span class="label">Department &amp; planogram<span class="req" id="reqDept" hidden>Pick a department</span></span>
+      <div class="two collapse">
+        <select id="fDept" aria-label="Department"></select>
+        <select id="fSub" aria-label="Planogram"></select>
+      </div>
+    </div>
+
+    <div>
+      <span class="label">Issue<span class="req" id="reqIssue" hidden>Pick one</span></span>
+      <div class="chips" id="fIssue" role="group" aria-label="Issue"></div>
+    </div>
+
+    <div>
+      <span class="label">Likely cause</span>
+      <div class="chips" id="fCause" role="group" aria-label="Likely cause"></div>
+    </div>
+
+    <div>
+      <label class="label" for="fNote">Note</label>
+      <textarea id="fNote" placeholder="What you saw, what you did"></textarea>
+    </div>
+
+    <div>
+      <span class="label">Status</span>
+      <div class="seg status" id="fStatus" role="group" aria-label="Status"></div>
+    </div>
+
+    <div id="shiftWrap" hidden>
+      <span class="label">Shift</span>
+      <div class="seg" id="fShift" role="group" aria-label="Shift"></div>
+    </div>
+
+    <button class="btn primary big" id="saveBtn">Save issue</button>
+  </section>
+
+  <section id="v-follow" class="stack" hidden></section>
+  <section id="v-history" class="stack" hidden></section>
+  <section id="v-stats" class="stack" hidden></section>
+  <section id="v-lists" class="stack" hidden></section>
+</div>
+
+<nav class="tabs" id="tabs" aria-label="Sections">
+  <button data-v="log" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Log</button>
+  <button data-v="follow"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8.5"/></svg>Open<span class="badge" id="fuBadge" hidden></span></button>
+  <button data-v="history"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>History</button>
+  <button data-v="stats"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>Stats</button>
+  <button data-v="lists"><svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="17" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></svg>Lists</button>
+</nav>
+
+<div id="sheetHost"></div>
+<div id="toastHost"></div>
+
+<script>
+'use strict';
+/* ---------- defaults ---------- */
+const DEFAULT_LISTS = {
+  departments: [
+    ["Computers & Tablets",["Laptops","Desktop Computers","2-in-1 Computers","Chromebooks","Tablets","Monitors","Computer Accessories","PC Components","Storage","Printers & Ink","Networking","3D Printers"]],
+    ["PC Gaming",["Gaming PCs","Gaming Laptops","Gaming Monitors","Gaming Keyboards & Mice","PC Components","Gaming Accessories"]],
+    ["TV & Home Theater",["TVs","OLED TVs","QLED TVs","LED TVs","Projectors","Streaming Devices","TV Accessories","TV Mounts","Cables","Home Theater Systems"]],
+    ["Home Audio",["Soundbars","AV Receivers","Speakers","Wireless Speakers","Headphones","Earbuds","Turntables","Audio Accessories"]],
+    ["Cameras & Camcorders",["DSLR Cameras","Mirrorless Cameras","Point-and-Shoot Cameras","Camera Lenses","Camcorders","Camera Accessories","Memory Cards","Drones"]],
+    ["Cell Phones",["Smartphones","Prepaid Phones","Cell Phone Accessories","Phone Cases","Screen Protectors","Chargers","Mobile Hotspots"]],
+    ["Wearable Technology",["Smartwatches","Fitness Trackers","Smart Rings","Wearable Accessories"]],
+    ["Video Games",["PlayStation","Xbox","Nintendo","PC Gaming","Game Consoles","Controllers","Gaming Accessories","Physical Games","Digital Games"]],
+    ["Car Electronics & GPS",["Car Stereos","Car Speakers","Subwoofers","Amplifiers","GPS & Navigation","Dash Cams","Radar Detectors","Remote Starters","Backup Cameras","Car Accessories"]],
+    ["Smart Home",["Smart Lights","Smart Plugs","Smart Switches","Smart Speakers","Smart Displays","Smart Thermostats","Smart Locks","Video Doorbells","Smart Cameras","Smart Sensors","Home Automation"]],
+    ["Security & Wi-Fi",["Security Cameras","Video Doorbells","Mesh Wi-Fi","Routers","Wi-Fi Extenders","Network Equipment","Network Accessories"]],
+    ["Major Appliances",["Refrigerators","Freezers","Dishwashers","Ranges","Cooktops","Wall Ovens","Microwaves","Washers","Dryers","Laundry Accessories","Appliance Accessories"]],
+    ["Small Appliances",["Coffee Makers","Espresso Machines","Blenders","Air Fryers","Toasters","Mixers","Food Processors","Vacuums","Air Purifiers","Fans","Air Conditioners","Kitchen Appliances"]],
+    ["Home, Furniture & Office",["Desks","Office Chairs","Furniture","Home Office Equipment","Shelving & Storage","Mattresses & Sleep Products","Office Accessories"]],
+    ["Health, Wellness & Personal Care",["Electric Toothbrushes","Water Flossers","Shavers","Hair Care","Hair Clippers","Massage Devices","Health Monitoring","Fitness Equipment","Wellness Products"]],
+    ["Fitness, Sports & Outdoors",["Exercise Equipment","Fitness Trackers","Bicycles","Outdoor Technology","Sports Electronics","Outdoor Accessories"]],
+    ["Electric Transportation",["Electric Bikes","Electric Scooters","EV Chargers","Electric Transportation Accessories"]],
+    ["Toys, Games & Crafts",["Toys","Board Games","STEM Toys","LEGO","Craft Products","Building Sets","Kids' Electronics"]],
+    ["Collectibles & Memorabilia",["Trading Cards","Pokémon","Sports Memorabilia","Pop-Culture Collectibles","Action Figures","Collectible Figures"]],
+    ["Services / Geek Squad",["Computer Setup","Computer Repair","Device Setup","TV Installation","Home Theater Installation","Appliance Installation","Networking Services","Data Services","Protection Plans","Tech Support"]],
+    ["Best Buy Outlet",["Open-Box Products","Clearance Products","Refurbished Products","Returned Merchandise"]]
+  ],
+  issues:["Wrong facing / placement","Overstuffed","Mixed product","Missing ESL","ESL not paired","Item in wrong location","RITE","Damaged product or fixture","Not per planogram","Missing signage","Safety / security concern"],
+  causes:["Outdated planogram","Training / process gap","Planogram not followed","Customer left item out","Display not maintained","Stock not on hand","Missed or late reset","Unknown"],
+  shifts:["Opening","Mid","Closing"],
+  showShift:false
+};
+const STATUSES=["Fixed","Open","Needs follow-up"];
+
+/* ---------- helpers ---------- */
+const localDay=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const $=(s,el=document)=>el.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}};
+const fmtDT=iso=>{const d=new Date(iso);return d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})+', '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})};
+const fmtD=d=>d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+function age(iso){const m=(Date.now()-new Date(iso))/60000;if(m<60)return Math.max(1,Math.round(m))+' min';const h=m/60;if(h<24)return Math.round(h)+' h';return Math.round(h/24)+' d'}
+function dur(ms){const h=ms/3600000;if(h<1)return Math.round(ms/60000)+' min';if(h<48)return h.toFixed(1)+' h';return (h/24).toFixed(1)+' d'}
+const pillCls=s=>s==='Needs follow-up'?'Needs':s;
+const newId=()=>'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function normLists(d){
+  const l=JSON.parse(JSON.stringify(DEFAULT_LISTS));
+  if(!d)return l;
+  if(Array.isArray(d.departments)&&d.departments.length)l.departments=d.departments.map(x=>{if(Array.isArray(x))return [String(x[0]),Array.isArray(x[1])?x[1].map(String):[]];const p=x.planograms||x.subs;return [String(x.name),Array.isArray(p)?p.map(String):[]]});
+  l.showShift=d.showShift===true;
+  l.updated=typeof d.updated==='string'?d.updated:'';
+  for(const k of['issues','causes','shifts'])if(Array.isArray(d[k])&&d[k].length)l[k]=d[k].map(String);
+  return l;
+}
+
+/* ---------- state ---------- */
+let items=[];            // newest first
+let lists=normLists(null);
+let loaded=false;
+let view='log';
+let hf=ls.get('roil.hf',{range:'30',dept:'',issue:'',status:'',q:''});
+let srange=ls.get('roil.srange','30');
+const form={photoFile:null,photoUrl:null,dept:'',sub:'',issue:'',cause:'',status:'Fixed',shift:''};
+const last=ls.get('roil.last',{});
+form.dept=last.dept||'';form.sub=last.sub||'';form.shift=last.shift||'';
+const photoUrls=new Map(),thumbUrls=new Map();   // item id -> blob: URL for photos kept on this phone
+
+/* ---------- local database (IndexedDB, only on this phone) ---------- */
+let idbP=null;
+function idb(){
+  if(!idbP)idbP=new Promise((res,rej)=>{const r=indexedDB.open('roil',1);
+    r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('items',{keyPath:'id'});d.createObjectStore('photos',{keyPath:'id'});d.createObjectStore('outbox',{keyPath:'seq',autoIncrement:true});d.createObjectStore('meta')};
+    r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+  return idbP;
+}
+const rq=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const done=t=>new Promise((res,rej)=>{t.oncomplete=()=>res();t.onerror=t.onabort=()=>rej(t.error)});
+async function getAll(s){const d=await idb();return rq(d.transaction(s).objectStore(s).getAll())}
+async function getOne(s,k){const d=await idb();return rq(d.transaction(s).objectStore(s).get(k))}
+/* ops: [{s:store, v:value, k?:key} | {s:store, del:key}] in one atomic transaction */
+async function write(ops){
+  const d=await idb();const t=d.transaction([...new Set(ops.map(o=>o.s))],'readwrite');
+  for(const o of ops){const st=t.objectStore(o.s);if('del' in o)st.delete(o.del);else if(o.k!==undefined)st.put(o.v,o.k);else st.put(o.v)}
+  return done(t);
+}
+
+function setItems(arr){items=arr.slice().sort((a,b)=>b.created<a.created?-1:1);renderAll()}
+function upsertLocal(n){setItems(items.filter(x=>x.id!==n.id).concat(n))}
+function dropLocal(id){
+  for(const m of[photoUrls,thumbUrls]){const u=m.get(id);if(u){URL.revokeObjectURL(u);m.delete(id)}}
+  setItems(items.filter(x=>x.id!==id));
+}
+const ITEM_FIELDS=['id','created','updated','dept','planogram','issue','cause','shift','note','status','fixedAt','photo'];
+function serverItem(it){const o={};for(const k of ITEM_FIELDS)o[k]=it[k]??(k==='fixedAt'?null:k==='photo'?false:'');o.photo=!!o.photo;return o}
+function listsBody(l){return {departments:l.departments.map(([n,s])=>({name:n,planograms:s})),issues:l.issues,causes:l.causes,shifts:l.shifts,showShift:!!l.showShift,updated:l.updated||''}}
+
+const store={
+  async put(item,photo){
+    const ops=[{s:'items',v:item}];
+    if(photo)ops.push({s:'photos',v:{id:item.id,full:photo.full,thumb:photo.thumb}});
+    await write(ops);
+    if(photo){photoUrls.set(item.id,URL.createObjectURL(photo.full));thumbUrls.set(item.id,URL.createObjectURL(photo.thumb))}
+    upsertLocal(item);
+  },
+  async patch(id,p){
+    const it=items.find(i=>i.id===id);if(!it)return;
+    const n={...it,...p,updated:new Date().toISOString()};
+    await write([{s:'items',v:n}]);
+    upsertLocal(n);
+  },
+  async remove(it){
+    await write([{s:'items',del:it.id},{s:'photos',del:it.id}]);
+    dropLocal(it.id);
+  },
+  async saveLists(l){
+    l.updated=new Date().toISOString();
+    await write([{s:'meta',v:listsBody(l),k:'lists'}]);
+  }
+};
+
+/* ---------- backup, restore & storage status ---------- */
+let lastBackup=ls.get('roil.lastBackup',null);   // ISO time of the last backup file made on this phone
+let store_={persisted:null,usage:null,quota:null};
+async function refreshStorage(){
+  try{store_.persisted=navigator.storage&&navigator.storage.persisted?await navigator.storage.persisted():null}catch(e){}
+  try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();store_.usage=e.usage;store_.quota=e.quota}}catch(e){}
+  setSync();if(view==='lists')renderLists();
+}
+const fmtMB=b=>b==null?'?':b<1048576?Math.max(1,Math.round(b/1024))+' KB':(b/1048576).toFixed(b<10485760?1:0)+' MB';
+function backupAgeDays(){return lastBackup?(Date.now()-new Date(lastBackup))/86400000:Infinity}
+function setSync(){
+  const el=$('#sync');const d=backupAgeDays();const stale=items.length&&d>7;
+  el.className='sync '+(stale?'local':'on');
+  $('span',el).textContent=!loaded?'Starting…':!items.length?'On this phone':lastBackup?`Backed up ${d<1?'today':Math.round(d)+' d ago'}`:'No backup yet';
+  $('#banner').innerHTML=store_.persisted===false&&items.length?`<div class="banner">Chrome may clear ROIL's data if your phone runs low on space. Add ROIL to your home screen (Chrome menu → Add to home screen) to keep it safe.</div>`:'';
+}
+$('#sync').addEventListener('click',()=>setView('lists'));
+
+async function blobToB64(b){const d=await blobToDataUrl(b);return d.slice(d.indexOf(',')+1)}
+function b64ToBlob(s,type){const bin=atob(s);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type})}
+/* One JSON file with every issue, your lists and all photos. Built in parts so a big log
+   doesn't need one giant string. Same item format the server version uses. */
+async function buildBackup(){
+  const [its,phs,l]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists')]);
+  const parts=[`{"format":"roil-backup","version":1,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"items":${JSON.stringify(its)},"photos":{`];
+  let first=true;
+  for(const p of phs){
+    parts.push(`${first?'':','}${JSON.stringify(p.id)}:{"full":"${await blobToB64(p.full)}","thumb":"${await blobToB64(p.thumb)}"}`);first=false;
+  }
+  parts.push('}}');
+  return {blob:new Blob(parts,{type:'application/json'}),count:its.length,photos:phs.length};
+}
+const backupName=()=>`ROIL backup ${localDay(new Date())}.json`;
+async function doBackup(shareIt){
+  toast('Making backup…');
+  try{
+    const b=await buildBackup();
+    if(shareIt){
+      const f=new File([b.blob],backupName(),{type:'application/json'});
+      if(!(navigator.canShare&&navigator.canShare({files:[f]}))){toast('This phone can\'t share the backup file. Use Download backup instead.');return}
+      await navigator.share({files:[f],title:'ROIL backup'});
+    }else save(backupName(),b.blob);
+    lastBackup=new Date().toISOString();ls.set('roil.lastBackup',lastBackup);setSync();if(view==='lists')renderLists();
+    toast(`Backup ${shareIt?'shared':'saved to Downloads'}: ${b.count} issue${b.count===1?'':'s'}, ${b.photos} photo${b.photos===1?'':'s'}.`);
+  }catch(e){if(e&&e.name==='AbortError')return;toast('Couldn\'t make the backup. Try again.')}
+}
+/* Restore merges: an issue in the file replaces the one on the phone only if it was edited more recently. */
+async function doRestore(file){
+  let data;
+  try{data=JSON.parse(await file.text())}catch(e){toast('That file isn\'t a ROIL backup.');return}
+  if(!data||data.format!=='roil-backup'||!Array.isArray(data.items)){toast('That file isn\'t a ROIL backup.');return}
+  const ID=/^[a-z0-9]{6,40}$/;const have=new Map(items.map(i=>[i.id,i]));const ops=[];let added=0,updated=0,photos=0;
+  for(const x of data.items){
+    if(!x||typeof x!=='object'||!ID.test(x.id||'')||typeof x.dept!=='string'||typeof x.issue!=='string'||!STATUSES.includes(x.status))continue;
+    const it={};for(const k of ITEM_FIELDS)it[k]=x[k]??(k==='fixedAt'?null:k==='photo'?false:'');it.photo=!!it.photo;
+    for(const k of['dept','planogram','issue','cause','shift','created','updated'])it[k]=String(it[k]).slice(0,120);
+    it.note=String(it.note).slice(0,2000);
+    const cur=have.get(it.id);
+    if(cur&&cur.updated>=it.updated)continue;
+    ops.push({s:'items',v:it});have.set(it.id,it);cur?updated++:added++;
+    const p=data.photos&&data.photos[it.id];
+    if(it.photo&&p&&typeof p.full==='string'){
+      try{const full=b64ToBlob(p.full,'image/jpeg');const thumb=typeof p.thumb==='string'?b64ToBlob(p.thumb,'image/jpeg'):full;
+        ops.push({s:'photos',v:{id:it.id,full,thumb}});photos++;
+        for(const m of[photoUrls,thumbUrls]){const u=m.get(it.id);if(u)URL.revokeObjectURL(u)}
+        photoUrls.set(it.id,URL.createObjectURL(full));thumbUrls.set(it.id,URL.createObjectURL(thumb));
+      }catch(e){}
+    }
+  }
+  if(data.lists&&Array.isArray(data.lists.departments)&&(data.lists.updated||'')>(lists.updated||'')){
+    lists=normLists(data.lists);ops.push({s:'meta',v:listsBody(lists),k:'lists'});buildForm();
+  }
+  try{if(ops.length)await write(ops)}catch(e){toast(e&&e.name==='QuotaExceededError'?'Not enough space on your phone to restore.':'Couldn\'t restore. Try again.');return}
+  setItems([...have.values()]);
+  toast(added||updated?`Restored ${added} new and ${updated} updated issue${added+updated===1?'':'s'} (${photos} photo${photos===1?'':'s'}).`:'Nothing new in that backup. Your log already has everything in it.');
+}
+
+async function boot(){
+  buildForm();renderAll();tick();setInterval(tick,30000);setSync();
+  try{
+    const [its,phs,l]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists')]);
+    for(const p of phs){photoUrls.set(p.id,URL.createObjectURL(p.full));thumbUrls.set(p.id,URL.createObjectURL(p.thumb))}
+    if(l)lists=normLists(l);
+    loaded=true;buildForm();setItems(its);
+  }catch(e){loaded=true;renderAll();toast('Chrome won\'t let ROIL store data. Make sure you\'re not in Incognito mode.')}
+  if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  if(navigator.storage&&navigator.storage.persist){try{await navigator.storage.persist()}catch(e){}}
+  await refreshStorage();
+}
+
+/* ---------- capture form ---------- */
+function chipHtml(arr,sel){return arr.map(v=>`<button type="button" class="chip" data-v="${esc(v)}" aria-pressed="${v===sel}">${esc(v)}</button>`).join('')}
+function segHtml(arr,sel){return arr.map(v=>`<button type="button" data-v="${esc(v)}" aria-pressed="${v===sel}">${esc(v==='Needs follow-up'?'Follow-up':v)}</button>`).join('')}
+function deptOptions(sel){return '<option value="">Department…</option>'+lists.departments.map(([n])=>`<option${n===sel?' selected':''}>${esc(n)}</option>`).join('')}
+function subOptions(dept,sel){const d=lists.departments.find(x=>x[0]===dept);const subs=d?d[1].slice():[];if(sel&&!subs.includes(sel))subs.push(sel);return `<option value="">${subs.length?'Planogram (optional)':dept?'No planograms listed':'Planogram…'}</option>`+subs.map(s=>`<option${s===sel?' selected':''}>${esc(s)}</option>`).join('')}
+function buildForm(){
+  if(!lists.departments.some(d=>d[0]===form.dept)){form.dept='';form.sub='';}
+  else if(form.sub&&!lists.departments.find(d=>d[0]===form.dept)[1].includes(form.sub))form.sub='';
+  if(!lists.showShift)form.shift='';
+  $('#shiftWrap').hidden=!lists.showShift;
+  $('#fDept').innerHTML=deptOptions(form.dept);
+  $('#fSub').innerHTML=subOptions(form.dept,form.sub);
+  if(!lists.issues.includes(form.issue))form.issue='';
+  if(!lists.causes.includes(form.cause))form.cause='';
+  if(form.shift&&!lists.shifts.includes(form.shift))form.shift='';
+  $('#fIssue').innerHTML=chipHtml(lists.issues,form.issue);
+  $('#fCause').innerHTML=chipHtml(lists.causes,form.cause);
+  $('#fStatus').innerHTML=segHtml(STATUSES,form.status);
+  $('#fShift').innerHTML=segHtml(lists.shifts,form.shift);
+}
+function tick(){$('#when').textContent=form.photoFile?'Photo taken · '+fmtDT(form.takenAt):'Logged as '+fmtDT(new Date().toISOString());if(view==='follow')renderFollow()}
+function bindChoice(id,key,toggle){
+  $(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;
+    form[key]=(toggle&&form[key]===v)?'':v;
+    $(id).querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===form[key]));
+    if(key==='issue')$('#reqIssue').hidden=true;
+    if(key==='shift')saveLast();
+  });
+}
+bindChoice('#fIssue','issue',true);bindChoice('#fCause','cause',true);bindChoice('#fStatus','status',false);bindChoice('#fShift','shift',true);
+function saveLast(){ls.set('roil.last',{dept:form.dept,sub:form.sub,shift:form.shift})}
+$('#fDept').addEventListener('change',e=>{form.dept=e.target.value;form.sub='';$('#fSub').innerHTML=subOptions(form.dept,'');$('#reqDept').hidden=true;saveLast()});
+$('#fSub').addEventListener('change',e=>{form.sub=e.target.value;saveLast()});
+$('#photoIn').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  if(form.photoUrl)URL.revokeObjectURL(form.photoUrl);
+  form.photoFile=f;form.photoUrl=URL.createObjectURL(f);form.takenAt=new Date().toISOString();
+  showPhoto();tick();
+});
+function showPhoto(){
+  const drop=$('#photoDrop');
+  if(form.photoFile){drop.classList.add('has');drop.querySelectorAll('svg,strong,span').forEach(x=>x.hidden=true);let img=$('img',drop);if(!img){img=document.createElement('img');img.alt='Issue photo';drop.prepend(img)}img.src=form.photoUrl;$('#clearPhoto').hidden=false;}
+  else{drop.classList.remove('has');const img=$('img',drop);if(img)img.remove();drop.querySelectorAll('svg,strong,span').forEach(x=>x.hidden=false);$('#clearPhoto').hidden=true;$('#photoIn').value='';}
+}
+$('#clearPhoto').addEventListener('click',e=>{e.preventDefault();if(form.photoUrl)URL.revokeObjectURL(form.photoUrl);form.photoFile=null;form.photoUrl=null;showPhoto();tick()});
+
+async function compress(file,max,q){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('Could not read that photo'));i.src=url});
+    const s=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    return await new Promise(r=>c.toBlob(r,'image/jpeg',q));
+  }finally{URL.revokeObjectURL(url)}
+}
+const blobToDataUrl=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b)});
+
+$('#saveBtn').addEventListener('click',async()=>{
+  let bad=false;
+  if(!form.dept){$('#reqDept').hidden=false;bad=true}
+  if(!form.issue){$('#reqIssue').hidden=false;bad=true}
+  if(bad){toast('Pick a department and an issue to save.');return}
+  if(!loaded){toast('Still loading. Try again in a moment.');return}
+  const btn=$('#saveBtn');btn.disabled=true;
+  const now=new Date().toISOString();
+  const created=form.takenAt&&form.photoFile?form.takenAt:now;
+  const item={id:newId(),created,updated:now,dept:form.dept,issue:form.issue,cause:form.cause||'',
+    planogram:form.sub||'',note:$('#fNote').value.trim(),status:form.status,shift:lists.showShift?(form.shift||''):'',
+    fixedAt:form.status==='Fixed'?now:null,photo:false};
+  let photo=null;
+  try{
+    if(form.photoFile){
+      btn.textContent='Saving photo…';
+      photo={full:await compress(form.photoFile,2048,.85),thumb:await compress(form.photoFile,480,.75)};item.photo=true;
+    }
+    btn.textContent='Saving…';
+    await store.put(item,photo);
+    const fileP=photo?Promise.resolve(new File([photo.full],photoName(item),{type:'image/jpeg'})):null;
+    if(form.photoUrl)URL.revokeObjectURL(form.photoUrl);
+    form.photoFile=null;form.photoUrl=null;form.takenAt=null;form.issue='';form.cause='';form.status='Fixed';
+    $('#fNote').value='';showPhoto();buildForm();tick();
+    window.scrollTo({top:0,behavior:'smooth'});
+    toast(item.status==='Fixed'?'Saved as fixed.':'Saved. It\'s on your follow-up list.',[['Share',()=>shareItem(item,fileP)],['Copy',()=>copyItem(item)]]);
+  }catch(e){
+    toast(e&&e.name==='QuotaExceededError'?'Your phone is out of space for ROIL. Free up storage, then tap Save again.':e&&e.message==='Could not read that photo'?'Couldn\'t read that photo. Take it again.':'Couldn\'t save. Tap Save again.');
+  }finally{btn.disabled=false;btn.textContent='Save issue'}
+});
+
+/* ---------- photos & sharing ---------- */
+const photoSrc=it=>it.photo?(photoUrls.get(it.id)||''):'';
+const thumbSrc=it=>it.photo?(thumbUrls.get(it.id)||''):'';
+const photoName=it=>`ROIL ${localDay(new Date(it.created))} ${it.issue.replace(/[\/\\:*?"<>|]/g,'-')}.jpg`;
+async function photoFile(it){
+  if(!it.photo)return null;
+  const p=await getOne('photos',it.id).catch(()=>null);
+  if(!p)throw new Error('photo missing');
+  return new File([p.full],photoName(it),{type:'image/jpeg'});
+}
+function cardText(it){
+  const lines=[`ROIL · ${it.issue}`,`${fmtDT(it.created)}${it.shift?' · '+it.shift:''}`,`Dept: ${it.dept}`];
+  if(it.planogram)lines.push(`Planogram: ${it.planogram}`);
+  if(it.cause)lines.push(`Likely cause: ${it.cause}`);
+  lines.push(`Status: ${it.status}${it.status!=='Fixed'?' (open '+age(it.created)+')':''}`);
+  if(it.note)lines.push(`Note: ${it.note}`);
+  return lines.join('\n');
+}
+function openListText(arr){
+  if(!arr.length)return 'ROIL · No open floor issues.';
+  return [`ROIL · Open floor issues (${arr.length}) · ${fmtD(new Date())}`,...arr.map(it=>`• ${it.issue} · ${it.dept}${it.planogram?' · PG '+it.planogram:''} · ${it.status==='Needs follow-up'?'needs follow-up':'open'} ${age(it.created)}${it.note?'\n   '+it.note:''}`)].join('\n');
+}
+/* Share menu: photo + text together. The text is also put on the clipboard first,
+   so if Teams drops it you can paste it into the comment box. Pass a file promise
+   that was started earlier, so the tap's permission to share doesn't time out. */
+async function shareItem(it,fileP){
+  const text=cardText(it);
+  let copied=false;try{await navigator.clipboard.writeText(text);copied=true}catch(e){}
+  if(!navigator.share){toast(copied?'This browser can\'t open the share menu. The details are copied.':'This browser can\'t open the share menu.');return}
+  const file=fileP?await fileP.catch(()=>null):null;
+  const data={title:`ROIL · ${it.issue}`,text};
+  if(file&&navigator.canShare&&navigator.canShare({files:[file]}))data.files=[file];
+  try{await navigator.share(data);if(copied)toast('Shared. If the text didn\'t come through, paste it. It\'s on your clipboard.')}
+  catch(e){if(e&&e.name==='AbortError')return;toast(copied?'Couldn\'t open the share menu. The details are copied, so use Copy photo too.':'Couldn\'t open the share menu.')}
+}
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);toast('Copied. Paste it into Teams.')}
+  catch(e){showCopyFallback(t)}
+}
+function showCopyFallback(t){
+  openSheet(`<div class="head"><h2>Copy this text</h2><button class="btn small" data-close>Close</button></div><p class="note">Copying was blocked. Select the text below, copy it, then paste into Teams.</p><textarea id="cpy" style="min-height:200px" readonly>${esc(t)}</textarea>`);
+  const ta=$('#cpy');ta.focus();ta.select();
+}
+function cardHtml(it,dataUrl){
+  const rows=cardText(it).split('\n');
+  return `<div>${dataUrl?`<img src="${dataUrl}" width="480" alt="Issue photo"><br>`:''}<b>${esc(rows[0])}</b><br>${rows.slice(1).map(esc).join('<br>')}</div>`;
+}
+function toPng(blob){
+  return new Promise((res,rej)=>{const u=URL.createObjectURL(blob);const i=new Image();
+    i.onload=()=>{const sc=Math.min(1,1280/Math.max(i.naturalWidth,i.naturalHeight));const c=document.createElement('canvas');c.width=Math.round(i.naturalWidth*sc);c.height=Math.round(i.naturalHeight*sc);
+      c.getContext('2d').drawImage(i,0,0,c.width,c.height);URL.revokeObjectURL(u);c.toBlob(b=>b?res(b):rej(new Error('png')),'image/png')};
+    i.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('img'))};i.src=u});
+}
+const canCopyImages=()=>!!(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write);
+/* Photo + details in one copy: plain text, formatted text with the photo, and the photo alone.
+   Built inside the tap with the image parts as promises; falls back to text only. */
+async function copyItem(it){
+  if(!it)return;
+  const text=cardText(it);
+  if(!it.photo||!canCopyImages())return copyText(text);
+  try{
+    const jpg=photoFile(it);
+    const item=new ClipboardItem({
+      'text/plain':new Blob([text],{type:'text/plain'}),
+      'text/html':jpg.then(blobToDataUrl).then(d=>new Blob([cardHtml(it,d)],{type:'text/html'})),
+      'image/png':jpg.then(toPng)
+    });
+    await navigator.clipboard.write([item]);
+    toast('Copied photo and details. Paste into Teams.');
+  }catch(e){
+    try{await navigator.clipboard.writeText(text);toast('Copied the details only. Use Copy photo or Share for the picture.')}
+    catch(e2){showCopyFallback(text)}
+  }
+}
+async function copyPhoto(it){
+  if(!it.photo)return;
+  if(!canCopyImages()){toast('This browser can\'t copy photos. Use Share instead.');return}
+  try{await navigator.clipboard.write([new ClipboardItem({'image/png':photoFile(it).then(toPng)})]);toast('Copied the photo. Paste it into Teams.')}
+  catch(e){toast('Copying the photo was blocked. Use Share instead.')}
+}
+
+/* ---------- views ---------- */
+function setView(v){
+  view=v;
+  for(const s of['log','follow','history','stats','lists'])$('#v-'+s).hidden=s!==v;
+  document.querySelectorAll('#tabs button').forEach(b=>{if(b.dataset.v===v)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+  if(v==='lists')refreshStorage();
+  renderAll();window.scrollTo({top:0});
+}
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setView(b.dataset.v)});
+const openItems=()=>items.filter(i=>i.status!=='Fixed').sort((a,b)=>a.created<b.created?-1:1);
+
+function renderAll(){
+  setSync();
+  const n=openItems().length;const bd=$('#fuBadge');bd.hidden=!n;bd.textContent=n;
+  if(view==='follow')renderFollow();
+  if(view==='history')renderHistory();
+  if(view==='stats')renderStats();
+  if(view==='lists')renderLists();
+}
+function thumb(it){const s=thumbSrc(it);return s?`<img class="thumb" src="${esc(s)}" alt="" loading="lazy">`:`<span class="thumb">NO PHOTO</span>`}
+function itemCard(it,extra=''){
+  return `<button class="item" data-id="${esc(it.id)}">${thumb(it)}<span class="body">
+    <span class="t">${esc(it.issue)} <span class="pill ${pillCls(it.status)}">${esc(it.status)}</span>${extra}</span>
+    <span class="s">${esc(it.dept)}${it.sub?' › '+esc(it.sub):''}${it.planogram?' · PG '+esc(it.planogram):''}</span>
+    <span class="s mono" style="font-size:12px">${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</span>
+    ${it.note?`<span class="n">${esc(it.note)}</span>`:''}</span></button>`;
+}
+function emptyState(title,body){return `<div class="empty"><strong>${title}</strong><span>${body}</span></div>`}
+function bindItemClicks(root){root.querySelectorAll('.item').forEach(b=>b.addEventListener('click',()=>openDetail(b.dataset.id)))}
+
+function renderFollow(){
+  const el=$('#v-follow');const arr=openItems();
+  el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Come back to (${arr.length})</h2>${arr.length?'<button class="btn small" id="copyOpen">Copy list for Teams</button>':''}</div>
+  ${!loaded?emptyState('Loading your log…','Open issues appear here.'):arr.length?`<div class="list">${arr.map(it=>`<div class="fu">${itemCard(it,`<span class="age">${age(it.created)}</span>`)}<div class="actions"><button class="btn small primary" data-fix="${esc(it.id)}">Mark fixed</button><button class="btn small" data-share="${esc(it.id)}">Share</button><button class="btn small" data-copy="${esc(it.id)}">Copy for Teams</button></div></div>`).join('')}</div>`
+  :emptyState('Nothing to come back to','Issues you save as Open or Follow-up are listed here, oldest first, until you mark them fixed.')}`;
+  bindItemClicks(el);
+  el.querySelectorAll('[data-fix]').forEach(b=>b.addEventListener('click',async()=>{b.disabled=true;try{const now=new Date().toISOString();await store.patch(b.dataset.fix,{status:'Fixed',fixedAt:now,updated:now});toast('Marked fixed.')}catch(e){b.disabled=false;toast('Couldn\'t update. Try again.')}}));
+  el.querySelectorAll('[data-share]').forEach(b=>b.addEventListener('click',()=>{const it=items.find(i=>i.id===b.dataset.share);shareItem(it,photoFile(it))}));
+  el.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>copyItem(items.find(i=>i.id===b.dataset.copy))));
+  const co=$('#copyOpen');if(co)co.addEventListener('click',()=>copyText(openListText(arr)));
+}
+
+function inRange(it,r){if(r==='all')return true;return Date.now()-new Date(it.created)<=Number(r)*86400000}
+function rangeOpts(sel){return [['1','Today (24 h)'],['7','Last 7 days'],['30','Last 30 days'],['90','Last 90 days'],['all','All time']].map(([v,t])=>`<option value="${v}"${v===sel?' selected':''}>${t}</option>`).join('')}
+function historyFiltered(){
+  const q=hf.q.trim().toLowerCase();
+  return items.filter(it=>inRange(it,hf.range)&&(!hf.dept||it.dept===hf.dept)&&(!hf.issue||it.issue===hf.issue)&&(!hf.status||it.status===hf.status)
+    &&(!q||[it.note,it.planogram,it.sub,it.cause].join(' ').toLowerCase().includes(q)));
+}
+function renderHistory(){
+  const el=$('#v-history');const arr=historyFiltered();
+  const focused=document.activeElement&&document.activeElement.id==='hq';
+  el.innerHTML=`<h2>History</h2>
+  <div class="filters">
+    <select id="hRange" aria-label="Date range">${rangeOpts(hf.range)}</select>
+    <select id="hStatus" aria-label="Status"><option value="">Any status</option>${STATUSES.map(s=>`<option${s===hf.status?' selected':''}>${esc(s)}</option>`).join('')}</select>
+    <select id="hDept" aria-label="Department"><option value="">All departments</option>${lists.departments.map(([n])=>`<option${n===hf.dept?' selected':''}>${esc(n)}</option>`).join('')}</select>
+    <select id="hIssue" aria-label="Issue"><option value="">All issues</option>${lists.issues.map(n=>`<option${n===hf.issue?' selected':''}>${esc(n)}</option>`).join('')}</select>
+    <input class="wide" type="search" id="hq" placeholder="Search notes, planograms, categories" value="${esc(hf.q)}">
+  </div>
+  <div class="row" style="justify-content:space-between"><span class="muted">${arr.length} issue${arr.length===1?'':'s'}</span>
+    <span class="row"><button class="btn small" id="expReport" ${arr.length?'':'disabled'}>Download report</button><button class="btn small" id="expCsv" ${arr.length?'':'disabled'}>Download spreadsheet</button></span></div>
+  ${!loaded?emptyState('Loading your log…',''):arr.length?`<div class="list">${arr.map(it=>itemCard(it)).join('')}</div>`:emptyState(items.length?'No issues match':'No issues logged yet',items.length?'Try a wider date range or clear a filter.':'Go to Log, take a photo and pick a department and issue. Everything you save shows up here.')}`;
+  const upd=(k,v)=>{hf[k]=v;ls.set('roil.hf',hf);renderHistory()};
+  $('#hRange').onchange=e=>upd('range',e.target.value);$('#hStatus').onchange=e=>upd('status',e.target.value);
+  $('#hDept').onchange=e=>upd('dept',e.target.value);$('#hIssue').onchange=e=>upd('issue',e.target.value);
+  let t;$('#hq').oninput=e=>{clearTimeout(t);t=setTimeout(()=>upd('q',e.target.value),250)};
+  if(focused){const q=$('#hq');q.focus();q.setSelectionRange(q.value.length,q.value.length)}
+  $('#expCsv').onclick=()=>exportCsv(arr);$('#expReport').onclick=()=>exportReport(arr);
+  bindItemClicks(el);
+}
+
+/* ---------- stats ---------- */
+function countBy(arr,fn){const m=new Map();for(const it of arr){const k=fn(it)||'Not set';m.set(k,(m.get(k)||0)+1)}return [...m.entries()].sort((a,b)=>b[1]-a[1])}
+function openBy(arr,fn){const m=new Map();for(const it of arr)if(it.status!=='Fixed'){const k=fn(it)||'Not set';m.set(k,(m.get(k)||0)+1)}return m}
+function bars(entries,openMap,limit=12){
+  if(!entries.length)return '<p class="note">No data in this range.</p>';
+  const max=entries[0][1];
+  return `<div class="bars">${entries.slice(0,limit).map(([k,v])=>{const o=openMap?openMap.get(k)||0:0;return `<div class="bar"><span class="bl" title="${esc(k)}">${esc(k)}</span><span class="bt"><i style="width:${(v-o)/max*100}%"></i>${o?`<i class="o" style="width:${o/max*100}%"></i>`:''}</span><span class="bn">${v}</span></div>`}).join('')}</div>`;
+}
+function trend(arr,r){
+  const daily=r==='1'||r==='7'||r==='30';const n=r==='1'?1:r==='7'?7:r==='30'?30:12;
+  const buckets=[];const today=new Date();today.setHours(0,0,0,0);
+  if(daily){for(let i=n-1;i>=0;i--){const s=new Date(today);s.setDate(s.getDate()-i);const e=new Date(s);e.setDate(e.getDate()+1);buckets.push({s,e,label:r==='30'?String(s.getDate()):s.toLocaleDateString(undefined,{weekday:'short'})})}}
+  else{const ws=new Date(today);ws.setDate(ws.getDate()-ws.getDay());for(let i=n-1;i>=0;i--){const s=new Date(ws);s.setDate(s.getDate()-7*i);const e=new Date(s);e.setDate(e.getDate()+7);buckets.push({s,e,label:fmtD(s)})}}
+  for(const b of buckets)b.v=arr.filter(it=>{const d=new Date(it.created);return d>=b.s&&d<b.e}).length;
+  const max=Math.max(1,...buckets.map(b=>b.v));
+  const step=buckets.length>14?5:1;
+  return `<div class="trend">${buckets.map(b=>`<div class="c" title="${esc(b.label)}: ${b.v}">${b.v&&buckets.length<=14?`<b style="bottom:${b.v/max*100}%;top:auto;transform:translateY(-2px)">${b.v}</b>`:''}<i style="height:${b.v/max*100}%"></i></div>`).join('')}</div>
+  <div class="tlabels">${buckets.map((b,i)=>`<span>${(buckets.length-1-i)%step===0?esc(b.label):''}</span>`).join('')}</div>
+  <p class="note" style="margin:6px 0 0">${daily?'Issues logged per day':'Issues logged per week (week starting)'}</p>`;
+}
+function renderStats(){
+  const el=$('#v-stats');const r=srange;const arr=items.filter(it=>inRange(it,r));
+  const open=items.filter(i=>i.status!=='Fixed').length;
+  const fixed=arr.filter(i=>i.status==='Fixed'&&i.fixedAt);
+  const spot=fixed.filter(i=>new Date(i.fixedAt)-new Date(i.created)<10*60000).length;
+  const later=fixed.map(i=>new Date(i.fixedAt)-new Date(i.created)).filter(ms=>ms>=10*60000).sort((a,b)=>a-b);
+  const med=later.length?later[Math.floor(later.length/2)]:null;
+  const combos=countBy(arr,i=>`${i.dept}${i.planogram?' › '+i.planogram:''} · ${i.issue}`).filter(x=>x[1]>1).slice(0,8);
+  const pogs=countBy(arr.filter(i=>i.planogram),i=>`${i.planogram.trim()} (${i.dept})`).filter(x=>x[1]>1).slice(0,8);
+  const causes=countBy(arr,i=>i.cause);
+  const coach=arr.filter(i=>i.cause==='Training / process gap'||i.cause==='Planogram not followed');
+  const coachIssues=countBy(coach,i=>i.issue).slice(0,3);
+  const coachShift=lists.showShift&&countBy(coach.filter(i=>i.shift),i=>i.shift)[0];
+  let insight='';
+  if(arr.length>=5){
+    const top=countBy(arr,i=>i.issue)[0];const topD=countBy(arr,i=>i.dept)[0];
+    insight=`<div class="insight"><b>${esc(top[0])}</b> is the most common issue (${top[1]} of ${arr.length}). <b>${esc(topD[0])}</b> has the most issues overall (${topD[1]}).${coach.length?` ${coach.length} issue${coach.length===1?' points':'s point'} to training or planogram not being followed${coachIssues.length?', mostly '+coachIssues.map(c=>esc(c[0]).toLowerCase()).join(', '):''}${coachShift&&coachShift[1]>1?`, most often on ${esc(coachShift[0].toLowerCase())} shift`:''}.`:''}</div>`;
+  }
+  el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Stats</h2><select id="sRange" style="width:auto" aria-label="Date range">${rangeOpts(r)}</select></div>
+  ${!items.length?emptyState(!loaded?'Loading your log…':'No stats yet','Once you log a few issues, this shows what goes wrong most, where it happens, and what\'s causing it.'):`
+  <div class="tiles">
+    <div class="tile"><span class="v">${arr.length}</span><span class="k">Issues logged</span></div>
+    <div class="tile ${open?'warn':''}"><span class="v">${open}</span><span class="k">Open now (all time)</span></div>
+    <div class="tile"><span class="v">${fixed.length?Math.round(spot/fixed.length*100)+'%':'–'}</span><span class="k">Fixed on the spot</span></div>
+    <div class="tile"><span class="v" style="font-size:${med?'28px':'34px'}">${med?dur(med):'–'}</span><span class="k">Median time to fix later</span></div>
+  </div>
+  ${insight}
+  <div class="stats-grid">
+    <div class="panel full"><span class="label">Trend</span>${trend(arr,r)}</div>
+    <div class="panel"><span class="label">By issue</span>${bars(countBy(arr,i=>i.issue),openBy(arr,i=>i.issue))}<div class="legend"><span><i style="background:var(--accent)"></i>Fixed</span><span><i style="background:var(--open)"></i>Still open</span></div></div>
+    <div class="panel"><span class="label">By department</span>${bars(countBy(arr,i=>i.dept),openBy(arr,i=>i.dept))}</div>
+    <div class="panel"><span class="label">Likely cause</span>${bars(causes,null)}</div>
+    ${lists.showShift?`<div class="panel"><span class="label">By shift</span>${bars(countBy(arr,i=>i.shift),null)}</div>`:''}
+    <div class="panel"><span class="label">Repeat spots</span>${combos.length?`<div class="hot">${combos.map(([k,v])=>`<div><b>${v}×</b><span>${esc(k)}</span></div>`).join('')}</div>`:'<p class="note">No department and issue pair has come up twice yet.</p>'}</div>
+    <div class="panel"><span class="label">Repeat planograms</span>${pogs.length?`<div class="hot">${pogs.map(([k,v])=>`<div><b>${v}×</b><span>${esc(k)}</span></div>`).join('')}</div>`:'<p class="note">No planogram has come up twice yet.</p>'}</div>
+  </div>
+  <div class="row"><button class="btn small" id="copySum">Copy summary for Teams</button><button class="btn small" id="sExport">Download report</button></div>`}`;
+  $('#sRange').onchange=e=>{srange=e.target.value;ls.set('roil.srange',srange);renderStats()};
+  const cs=$('#copySum');if(cs)cs.onclick=()=>copyText(summaryText(arr,r));
+  const se=$('#sExport');if(se)se.onclick=()=>exportReport(arr);
+}
+function summaryText(arr,r){
+  const lbl={'1':'last 24 hours','7':'last 7 days','30':'last 30 days','90':'last 90 days','all':'all time'}[r];
+  const L=[`ROIL summary · ${lbl} · ${arr.length} issues`];
+  const add=(t,e)=>{if(e.length)L.push('',t,...e.slice(0,5).map(([k,v])=>`• ${k}: ${v}`))};
+  add('Top issues',countBy(arr,i=>i.issue));add('Top departments',countBy(arr,i=>i.dept));add('Likely causes',countBy(arr.filter(i=>i.cause),i=>i.cause));
+  const o=openItems();L.push('',`Still open: ${o.length}`);
+  return L.join('\n');
+}
+
+/* ---------- exports ---------- */
+const csvCell=v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+function save(filename,data){
+  const b=data instanceof Blob?data:new Blob([data],{type:filename.endsWith('.csv')?'text/csv':'text/html'});
+  const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=filename;document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),30000);
+}
+function exportCsv(arr){
+  const head=['Date','Time','Shift','Department','Issue','Likely cause','Planogram','Status','Fixed at','Hours to fix','Note','Photo'];
+  const rows=arr.map(it=>{const d=new Date(it.created);const fx=it.fixedAt?new Date(it.fixedAt):null;
+    return [d.toLocaleDateString(),d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}),it.shift,it.dept,it.issue,it.cause,it.planogram,it.status,fx?fx.toLocaleString():'',fx?((fx-d)/3600000).toFixed(2):'',it.note,it.photo?'Yes':'No']});
+  save(`ROIL issues ${localDay(new Date())}.csv`,'﻿'+[head,...rows].map(r=>r.map(csvCell).join(',')).join('\r\n'));
+}
+async function exportReport(arr){
+  toast('Building report…');
+  const imgs={};
+  for(const it of arr){const s=thumbSrc(it);if(!s)continue;
+    try{imgs[it.id]=await blobToDataUrl(await (await fetch(s)).blob())}catch(e){}}
+  const open=arr.filter(i=>i.status!=='Fixed').length;
+  const html=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ROIL report ${fmtD(new Date())}</title>
+<style>body{font:15px/1.45 system-ui,sans-serif;color:#16201c;background:#fff;max-width:900px;margin:0 auto;padding:20px 16px}h1{font-size:24px;margin:0 0 4px}p.m{color:#5a6a64;margin:0 0 20px}
+.it{display:grid;grid-template-columns:200px 1fr;gap:16px;border-top:1px solid #d3dcd8;padding:14px 0}.it img{width:200px;border-radius:6px}.np{width:200px;height:120px;background:#eef2f0;border-radius:6px;display:grid;place-items:center;color:#5a6a64;font-size:12px}
+h2{font-size:17px;margin:0 0 4px}.s{display:inline-block;font-size:12px;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:2px}.Fixed{background:#dcf0e3;color:#1c7443}.Open{background:#fbe9d6;color:#a85507}.Needs{background:#efe1f6;color:#8a3fb0}
+dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:6px 0 0;font-size:14px}dt{color:#5a6a64}dd{margin:0}@media(max-width:560px){.it{grid-template-columns:1fr}.it img,.np{width:100%}}</style></head><body>
+<h1>Floor issue report</h1><p class="m">${arr.length} issues · ${open} still open · created ${esc(fmtDT(new Date().toISOString()))}</p>
+${arr.map(it=>`<div class="it">${imgs[it.id]?`<img src="${imgs[it.id]}" alt="">`:'<div class="np">No photo</div>'}<div><h2>${esc(it.issue)}<span class="s ${pillCls(it.status)}">${esc(it.status)}</span></h2>
+<dl><dt>When</dt><dd>${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</dd><dt>Department</dt><dd>${esc(it.dept)}</dd>${it.planogram?`<dt>Planogram</dt><dd>${esc(it.planogram)}</dd>`:''}${it.cause?`<dt>Likely cause</dt><dd>${esc(it.cause)}</dd>`:''}${it.fixedAt?`<dt>Fixed</dt><dd>${esc(fmtDT(it.fixedAt))}</dd>`:''}${it.note?`<dt>Note</dt><dd>${esc(it.note)}</dd>`:''}</dl></div></div>`).join('')}
+</body></html>`;
+  await save(`ROIL report ${localDay(new Date())}.html`,html);
+}
+
+/* ---------- detail sheet ---------- */
+let sheetClose=null;
+function openSheet(html,onClose){
+  if(sheetClose){const f=sheetClose;sheetClose=null;f()}
+  sheetClose=onClose||null;
+  const host=$('#sheetHost');host.innerHTML=`<div class="overlay"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  const ov=$('.overlay',host);ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('[data-close]'))closeSheet()});
+  document.addEventListener('keydown',escClose);
+}
+function escClose(e){if(e.key==='Escape')closeSheet()}
+function closeSheet(){$('#sheetHost').innerHTML='';document.removeEventListener('keydown',escClose);if(sheetClose){const f=sheetClose;sheetClose=null;f()}}
+function openDetail(id){
+  const it=items.find(i=>i.id===id);if(!it)return;
+  const src=photoSrc(it);
+  openSheet(`<div class="head"><div><h2>${esc(it.issue)}</h2><span class="mono muted" style="font-size:13px">${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</span></div><button class="btn small" data-close>Close</button></div>
+  ${src?`<img src="${esc(src)}" alt="Issue photo">`:''}
+  <div class="row"><button class="btn small primary" id="dShare">Share to Teams</button><button class="btn small" id="dCopy">Copy for Teams</button><button class="btn small" id="dText">Copy text</button>${src?'<button class="btn small" id="dPng">Copy photo</button>':''}</div>
+  <div><span class="label">Status</span><div class="seg status" id="dStatus">${segHtml(STATUSES,it.status)}</div></div>
+  <div class="two collapse"><div><label class="label" for="dDept">Department</label><select id="dDept">${deptOptions(it.dept)}</select></div><div><label class="label" for="dSub">Planogram</label><select id="dSub">${subOptions(it.dept,it.planogram)}</select></div></div>
+  <div class="two collapse"><div><label class="label" for="dIssue">Issue</label><select id="dIssue">${lists.issues.concat(lists.issues.includes(it.issue)?[]:[it.issue]).map(v=>`<option${v===it.issue?' selected':''}>${esc(v)}</option>`).join('')}</select></div>
+  <div><label class="label" for="dCause">Likely cause</label><select id="dCause"><option value="">Not set</option>${lists.causes.concat(!it.cause||lists.causes.includes(it.cause)?[]:[it.cause]).map(v=>`<option${v===it.cause?' selected':''}>${esc(v)}</option>`).join('')}</select></div></div>
+  <div><label class="label" for="dNote">Note</label><textarea id="dNote">${esc(it.note)}</textarea></div>
+  ${it.fixedAt?`<p class="note" style="margin:0">Fixed ${esc(fmtDT(it.fixedAt))}${new Date(it.fixedAt)-new Date(it.created)>=600000?' · took '+dur(new Date(it.fixedAt)-new Date(it.created)):' · on the spot'}</p>`:''}
+  <div class="row" style="justify-content:space-between"><button class="btn danger small" id="dDel">Delete</button><button class="btn primary" id="dSave">Save changes</button></div>`);
+  let st=it.status;
+  $('#dStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st=b.dataset.v;$('#dStatus').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===st))});
+  $('#dDept').onchange=e=>{$('#dSub').innerHTML=subOptions(e.target.value,'')};
+  const fileP=it.photo?photoFile(it):null;if(fileP)fileP.catch(()=>{});
+  $('#dShare').onclick=()=>shareItem(it,fileP);
+  $('#dCopy').onclick=()=>copyItem(it);
+  $('#dText').onclick=()=>copyText(cardText(it));
+  const dg=$('#dPng');if(dg)dg.onclick=()=>copyPhoto(it);
+  let armed=false;
+  $('#dDel').onclick=async e=>{if(!armed){armed=true;e.target.textContent='Tap again to delete';setTimeout(()=>{armed=false;if(e.target.isConnected)e.target.textContent='Delete'},4000);return}
+    try{await store.remove(it);closeSheet();toast('Deleted.')}catch(err){toast('Couldn\'t delete. Try again.')}};
+  $('#dSave').onclick=async()=>{
+    const dept=$('#dDept').value;if(!dept){toast('Pick a department.');return}
+    const now=new Date().toISOString();
+    const p={status:st,dept,issue:$('#dIssue').value,cause:$('#dCause').value,planogram:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
+    if(st==='Fixed'&&it.status!=='Fixed')p.fixedAt=now;if(st!=='Fixed')p.fixedAt=null;
+    try{await store.patch(it.id,p);closeSheet();toast('Saved.')}catch(e){toast('Couldn\'t save. Try again.')}
+  };
+}
+
+/* ---------- lists editor ---------- */
+function backupHtml(){
+  const d=backupAgeDays();
+  return `<section class="panel lsec"><header><h3>Backup &amp; storage</h3></header>
+  <p class="note" style="margin:0">Everything is stored only on this phone. A backup file holds every issue, photo and list, so you can restore it on a new phone or move it to your server later.</p>
+  <p style="margin:0"><b>${lastBackup?'Last backup: '+esc(fmtDT(lastBackup)):'No backup made yet'}</b>${items.length&&d>7?' <span class="pill Open">Due</span>':''}</p>
+  <div class="row"><button class="btn small primary" data-act="bk-dl">Download backup</button><button class="btn small" data-act="bk-share">Share backup</button><label class="btn small ghost" for="rFile">Restore from backup</label><input type="file" id="rFile" accept="application/json,.json" hidden></div>
+  <p class="note" style="margin:0">Storage: ${store_.persisted===true?'kept permanently':store_.persisted===false?'Chrome may clear it if space runs low. Add ROIL to your home screen to keep it':'unknown'}. Using ${fmtMB(store_.usage)}.</p>
+  </section>`;
+}
+
+let listsPending=false,listsSaveT=null;const openDepts=new Set();let armedKey=null,armedT=null;
+const IC={up:'<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',down:'<svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',del:'<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>'};
+function commitLists(msg){
+  buildForm();renderAll();
+  listsPending=true;clearTimeout(listsSaveT);setSaving('Saving…');
+  listsSaveT=setTimeout(async()=>{
+    try{await store.saveLists(lists);setSaving('Saved');if(msg)toast(msg)}
+    catch(e){setSaving('Not saved');toast('Couldn\'t save your lists. Try again.')}
+    finally{listsPending=false}
+  },500);
+}
+function setSaving(t){const e=$('#lSaving');if(e)e.textContent=t}
+function getArr(k){return k.startsWith('pog:')?lists.departments[+k.slice(4)][1]:lists[k]}
+function rowsHtml(k,arr,noun){
+  return `<ul class="lrows">${arr.map((v,i)=>`<li class="lrow">
+    <input type="text" id="li-${k}-${i}" data-k="${k}" data-i="${i}" value="${esc(v)}" aria-label="${esc(noun)} ${i+1}">
+    <button class="ib" data-act="up" data-k="${k}" data-i="${i}" ${i?'':'disabled'} aria-label="Move up">${IC.up}</button>
+    <button class="ib" data-act="down" data-k="${k}" data-i="${i}" ${i<arr.length-1?'':'disabled'} aria-label="Move down">${IC.down}</button>
+    <button class="ib del${armedKey===k+':'+i?' armed':''}" data-act="del" data-k="${k}" data-i="${i}" aria-label="Delete ${esc(v)}">${IC.del}</button></li>`).join('')}</ul>
+  <div class="ladd"><input type="text" id="add-${k}" data-add="${k}" placeholder="Add ${esc(noun.toLowerCase())}" aria-label="New ${esc(noun.toLowerCase())}"><button class="btn small" data-act="add" data-k="${k}">Add</button></div>`;
+}
+function renderLists(){
+  const el=$('#v-lists');
+  const fid=document.activeElement&&el.contains(document.activeElement)?document.activeElement.id:null;
+  el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Lists</h2><span class="saving" id="lSaving"></span></div>
+  <p class="note" style="margin:0">These are the choices on the Log screen. Changes save as you make them. Renaming or deleting here doesn't change issues you've already logged.</p>
+  <section class="panel lsec"><header><h3>Departments &amp; planograms</h3><span class="muted mono" style="font-size:12px">${lists.departments.length}</span></header>
+    <div class="lrows">${lists.departments.map(([n,p],di)=>`<details class="dept" data-di="${di}" ${openDepts.has(n)?'open':''}><summary>${esc(n)}<span class="cnt">${p.length} planogram${p.length===1?'':'s'}</span></summary>
+      <div class="dbody">
+        <div><label class="label" for="dn-${di}">Department name</label><div class="ladd"><input type="text" id="dn-${di}" data-dept="${di}" value="${esc(n)}"><button class="btn small danger${armedKey==='dept:'+di?' armed':''}" data-act="deldept" data-di="${di}">${armedKey==='dept:'+di?'Tap again':'Delete'}</button></div></div>
+        <div><span class="label">Planograms</span>${rowsHtml('pog:'+di,p,'Planogram')}</div>
+      </div></details>`).join('')}</div>
+    <div class="ladd"><input type="text" id="add-dept" data-add="dept" placeholder="Add department" aria-label="New department"><button class="btn small" data-act="adddept">Add</button></div>
+  </section>
+  <section class="panel lsec"><header><h3>Issue types</h3><span class="muted mono" style="font-size:12px">${lists.issues.length}</span></header>${rowsHtml('issues',lists.issues,'Issue type')}</section>
+  <section class="panel lsec"><header><h3>Likely causes</h3><span class="muted mono" style="font-size:12px">${lists.causes.length}</span></header>${rowsHtml('causes',lists.causes,'Cause')}</section>
+  <section class="panel lsec"><header><h3>Statuses</h3></header><p class="note" style="margin:0">Fixed (the default), Open and Needs follow-up. These stay as they are, since the Open tab depends on them.</p></section>
+  <section class="panel lsec"><header><h3>Archived features</h3></header>
+    <label class="switch"><input type="checkbox" id="tShift" ${lists.showShift?'checked':''}><span><b>Shift selector</b><br><span class="note">Adds a shift choice to the Log screen and a By shift chart to Stats.</span></span></label>
+    ${lists.showShift?`<div><span class="label">Shifts</span>${rowsHtml('shifts',lists.shifts,'Shift')}</div>`:''}
+  </section>
+  ${backupHtml()}
+  <div><button class="btn small ghost${armedKey==='reset'?' danger':''}" data-act="reset">${armedKey==='reset'?'Tap again to replace all lists':'Restore starter lists'}</button></div>`;
+  if(fid){const f=document.getElementById(fid);if(f){f.focus();if(f.setSelectionRange&&f.type==='text')f.setSelectionRange(f.value.length,f.value.length)}}
+}
+function arm(key){armedKey=key;clearTimeout(armedT);armedT=setTimeout(()=>{armedKey=null;if(view==='lists')renderLists()},4000);renderLists()}
+function addTo(k,input){
+  const v=input.value.trim();if(!v)return;
+  const arr=k==='dept'?lists.departments.map(d=>d[0]):getArr(k);
+  if(arr.some(x=>x.toLowerCase()===v.toLowerCase())){toast(`"${v}" is already in this list.`);return}
+  if(k==='dept'){lists.departments.push([v,[]]);openDepts.add(v)}else getArr(k).push(v);
+  input.value='';commitLists();
+  const again=document.getElementById(input.id);if(again)again.focus();
+}
+(function bindLists(){
+  const el=$('#v-lists');
+  el.addEventListener('toggle',e=>{const d=e.target.closest&&e.target.closest('details.dept');if(!d)return;const n=lists.departments[+d.dataset.di]?.[0];if(n)(d.open?openDepts.add(n):openDepts.delete(n))},true);
+  el.addEventListener('change',e=>{
+    const t=e.target;
+    if(t.id==='rFile'){const f=t.files&&t.files[0];t.value='';if(f)doRestore(f);return}
+    if(t.id==='tShift'){lists.showShift=t.checked;commitLists(t.checked?'Shift selector turned on.':'Shift selector archived.');return}
+    if(t.dataset.dept!=null){const di=+t.dataset.dept,v=t.value.trim(),old=lists.departments[di][0];
+      if(!v||v===old){t.value=old;return}
+      if(lists.departments.some((d,i)=>i!==di&&d[0].toLowerCase()===v.toLowerCase())){toast(`"${v}" is already a department.`);t.value=old;return}
+      lists.departments[di][0]=v;if(openDepts.delete(old))openDepts.add(v);if(form.dept===old)form.dept=v;commitLists();return}
+    if(t.dataset.k&&t.dataset.i!=null){const arr=getArr(t.dataset.k),i=+t.dataset.i,v=t.value.trim();
+      if(!v||v===arr[i]){t.value=arr[i];return}
+      if(arr.some((x,j)=>j!==i&&x.toLowerCase()===v.toLowerCase())){toast(`"${v}" is already in this list.`);t.value=arr[i];return}
+      arr[i]=v;commitLists()}
+  });
+  el.addEventListener('keydown',e=>{const t=e.target;if(e.key!=='Enter')return;
+    if(t.dataset.add){e.preventDefault();addTo(t.dataset.add,t)}else if(t.matches('input[type=text]')){e.preventDefault();t.blur()}});
+  el.addEventListener('click',e=>{
+    const b=e.target.closest('button[data-act]');if(!b)return;const act=b.dataset.act,k=b.dataset.k,i=+b.dataset.i;
+    if(act==='add'){addTo(k,document.getElementById('add-'+k));return}
+    if(act==='adddept'){addTo('dept',$('#add-dept'));return}
+    if(act==='up'||act==='down'){const arr=getArr(k),j=act==='up'?i-1:i+1;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];commitLists();return}
+    if(act==='del'){const arr=getArr(k);
+      if((k==='issues')&&arr.length<=1){toast('Keep at least one issue type.');return}
+      if(armedKey!==k+':'+i){arm(k+':'+i);return}
+      armedKey=null;arr.splice(i,1);commitLists();return}
+    if(act==='deldept'){const di=+b.dataset.di;
+      if(lists.departments.length<=1){toast('Keep at least one department.');return}
+      if(armedKey!=='dept:'+di){arm('dept:'+di);return}
+      armedKey=null;const n=lists.departments[di][0];lists.departments.splice(di,1);openDepts.delete(n);commitLists(`Deleted ${n}.`);return}
+    if(act==='bk-dl'){doBackup(false);return}
+    if(act==='bk-share'){doBackup(true);return}
+    if(act==='reset'){if(armedKey!=='reset'){arm('reset');return}armedKey=null;lists=normLists(null);commitLists('Starter lists restored.')}
+  });
+})();
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg,actions=[]){
+  const host=$('#toastHost');clearTimeout(toastT);
+  host.innerHTML=`<div class="toast" role="status"><span>${esc(msg)}</span>${actions.map((a,i)=>`<button class="btn small" data-a="${i}">${esc(a[0])}</button>`).join('')}</div>`;
+  host.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>actions[b.dataset.a][1]());
+  toastT=setTimeout(()=>host.innerHTML='',actions.length?7000:3200);
+}
+
+boot();
+</script>
+</body>
+</html>
