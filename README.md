@@ -40,7 +40,7 @@ Three layouts, set in **Lists → Appearance → Log screen layout**:
 
 So after taking the photo, you can scan the tag and the items in one go, then pick what's wrong.
 
-- **Location SKU** (top of the **Where** step): the 7-digit SKU from the shelf tag (ESL). On Android, tap **Scan** and point the camera at the tag's QR code. You can also type it, or use a Bluetooth scanner. Once ROIL has seen a SKU, it fills in the department and planogram you used last time. You can add a product name, and **View on bestbuy.com** opens the product.
+- **Location SKU** (top of the **Where** step): the 7-digit SKU from the shelf tag (ESL). On Android, tap **Scan** and point the camera at the tag's QR code. You can also type it, or use a Bluetooth scanner. Once ROIL has seen a SKU, it fills in the department and planogram where you've logged it most. If the product is in more than one planogram, the other places show under the SKU as **Logged at** buttons; tap one to switch. You can add a product name, and **View on bestbuy.com** opens the product.
 - **Lock-up** (under the SKU): turn this on when customers can't reach the spot. If you pick Customer as the source for a lock-up issue, ROIL warns you. Stats shows lock-up issues separately, as employee-caused.
 - **The shelf tag's product counts as the first item found.** Most of the time the product at fault is the one the tag is for, so setting the location SKU adds it to Items found, marked "from the shelf tag". Scanning that product's own barcode confirms it, a different product is added alongside it, and you can remove it if it isn't there.
 - **Items found** (on the **What's wrong** step): it opens automatically for Placement and Pricing & labels issues, or once you've scanned an item. For other issues, tap **+ Items found**. Scan (the camera stays open) or type the UPC of each product that's actually there. Scanning the same product again adds one to its quantity. Each item is marked:
@@ -49,9 +49,17 @@ So after taking the photo, you can scan the tag and the items in one go, then pi
   - **Not known yet:** tap **Belongs here** or **Different product**, and ROIL remembers your answer.
 
   UPCs are checked as you add them, so a misread barcode is caught.
+- **Editing an item:** tap an item's code to open it. You can:
+  - Fix the code.
+  - Type a quantity.
+  - Switch it between **Correct**, **Wrong item** and **Not sure**. ROIL remembers this for future scans.
+  - Set which product SKU a UPC is, and the product's name.
+  - Remove it.
+
+  Tap **Done** to save, or tap the code again to close it. The − and + buttons still work without opening it.
 - **Already logged?** When you save, ROIL checks for an open issue with the same location SKU, an item in common, or the same planogram and issue. If there's one, you can open it instead of saving a duplicate. You can turn this off in Lists → Appearance → Log screen.
 
-**Lists → Products** holds what ROIL has learned. Each SKU shows its UPCs, a product name and a bestbuy.com link. There's also a list of UPCs that aren't paired yet, which you can pair with a SKU. Products sync between your devices and are included in backups.
+**Lists → Products** holds what ROIL has learned. Each SKU shows its UPCs, a product name, a bestbuy.com link and the places it's been logged (you can forget a wrong one). There's also a list of UPCs that aren't paired yet, which you can pair with a SKU. Products sync between your devices and are included in backups.
 
 **Pair mode** (in Lists → Products) teaches ROIL quickly. Scan a shelf tag, then every product that belongs on it, then the next tag, and so on.
 

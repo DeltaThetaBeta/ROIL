@@ -346,7 +346,17 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 .found{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:6px}
 .frow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:var(--r-sm);padding:8px 8px 8px 10px}
 .frow.v-right{border-left-color:var(--good)}.frow.v-wrong{border-left-color:var(--bad)}
-.fmain{display:grid;gap:3px;min-width:0}
+.fmain{display:grid;gap:3px;min-width:0;cursor:pointer;border-radius:6px}
+.fmain:focus-visible{outline-offset:4px}
+.fmain .fcode::after{content:"Edit";margin-left:8px;font-family:var(--f-body);font-size:12px;color:var(--accent);text-decoration:underline}
+.frow.editing .fmain .fcode::after{content:"Close"}
+.frow.editing{border-color:var(--accent)}
+.fedit{grid-column:1/-1;display:grid;gap:12px;border-top:1px dashed var(--line);padding-top:12px;margin-top:2px}
+.fedit .label{margin-bottom:4px}
+.fedit input[type=number]{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:11px 12px;min-height:46px}
+.locchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;margin-bottom:4px}
+.locchips .chip{min-height:34px;padding:5px 10px;font-size:13px}
+.chip[aria-pressed="true"] .muted{color:inherit;opacity:.85}
 .fcode{font-size:14px;overflow-wrap:anywhere}
 .fsub{font-size:13px;color:var(--muted)}
 .fask{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
@@ -1286,8 +1296,8 @@ function bindChoice(id,key,toggle){
 }
 bindChoice('#fIssue','issue',true);bindChoice('#fSource','source',true);bindChoice('#fCause','cause',true);bindChoice('#fStatus','status',false);bindChoice('#fShift','shift',true);
 function saveLast(){ls.set('roil.last',{dept:form.dept,sub:form.sub,shift:form.shift})}
-$('#fDept').addEventListener('change',e=>{form.dept=e.target.value;form.sub='';$('#fSub').innerHTML=subOptions(form.dept,'');$('#reqDept').hidden=true;saveLast();updateLogUI()});
-$('#fSub').addEventListener('change',e=>{form.sub=e.target.value;saveLast();updateLogUI()});
+$('#fDept').addEventListener('change',e=>{form.dept=e.target.value;form.sub='';$('#fSub').innerHTML=subOptions(form.dept,'');$('#reqDept').hidden=true;saveLast();updateLogUI();if(logBox&&form.sku)logBox.render()});
+$('#fSub').addEventListener('change',e=>{form.sub=e.target.value;saveLast();updateLogUI();if(logBox&&form.sku)logBox.render()});
 /* ---------- photos on the Log screen: Before and After ---------- */
 function setPhoto(f,which='before'){
   if(!f||!/^image\//.test(f.type||'image/')){toast('That isn\'t a photo. Use a JPEG, PNG or WebP image.');return}
@@ -1382,7 +1392,9 @@ let prods={skus:{},upcs:{}};
 function cleanProds(p){
   const o={skus:{},upcs:{}};if(!p||typeof p!=='object')return o;
   for(const [k,v] of Object.entries(p.skus||{})){if(!SKU_RE.test(k)||!v||typeof v!=='object')continue;
-    o.skus[k]={name:String(v.name||'').slice(0,80),deptId:ENTRY_ID.test(String(v.deptId||''))?String(v.deptId):'',planogramId:ENTRY_ID.test(String(v.planogramId||''))?String(v.planogramId):'',deleted:!!v.deleted,updated:String(v.updated||'').slice(0,40)}}
+    o.skus[k]={name:String(v.name||'').slice(0,80),deptId:ENTRY_ID.test(String(v.deptId||''))?String(v.deptId):'',planogramId:ENTRY_ID.test(String(v.planogramId||''))?String(v.planogramId):'',deleted:!!v.deleted,updated:String(v.updated||'').slice(0,40)};
+    const s=o.skus[k];s.locs=Array.isArray(v.locs)?v.locs.filter(l=>l&&ENTRY_ID.test(String(l.d||''))&&(!l.p||ENTRY_ID.test(String(l.p)))).slice(0,8).map(l=>({d:String(l.d),p:l.p?String(l.p):'',n:Math.max(1,Math.min(99999,parseInt(l.n,10)||1)),t:String(l.t||'').slice(0,40)})):[];
+    if(!s.locs.length&&s.deptId)s.locs=[{d:s.deptId,p:s.planogramId,n:1,t:s.updated}]}
   for(const [k,v] of Object.entries(p.upcs||{})){if(!UPC_RE.test(k)||!v||typeof v!=='object')continue;
     o.upcs[k]={sku:SKU_RE.test(String(v.sku||''))?String(v.sku):'',no:Array.isArray(v.no)?v.no.filter(x=>SKU_RE.test(String(x))).map(String).slice(-20):[],updated:String(v.updated||'').slice(0,40)}}
   return o;
@@ -1398,6 +1410,19 @@ const skuEntry=sku=>{const e=prods.skus[sku];return e&&!e.deleted?e:null};
 const prodName=sku=>(skuEntry(sku)||{}).name||'';
 const upcSku=upc=>(prods.upcs[upc]||{}).sku||'';
 function setSkuInfo(sku,patch){const e=prods.skus[sku]&&!prods.skus[sku].deleted?prods.skus[sku]:{name:'',deptId:'',planogramId:''};prods.skus[sku]={...e,...patch,deleted:false,updated:nowIso()}}
+/* Each SKU remembers every place it's been logged, most-used first (an item can be in more than one planogram). */
+function addSkuLoc(sku,d,p){
+  const e=skuEntry(sku)||{},locs=(e.locs||[]).map(l=>({...l})),t=nowIso();
+  const x=locs.find(l=>l.d===d&&l.p===(p||''));if(x){x.n++;x.t=t}else locs.push({d,p:p||'',n:1,t});
+  locs.sort((a,b)=>b.n-a.n||(b.t||'').localeCompare(a.t||''));
+  setSkuInfo(sku,{locs:locs.slice(0,8),deptId:d,planogramId:p||''});
+}
+function skuLocs(sku){   // locations still in your lists
+  const e=skuEntry(sku);if(!e)return [];
+  const locs=e.locs&&e.locs.length?e.locs:e.deptId?[{d:e.deptId,p:e.planogramId||'',n:1,t:e.updated||''}]:[];
+  return locs.filter(l=>{const d=IX.dept.get(l.d);return d&&!d.archived&&(!l.p||d.planograms.some(x=>x.id===l.p&&!x.archived))});
+}
+const locName=l=>{const d=IX.dept.get(l.d);const pg=l.p&&d?d.planograms.find(x=>x.id===l.p):null;return d?d.name+(pg?' › '+pg.name:''):'?'};
 function linkUpc(upc,sku){const e=prods.upcs[upc]||{no:[]};prods.upcs[upc]={sku,no:(e.no||[]).filter(x=>x!==sku),updated:nowIso()};if(sku&&!skuEntry(sku))setSkuInfo(sku,{})}
 function notHere(upc,sku){const e=prods.upcs[upc]||{sku:'',no:[]};prods.upcs[upc]={sku:e.sku===sku?'':e.sku,no:[...new Set([...(e.no||[]),sku])].slice(-20),updated:nowIso()}}
 /* right / wrong / '' (unknown) for one item found at a location */
@@ -1470,21 +1495,23 @@ function closeScanner(){
 
 /* ---------- the SKU box: location SKU, lock-up and items found (Log screen and issue screen) ---------- */
 function SkuBox(root,st,opt={}){
-  let naming=false;
+  let naming=false,editing=-1,ev=null;
   const self={root,st,
     render(){
       const loc=st.sku,e=loc?skuEntry(loc):null,name=e?e.name:'';
       const rows=st.found.map((f,i)=>{const v=verdict(f,loc),l=foundLabel(f);
-        return `<li class="frow v-${v||'unk'}"><div class="fmain"><span class="fcode mono">${esc(l.code)}</span>${f.auto?`<span class="fsub">${esc(l.sub?l.sub+' · ':'')}from the shelf tag. Remove it if it's not here.</span>`:l.sub?`<span class="fsub">${esc(l.sub)}</span>`:''}
+        const open=i===editing;
+        return `<li class="frow v-${v||'unk'}${open?' editing':''}"><div class="fmain" data-edit="${i}" role="button" tabindex="0" aria-expanded="${open}" title="Tap to edit"><span class="fcode mono">${esc(l.code)}</span>${f.auto?`<span class="fsub">${esc(l.sub?l.sub+' · ':'')}from the shelf tag. Remove it if it's not here.</span>`:l.sub?`<span class="fsub">${esc(l.sub)}</span>`:''}
           <span class="fv">${v==='right'?'<span class="pill Fixed">Correct</span>':v==='wrong'?'<span class="pill bad">Wrong item</span>':loc?'<span class="pill">Not known yet</span>':'<span class="pill">Add the location SKU to check</span>'}</span>
           ${!v&&loc&&f.kind==='upc'?`<span class="fask"><button type="button" class="btn small" data-belong="${i}">Belongs here</button><button type="button" class="btn small" data-diff="${i}">Different product</button></span>`:''}</div>
-          <div class="qty"><button type="button" class="ib" data-dec="${i}" aria-label="One less">−</button><span class="mono">${f.qty}</span><button type="button" class="ib" data-inc="${i}" aria-label="One more">+</button></div></li>`}).join('');
+          <div class="qty"><button type="button" class="ib" data-dec="${i}" aria-label="One less">−</button><span class="mono">${f.qty}</span><button type="button" class="ib" data-inc="${i}" aria-label="One more">+</button></div>${open?editHtml(f,v,loc):''}</li>`}).join('');
       const wrong=st.found.filter(f=>verdict(f,loc)==='wrong').length;
       const locH=`
         <div><label class="label" for="${opt.id}Sku">Location SKU <span class="lsub">from the shelf tag</span></label>
           <div class="skuin"><input type="text" id="${opt.id}Sku" class="skuInput mono" inputmode="numeric" autocomplete="off" maxlength="80" placeholder="${canCam?'Scan or type the SKU':'Type or scan the SKU'}" value="${esc(loc)}">${canCam?'<button type="button" class="btn" data-scan="sku">Scan</button>':''}</div>
           ${loc?`<div class="skuinfo">${naming?`<span class="ladd"><input type="text" class="nameIn" maxlength="80" placeholder="Product name" value="${esc(name)}" aria-label="Product name"><button type="button" class="btn small" data-savename>Save</button></span>`
-            :`${name?`<b>${esc(name)}</b> · <button type="button" class="linkish" data-name>Rename</button>`:'<button type="button" class="linkish" data-name>Add product name</button>'} · <a class="linkish" href="${bbUrl(loc)}" target="_blank" rel="noopener noreferrer">View on bestbuy.com</a> · <button type="button" class="linkish rm" data-clrsku>Clear</button>`}</div>`:''}
+            :`${(()=>{const L=skuLocs(loc);if(L.length<2||!opt.onPickLoc)return '';const c=opt.curLoc?opt.curLoc():{};
+              return `<span class="locchips"><span class="lsub">Logged at</span>${L.map((l,i)=>`<button type="button" class="chip" data-loc="${i}" aria-pressed="${c.d===l.d&&c.p===l.p}">${esc(locName(l))} <span class="muted">${l.n}×</span></button>`).join('')}</span>`})()}${name?`<b>${esc(name)}</b> · <button type="button" class="linkish" data-name>Rename</button>`:'<button type="button" class="linkish" data-name>Add product name</button>'} · <a class="linkish" href="${bbUrl(loc)}" target="_blank" rel="noopener noreferrer">View on bestbuy.com</a> · <button type="button" class="linkish rm" data-clrsku>Clear</button>`}</div>`:''}
         </div>
         <label class="switch"><input type="checkbox" class="lockIn" ${st.lockup?'checked':''}><span>Lock-up <span class="lsub">customers can't reach it</span></span></label>`;
       const itemsH=`<div><span class="label">Items found <span class="lsub">${st.found.length?`${st.found.reduce((a,f)=>a+f.qty,0)} item${st.found.reduce((a,f)=>a+f.qty,0)===1?'':'s'}${wrong?` · ${wrong} wrong`:''}`:'what\'s actually there (optional)'}</span></span>
@@ -1496,6 +1523,31 @@ function SkuBox(root,st,opt={}){
       if(naming){const n=$('.nameIn',root);n.focus();n.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('[data-savename]',root).click()}}}
     },
     changed(){self.render();opt.onChange&&opt.onChange()},
+    toggleEdit(i){editing=editing===i?-1:i;ev=null;self.render();if(editing>=0){const c=$('.fedit .eQty',opt.itemsRoot||root);if(c&&!dev.mobile)c.focus()}},
+    async saveEdit(){
+      const f=st.found[editing];if(!f)return;const R=opt.itemsRoot||root,loc=st.sku;
+      const c=parseCode($('.eCode',R).value);
+      if(c.kind==='bad'){toast(c.check?`${c.code} isn't a valid UPC (the check digit doesn't match).`:'Type a UPC, or a 6 or 7-digit SKU.');$('.eCode',R).focus();return}
+      const qty=Math.max(1,Math.min(999,parseInt($('.eQty',R).value,10)||1));
+      let changedProds=false;
+      const dup=st.found.findIndex((x,j)=>j!==editing&&x.code===c.code&&x.kind===c.kind);
+      if(dup>=0){st.found[dup].qty=Math.min(999,st.found[dup].qty+qty);st.found.splice(editing,1);editing=-1;self.changed();toast('Merged with the same item already on the list.');return}
+      Object.assign(f,{code:c.code,kind:c.kind,qty});delete f.auto;
+      if(f.kind==='upc'){
+        const ps=$('.eSku',R),want=ps?ps.value.trim():'';
+        if(want&&!SKU_RE.test(want)){toast('The product SKU is the 6 or 7-digit number for that product.');ps.focus();return}
+        if(want!==upcSku(f.code)){if(want)linkUpc(f.code,want);else if(prods.upcs[f.code])prods.upcs[f.code]={...prods.upcs[f.code],sku:'',updated:nowIso()};changedProds=true}
+        if(ev&&loc&&ev!==verdict(f,loc)){
+          if(ev==='right')linkUpc(f.code,loc);else if(ev==='wrong')notHere(f.code,loc);
+          else{const e=prods.upcs[f.code];if(e)prods.upcs[f.code]={sku:e.sku===loc?'':e.sku,no:(e.no||[]).filter(x=>x!==loc),updated:nowIso()}}
+          changedProds=true}
+      }
+      const nm=$('.eName',R),ps=f.kind==='sku'?f.code:upcSku(f.code);   // after any pairing above
+      if(nm&&!ps&&nm.value.trim())toast('Add the product SKU to save a name for it.');
+      if(nm&&ps&&nm.value.trim()!==prodName(ps)){setSkuInfo(ps,{name:nm.value.trim().slice(0,80)});changedProds=true}
+      if(changedProds)await saveProds();
+      editing=-1;ev=null;self.changed();
+    },
     setLoc(code,quiet){
       if(st.sku===code)return;
       const had=st.sku;st.sku=code;naming=false;
@@ -1524,11 +1576,16 @@ function SkuBox(root,st,opt={}){
     }
   };
   for(const R of [root,opt.itemsRoot].filter(Boolean))R.addEventListener('click',async e=>{
+    const ed=e.target.closest('[data-edit]');if(ed&&!e.target.closest('button')){self.toggleEdit(+ed.dataset.edit);return}
     const t=e.target.closest('button');if(!t)return;const d=t.dataset;
+    if('ev' in d){ev=d.ev;t.parentNode.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b===t));return}
+    if('edone' in d){self.saveEdit();return}
+    if('eremove' in d){st.found.splice(editing,1);editing=-1;self.changed();return}
+    if('loc' in d){const L=skuLocs(st.sku);if(L[+d.loc]&&opt.onPickLoc)opt.onPickLoc(L[+d.loc]);return}
     if(d.scan){openScanner(d.scan==='sku'?{title:'Scan the shelf tag',hint:'Point the camera at the QR code on the shelf tag (ESL).',onCode:c=>self.take(c,'sku')}
       :{title:'Scan items',hint:'Scan each product\'s UPC. Scan the same product again to count another one.',continuous:true,onCode:c=>self.take(c,'items')});return}
     if('add' in d){const inp=$('.addCode',R);const v=inp.value.trim();if(!v)return;const c=parseCode(v);if(c.kind==='bad'){self.take(c);return}inp.value='';self.take(c,'items');const again=$('.addCode',R);if(again)again.focus();return}
-    if('inc' in d||'dec' in d){const f=st.found[+(d.inc??d.dec)];if(!f)return;delete f.auto;if('inc' in d)f.qty=Math.min(999,f.qty+1);else if(f.qty>1)f.qty--;else st.found.splice(+d.dec,1);self.changed();return}
+    if('inc' in d||'dec' in d){const f=st.found[+(d.inc??d.dec)];if(!f)return;delete f.auto;if('inc' in d)f.qty=Math.min(999,f.qty+1);else if(f.qty>1)f.qty--;else{st.found.splice(+d.dec,1);editing=-1}if(editing>=0){const q=$('.eQty',R);if(q)q.value=st.found[editing].qty}self.changed();return}
     if('belong' in d||'diff' in d){const f=st.found[+(d.belong??d.diff)];if(!f||!st.sku)return;
       if('belong' in d){linkUpc(f.code,st.sku);toast(`Got it. UPC ${f.code} belongs to SKU ${st.sku}.`)}else{notHere(f.code,st.sku);toast('Marked as a wrong item. Pair it with its own SKU in Lists → Products when you can.')}
       await saveProds();self.changed();return}
@@ -1545,11 +1602,25 @@ function SkuBox(root,st,opt={}){
   for(const R of [root,opt.itemsRoot].filter(Boolean))R.addEventListener('keydown',e=>{
     if(e.key!=='Enter')return;
     if(e.target.classList.contains('addCode')){e.preventDefault();$('[data-add]',R).click()}
+    else if(e.target.closest('.fedit')&&e.target.tagName==='INPUT'){e.preventDefault();self.saveEdit()}
+    else if(e.target.matches('[data-edit]')){e.preventDefault();self.toggleEdit(+e.target.dataset.edit)}
     else if(e.target.classList.contains('skuInput')){e.preventDefault();e.target.blur()}
   });
   for(const R of [root,opt.itemsRoot].filter(Boolean))R.addEventListener('input',e=>{const t=e.target;if(t.classList.contains('skuInput')&&/^\d{7}$/.test(t.value.trim()))t.blur()});
   self.render();
   return self;
+}
+
+function editHtml(f,v,loc){
+  const ps=f.kind==='sku'?f.code:upcSku(f.code);
+  return `<div class="fedit">
+    <div class="two"><label><span class="label">Code</span><input type="text" class="eCode mono" inputmode="numeric" autocomplete="off" maxlength="80" value="${esc(f.code)}" aria-label="UPC or SKU"></label>
+      <label><span class="label">Quantity</span><input type="number" class="eQty mono" inputmode="numeric" min="1" max="999" value="${f.qty}" aria-label="Quantity"></label></div>
+    ${f.kind==='upc'?`<div><span class="label">At this location</span>${loc?`<div class="seg" role="group" aria-label="Right or wrong item">${[['right','Correct'],['wrong','Wrong item'],['','Not sure']].map(([k,t])=>`<button type="button" data-ev="${k}" aria-pressed="${(v||'')===k}">${t}</button>`).join('')}</div><p class="note" style="margin:4px 0 0">Changes what ROIL remembers for this UPC at SKU ${esc(loc)}.</p>`:'<p class="note" style="margin:0">Add the location SKU to mark it right or wrong.</p>'}</div>
+    <label><span class="label">Product SKU <span class="lsub">which product this UPC is</span></span><input type="text" class="eSku mono" inputmode="numeric" maxlength="7" autocomplete="off" value="${esc(upcSku(f.code))}" placeholder="Not known"></label>`:''}
+    ${ps||f.kind==='upc'?`<label><span class="label">Product name</span><input type="text" class="eName" maxlength="80" value="${esc(ps?prodName(ps):'')}" placeholder="${ps?'Optional':'Needs the product SKU above'}"></label>`:''}
+    <div class="row" style="justify-content:space-between"><button type="button" class="btn small danger" data-eremove>Remove item</button><button type="button" class="btn small primary" data-edone>Done</button></div>
+  </div>`;
 }
 
 /* ---------- Bluetooth / USB barcode scanners (keyboard mode) ----------
@@ -1632,6 +1703,7 @@ function productsHtml(){
     <div class="dbody">
       <div class="ladd"><input type="text" id="pn-${s}" data-pname="${s}" value="${esc(e.name||'')}" maxlength="80" placeholder="Product name (optional)" aria-label="Product name"><button class="btn small danger${armedKey==='sku:'+s?' armed':''}" type="button" data-act="delsku" data-sku="${s}">${armedKey==='sku:'+s?'Tap again':'Delete'}</button></div>
       <a class="linkish" href="${bbUrl(s)}" target="_blank" rel="noopener noreferrer">View on bestbuy.com</a>
+      ${(e.locs||[]).length?`<div><span class="label">Logged at</span><ul class="lrows">${e.locs.map((l,i)=>`<li class="arow"><span>${esc(locName(l))}</span><span class="muted mono">${l.n}×</span><span></span><button class="ib del" type="button" data-act="delloc" data-sku="${s}" data-i="${i}" aria-label="Forget this location" title="Forget this location"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></li>`).join('')}</ul></div>`:''}
       ${ups.length?`<ul class="lrows">${ups.map(u=>`<li class="arow"><span class="mono">${u}</span><span></span><span></span><button class="btn small" type="button" data-act="unlink" data-upc="${u}">Unpair</button></li>`).join('')}</ul>`:'<p class="note" style="margin:0">No UPCs paired yet.</p>'}
     </div></details>`}).join('')}${list.length>40?`<p class="note">Showing 40 of ${list.length}. Search to find others.</p>`:''}${q&&!list.length?'<p class="note">No match.</p>':''}</div>
   ${unk.length?`<details class="arch" ${openSkus.has('_unk')?'open':''} data-sku="_unk"><summary>UPCs not paired yet (${unk.length})</summary><ul class="lrows">${unk.slice(0,40).map(([u,x])=>`<li class="ladd"><span class="mono" style="align-self:center">${u} <span class="muted">· seen ${x.n}×${x.at.size?' at SKU '+[...x.at].slice(0,3).join(', '):''}</span></span><span class="row" style="gap:6px;flex-wrap:nowrap"><input type="text" class="mono" style="width:7.5em;min-height:38px" inputmode="numeric" maxlength="7" id="lk-${u}" placeholder="SKU" aria-label="SKU for UPC ${u}"><button class="btn small" type="button" data-act="linkupc" data-upc="${u}">Pair</button></span></li>`).join('')}</ul></details>`:''}
@@ -1643,6 +1715,7 @@ function productsHtml(){
     const b=e.target.closest('#prodPanel [data-act]');if(!b)return;const a=b.dataset.act;
     if(a==='pair'){openPairMode();return}
     if(a==='unlink'){const u=b.dataset.upc,s=upcSku(u);prods.upcs[u]={sku:'',no:[...new Set([...(prods.upcs[u].no||[]),s])].slice(-20),updated:nowIso()};await saveProds();renderLists();toast(`Unpaired UPC ${u}.`);return}
+    if(a==='delloc'){const s=b.dataset.sku,e=prods.skus[s];if(!e)return;const locs=(e.locs||[]).filter((_,i)=>i!==+b.dataset.i);setSkuInfo(s,{locs,deptId:locs[0]?locs[0].d:'',planogramId:locs[0]?locs[0].p:''});await saveProds();renderLists();toast('Location forgotten.');return}
     if(a==='delsku'){const s=b.dataset.sku;if(armedKey!=='sku:'+s){arm('sku:'+s);return}armedKey=null;
       prods.skus[s]={...prods.skus[s],deleted:true,updated:nowIso()};for(const [u,x] of Object.entries(prods.upcs))if(x.sku===s)prods.upcs[u]={...x,sku:'',updated:nowIso()};
       await saveProds();renderLists();toast(`Deleted SKU ${s} from Products. Issues keep their SKU.`);return}
@@ -1827,12 +1900,13 @@ $('#scanBtn').onclick=()=>openScanner({title:'Scan',hint:'Scan the shelf tag QR 
   onCode:c=>{const m=logBox.take(c,'auto');updateLogUI();return m}});
 logBox=SkuBox($('#fSkuBox'),form,{id:'f',itemsRoot:$('#fFound'),
   onChange:k=>{if(k==='lockup'){onFormChoice('lockup');if(!(ap.whyOpen||whyOpenNow))fillWhy()}else updateLogUI()},
-  onSku:sku=>{   // a SKU you've logged before fills in its department and planogram
-    const e=skuEntry(sku);if(!e||!e.deptId)return;const d=IX.dept.get(e.deptId);if(!d||d.archived)return;
-    const pg=e.planogramId&&d.planograms.find(x=>x.id===e.planogramId&&!x.archived)?e.planogramId:'';
-    if(form.dept===e.deptId&&form.sub===pg)return;
-    form.dept=e.deptId;form.sub=pg;$('#fDept').innerHTML=deptOptions(form.dept);$('#fSub').innerHTML=subOptions(form.dept,form.sub);$('#reqDept').hidden=true;saveLast();
-    toast(`Filled in ${d.name}${pg?' › '+d.planograms.find(x=>x.id===pg).name:''} from last time.`)}});
+  onSku:sku=>{   // a SKU you've logged before fills in its most-used department and planogram
+    const L=skuLocs(sku);if(!L.length)return;const l=L[0];
+    if(form.dept!==l.d||form.sub!==l.p)setFormLoc(l);
+    toast(L.length>1?`Filled in ${locName(l)} (most used). It's also logged at ${L.length-1} other place${L.length===2?'':'s'}, listed under the SKU.`:`Filled in ${locName(l)} from last time.`)},
+  curLoc:()=>({d:form.dept,p:form.sub}),
+  onPickLoc:l=>{setFormLoc(l);toast(`Location set to ${locName(l)}.`)}});
+function setFormLoc(l){form.dept=l.d;form.sub=l.p;$('#fDept').innerHTML=deptOptions(form.dept);$('#fSub').innerHTML=subOptions(form.dept,form.sub);$('#reqDept').hidden=true;saveLast();updateLogUI();if(logBox)logBox.render()}
 
 /* ---------- saving ---------- */
 $('#saveBtn').addEventListener('click',()=>{form.saveAfterPhoto=false;doSave(false)});
@@ -1869,7 +1943,7 @@ async function doSave(skipAfterCheck,skipDup){
     }
     btn.textContent='Saving…';
     await store.put(item,photo);
-    if(item.sku){const e=skuEntry(item.sku);if(!e||e.deptId!==item.deptId||e.planogramId!==item.planogramId){setSkuInfo(item.sku,{deptId:item.deptId,planogramId:item.planogramId});saveProds()}}
+    if(item.sku){addSkuLoc(item.sku,item.deptId,item.planogramId);saveProds()}
     const fileP=photo&&photo.full?Promise.resolve(new File([photo.full],photoName(item),{type:'image/jpeg'})):null;
     resetForm();
     toast(item.status==='Fixed'?'Saved as fixed.':'Saved. It\'s on your Open list.',[['Share',()=>shareItem(item,fileP)],['Copy',()=>copyItem(item)]]);
@@ -2205,7 +2279,9 @@ function openDetail(id){
   const cur=()=>items.find(i=>i.id===it.id)||it;
   const ds={sku:it.sku||'',lockup:!!it.lockup,found:cleanFound(it.found)};
   const dWarn=()=>{const c=lockConflict(ds.lockup,$('#dSource').value);const w=$('#dLockWarn');w.hidden=!c;w.textContent=c?LOCK_WARN:''};
-  detailBox=SkuBox($('#dSkuBox'),ds,{id:'d',onChange:dWarn});
+  detailBox=SkuBox($('#dSkuBox'),ds,{id:'d',onChange:dWarn,curLoc:()=>({d:$('#dDept').value,p:$('#dSub').value}),
+    onPickLoc:l=>{$('#dDept').innerHTML=deptOptions(l.d);$('#dSub').innerHTML=subOptions(l.d,l.p);detailBox.render()}});
+  for(const id of['#dDept','#dSub'])$(id).addEventListener('change',()=>{if(ds.sku)detailBox.render()});
   $('#dSource').addEventListener('change',dWarn);dWarn();
   const setSt=v=>{st=v;$('#dStatus').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===st))};
   const refreshBA=()=>{const c=cur();$('#dBA').innerHTML=baHtml(c);const dg=$('#dPng');if(dg)dg.hidden=!c.photo;lockStatus($('#dStatus'),c.after);$('#dLock').hidden=!c.after;if(c.after)setSt('Fixed')};
