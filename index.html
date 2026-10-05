@@ -326,10 +326,15 @@ p.req{margin:0 0 6px;font-weight:600}
 .item .thumb.ba img{width:100%;height:100%;object-fit:cover;display:block}
 .ba2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ba2 figure{margin:0;display:grid;gap:4px;min-width:0}
-.ba2 figure img,.sheet .ba2 img{width:100%;aspect-ratio:3/4;max-height:340px;object-fit:contain;border-radius:var(--r-sm);background:var(--sunk)}
+.ba2 figure img,.sheet .ba2 img{width:100%;height:clamp(170px,42vw,340px);max-height:none;object-fit:contain;border-radius:var(--r-sm);background:var(--sunk)}
 .ba2 figcaption{font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
-.np2{display:grid;place-items:center;aspect-ratio:3/4;max-height:340px;border:2px dashed var(--line);border-radius:var(--r-sm);background:var(--sunk);color:var(--muted);font-size:14px;text-align:center;padding:10px}
+.np2{display:grid;place-items:center;width:100%;height:clamp(170px,42vw,340px);border:2px dashed var(--line);border-radius:var(--r-sm);background:var(--sunk);color:var(--muted);font-size:14px;text-align:center;padding:10px}
 .np2.addafter{color:var(--accent);font-weight:600;cursor:pointer;border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.lockn{margin:6px 0 0;font-size:13px}
+button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0}
+.linkish.rm{color:var(--bad)}
+.linkish.rm.armed{font-weight:700}
+#dBA.busy{opacity:.5;pointer-events:none}
 .linkish{color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;font-family:var(--f-body);text-decoration:underline}
 </style>
 </head>
@@ -401,6 +406,7 @@ p.req{margin:0 0 6px;font-weight:600}
       <div class="part" id="part-status">
         <span class="label">Status</span>
         <div class="seg status" id="fStatus" role="group" aria-label="Status"></div>
+        <p class="note lockn" id="statusLock" hidden>It's Fixed because there's an after photo. Remove the after photo to change the status.</p>
       </div>
       <div class="part" id="part-note">
         <label class="label" for="fNote">Note</label>
@@ -791,7 +797,7 @@ function dropLocal(id){
   dropPhotoUrls(id);
   setItems(items.filter(x=>x.id!==id));
 }
-const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','sourceId','causeId','shiftId','dept','planogram','issue','source','cause','shift','note','status','fixedAt','photo','after','afterRev','rite','riteNo'];
+const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','sourceId','causeId','shiftId','dept','planogram','issue','source','cause','shift','note','status','fixedAt','photo','photoRev','after','afterRev','rite','riteNo'];
 const REF_FIELDS=['deptId','planogramId','issueId','sourceId','causeId','shiftId'];
 function serverItem(it){const o={};for(const k of ITEM_FIELDS)o[k]=it[k]??(k==='fixedAt'?null:k==='photo'?false:'');o.photo=!!o.photo;return o}
 
@@ -905,7 +911,7 @@ async function mergeIncoming(data,opt={}){
     if(!x||typeof x!=='object'||!ID.test(x.id||'')||typeof x.dept!=='string'||typeof x.issue!=='string'||!STATUSES.includes(x.status))continue;
     const it={};for(const k of ITEM_FIELDS)it[k]=x[k]??(k==='fixedAt'?null:k==='photo'?false:'');it.photo=!!it.photo;
     for(const k of['dept','planogram','issue','source','cause','shift','created','updated'])it[k]=String(it[k]).slice(0,120);
-    it.rite=!!it.rite;it.riteNo=String(it.riteNo||'').slice(0,40);it.after=!!it.after;it.afterRev=/^[a-z0-9]{1,20}$/.test(String(it.afterRev||''))?String(it.afterRev):'';
+    it.rite=!!it.rite;it.riteNo=String(it.riteNo||'').slice(0,40);it.after=!!it.after;const REV=v=>/^[a-z0-9]{1,20}$/.test(String(v||''))?String(v):'';it.afterRev=REV(it.afterRev);it.photoRev=it.photo?REV(it.photoRev):'';if(!it.after)it.afterRev='';
     it.note=String(it.note).slice(0,2000);
     for(const k of REF_FIELDS)it[k]=ENTRY_ID.test(String(it[k]))?String(it[k]):'';
     link(it);
@@ -914,9 +920,13 @@ async function mergeIncoming(data,opt={}){
     if(newTombs[it.id]&&newTombs[it.id]>=it.updated)continue;   // deleted after this version was saved
     ops.push({s:'items',v:it});have.set(it.id,it);cur?updated++:added++;
     const p=opt.photos&&data.photos&&data.photos[it.id];
+    if(opt.photos&&cur&&((cur.photo&&!it.photo)||(cur.after&&!it.after))){
+      const r=await getOne('photos',it.id).catch(()=>null);
+      if(r){const rec={...r};if(!it.photo){delete rec.full;delete rec.thumb;delete rec.photoRev}if(!it.after){delete rec.after;delete rec.afterThumb;delete rec.afterRev}ops.push({s:'photos',v:rec});setPhotoUrls(rec)}
+    }
     if(p&&(typeof p.full==='string'||typeof p.after==='string')){
       try{const cur=await getOne('photos',it.id).catch(()=>null)||{id:it.id};const rec={...cur,id:it.id};
-        if(it.photo&&typeof p.full==='string'){rec.full=b64ToBlob(p.full,'image/jpeg');rec.thumb=typeof p.thumb==='string'?b64ToBlob(p.thumb,'image/jpeg'):rec.full}
+        if(it.photo&&typeof p.full==='string'){rec.full=b64ToBlob(p.full,'image/jpeg');rec.thumb=typeof p.thumb==='string'?b64ToBlob(p.thumb,'image/jpeg'):rec.full;rec.photoRev=it.photoRev}
         if(it.after&&typeof p.after==='string'){rec.after=b64ToBlob(p.after,'image/jpeg');rec.afterThumb=typeof p.afterThumb==='string'?b64ToBlob(p.afterThumb,'image/jpeg'):rec.after;rec.afterRev=it.afterRev}
         ops.push({s:'photos',v:rec});photos++;setPhotoUrls(rec);
       }catch(e){}
@@ -1031,26 +1041,29 @@ function syncDocText(){
   const its=items.map(x=>({...x})).sort((a,b)=>a.id<b.id?-1:1);
   return JSON.stringify({format:'roil-sync',version:2,lists:listsBody(lists),deleted:tombs,items:its});
 }
+const pname=(kind,id,rev)=>rev?`${kind}-${id}-${rev}.jpg`:`${kind}-${id}.jpg`;
 async function syncPhotos(folder,files){
   const phs=await getAll('photos');const have=new Map(phs.map(p=>[p.id,p]));
   const byId=new Map(items.map(i=>[i.id,i]));let got=0;
   const up=async(name,blob)=>{if(blob&&!files.has(name)){const f=await Drive.create(folder,name,blob,'image/jpeg');files.set(f.name,f)}};
   for(const p of phs){const it=byId.get(p.id);if(!it)continue;
-    if(it.photo){await up(`photo-${p.id}.jpg`,p.full);await up(`thumb-${p.id}.jpg`,p.thumb)}
+    if(it.photo&&(p.photoRev||'')===(it.photoRev||'')){await up(pname('photo',p.id,it.photoRev),p.full);await up(pname('thumb',p.id,it.photoRev),p.thumb)}
     if(it.after&&it.afterRev&&p.afterRev===it.afterRev){await up(`after-${p.id}-${it.afterRev}.jpg`,p.after);await up(`afterthumb-${p.id}-${it.afterRev}.jpg`,p.afterThumb)}
   }
   for(const it of items){   // photos from other devices: small versions now, full ones when you open the issue
     const p=have.get(it.id),rec=p?{...p}:{id:it.id};let changed=false;
-    if(it.photo&&!rec.thumb){const f=files.get(`thumb-${it.id}.jpg`)||files.get(`photo-${it.id}.jpg`);
-      if(f){const b=await (await Drive.read(f.id)).blob();rec.thumb=b;if(f.name.startsWith('photo-'))rec.full=b;changed=true}}
+    if(it.photo&&(!rec.thumb||(rec.photoRev||'')!==(it.photoRev||''))){const f=files.get(pname('thumb',it.id,it.photoRev))||files.get(pname('photo',it.id,it.photoRev));
+      if(f){const b=await (await Drive.read(f.id)).blob();rec.thumb=b;rec.full=f.name.startsWith('photo-')?b:null;rec.photoRev=it.photoRev||'';changed=true}}
+    if(!it.photo&&(rec.full||rec.thumb)){delete rec.full;delete rec.thumb;delete rec.photoRev;changed=true}      // removed on another device
+    if(!it.after&&(rec.after||rec.afterThumb)){delete rec.after;delete rec.afterThumb;delete rec.afterRev;changed=true}
     if(it.after&&it.afterRev&&rec.afterRev!==it.afterRev){const f=files.get(`afterthumb-${it.id}-${it.afterRev}.jpg`)||files.get(`after-${it.id}-${it.afterRev}.jpg`);
       if(f){const b=await (await Drive.read(f.id)).blob();rec.afterThumb=b;rec.after=f.name.startsWith('after-')?b:null;rec.afterRev=it.afterRev;changed=true}}
     if(changed){await write([{s:'photos',v:rec}]);setPhotoUrls(rec);got++}
   }
-  for(const [name,f] of [...files]){   // tidy Drive: photos of deleted issues, and after photos that were replaced
+  for(const [name,f] of [...files]){   // tidy Drive: photos of deleted issues, and photos that were replaced or removed
     const m=name.match(/^(photo|thumb|after|afterthumb)-([a-z0-9]+)(?:-([a-z0-9]+))?\.jpg$/);if(!m)continue;
     const it=byId.get(m[2]);
-    const stale=it?(m[1].startsWith('after')&&m[3]!==it.afterRev):!!tombs[m[2]];
+    const stale=it?(m[1].startsWith('after')?!it.after||m[3]!==it.afterRev:!it.photo||(m[3]||'')!==(it.photoRev||'')):!!tombs[m[2]];
     if(stale){await Drive.trash(f.id);files.delete(name)}
   }
   if(got)renderAll();
@@ -1099,14 +1112,14 @@ async function runSync(manual){
 /* A full photo that came from another device is downloaded the first time it's needed. */
 async function ensureFull(id,which='before'){
   const A=which==='after',p=await getOne('photos',id).catch(()=>null);
-  if(p&&(A?p.after:p.full))return A?p.after:p.full;
   const it=items.find(i=>i.id===id);
+  if(p&&(A?p.after:p.full&&(p.photoRev||'')===((it&&it.photoRev)||'')))return A?p.after:p.full;
   if(syncCfg.dest==='drive'&&gToken()&&navigator.onLine&&it){
     try{
-      const name=A?`after-${id}-${it.afterRev}.jpg`:`photo-${id}.jpg`;
+      const name=A?pname('after',id,it.afterRev):pname('photo',id,it.photoRev);
       let f=driveFiles.get(name);
       if(!f){driveFiles=await Drive.list(await Drive.folder());f=driveFiles.get(name)}
-      if(f){const blob=await (await Drive.read(f.id)).blob();const rec={...(p||{id}),id};if(A){rec.after=blob;rec.afterRev=it.afterRev;if(!rec.afterThumb)rec.afterThumb=blob}else{rec.full=blob;if(!rec.thumb)rec.thumb=blob}
+      if(f){const blob=await (await Drive.read(f.id)).blob();const rec={...(p||{id}),id};if(A){rec.after=blob;rec.afterRev=it.afterRev;if(!rec.afterThumb)rec.afterThumb=blob}else{rec.full=blob;rec.photoRev=it.photoRev||'';if(!rec.thumb)rec.thumb=blob}
         await write([{s:'photos',v:rec}]);setPhotoUrls(rec);return blob}
     }catch(e){}
   }
@@ -1358,7 +1371,10 @@ function fillWhy(){
     r.innerHTML=`<span><span class="k">Source</span> ${esc(v.source||'Not set')}</span><span><span class="k">Cause</span> ${esc(v.cause||'Not set')}</span><span class="chg">Change</span>`;
     r.onclick=()=>{whyOpenNow=true;fillWhy()};b.append(r)}
 }
+/* An issue with an after photo is fixed: Open and Follow-up stay locked until the after photo is removed. */
+function lockStatus(el,locked){if(!el)return;el.querySelectorAll('button').forEach(b=>{const off=locked&&b.dataset.v!=='Fixed';b.disabled=off;b.title=off?'Remove the after photo to change the status':''})}
 function updateLogUI(){
+  lockStatus($('#fStatus'),!!form.afterFile);$('#statusLock').hidden=!form.afterFile;
   const L=logLayout(),v=logValues();
   if(L==='sections'&&!(ap.whyOpen||whyOpenNow))fillWhy();
   if(L==='summary'){
@@ -1755,11 +1771,10 @@ function openDetail(id){
   const it=items.find(i=>i.id===id);if(!it)return;
   const src=photoSrc(it);
   openSheet(`<div class="head"><div><h2>${esc(it.issue)}</h2><span class="mono muted" style="font-size:13px">${esc(fmtDT(it.created))}${it.shift?' · '+esc(it.shift):''}</span></div><button class="btn small" data-close>Close</button></div>
-  <div class="ba2"><figure>${src?`<img id="dImg" src="${esc(src)}" alt="Before">`:'<div class="np2">No before photo</div>'}<figcaption>Before</figcaption></figure>
-    <figure>${it.after?`<img id="dAfterImg" src="${esc(afterUrls.get(it.id)||afterThumbUrls.get(it.id)||'')}" alt="After">`:`<label class="np2 addafter" for="dAfterIn">+ Add after photo</label>`}<figcaption>After${it.after?` · <label class="linkish" for="dAfterIn">Replace</label>`:''}</figcaption></figure></div>
-  <input type="file" id="dAfterIn" accept="image/*" capture="environment" hidden>
+  <div class="ba2" id="dBA">${baHtml(it)}</div>
+  <input type="file" id="dBeforeIn" accept="image/*" capture="environment" hidden><input type="file" id="dAfterIn" accept="image/*" capture="environment" hidden>
   <div class="row"><button class="btn small primary" id="dShare">Share to Teams</button><button class="btn small" id="dCopy">Copy for Teams</button><button class="btn small" id="dText">Copy text</button>${src?'<button class="btn small" id="dPng">Copy photo</button>':''}</div>
-  <div><span class="label">Status</span><div class="seg status" id="dStatus">${segHtml(STATUSES,it.status)}</div></div>
+  <div><span class="label">Status</span><div class="seg status" id="dStatus">${segHtml(STATUSES,it.status)}</div><p class="note lockn" id="dLock" ${it.after?'':'hidden'}>It's Fixed because there's an after photo. Remove the after photo to change the status.</p></div>
   <div class="two collapse"><div><label class="label" for="dDept">Department</label><select id="dDept">${deptOptions(it.deptId)}</select></div><div><label class="label" for="dSub">Planogram</label><select id="dSub">${subOptions(it.deptId,it.planogramId)}</select></div></div>
   <div class="two collapse"><div><label class="label" for="dIssue">Issue</label><select id="dIssue">${entryOptions(lists.issues,it.issueId)}</select></div>
   <div><label class="label" for="dCause">Cause</label><select id="dCause">${entryOptions(lists.causes,it.causeId,'Not set')}</select></div></div>
@@ -1772,14 +1787,29 @@ function openDetail(id){
   $('#dStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st=b.dataset.v;$('#dStatus').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===st))});
   $('#dDept').onchange=e=>{$('#dSub').innerHTML=subOptions(e.target.value,'')};
   $('#dIssue').onchange=e=>{$('#dRiteWrap').hidden=!isDemoIssue(e.target.value)};
-  const fileP=it.photo?photoFile(it):null;if(fileP)fileP.catch(()=>{});
+  let fileP=it.photo?photoFile(it):null;if(fileP)fileP.catch(()=>{});
   if(it.photo&&!photoUrls.has(it.id))ensureFull(it.id).then(()=>{const im=$('#dImg'),u=photoUrls.get(it.id);if(im&&u)im.src=u});
   if(it.after&&!afterUrls.has(it.id))ensureFull(it.id,'after').then(()=>{const im=$('#dAfterImg'),u=afterUrls.get(it.id);if(im&&u)im.src=u});
-  $('#dAfterIn').onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;closeSheet();await addAfterPhoto(it.id,f);openDetail(it.id)};
-  $('#dShare').onclick=()=>shareItem(it,fileP);
-  $('#dCopy').onclick=()=>copyItem(it);
-  $('#dText').onclick=()=>copyText(cardText(it));
-  const dg=$('#dPng');if(dg)dg.onclick=()=>copyPhoto(it);
+  const cur=()=>items.find(i=>i.id===it.id)||it;
+  const setSt=v=>{st=v;$('#dStatus').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===st))};
+  const refreshBA=()=>{const c=cur();$('#dBA').innerHTML=baHtml(c);const dg=$('#dPng');if(dg)dg.hidden=!c.photo;lockStatus($('#dStatus'),c.after);$('#dLock').hidden=!c.after;if(c.after)setSt('Fixed')};
+  lockStatus($('#dStatus'),it.after);
+  const photoChange=async(which,f)=>{
+    const busy=$('#dBA');busy.classList.add('busy');
+    try{const p=await setItemPhoto(it.id,which,f);
+      if(which==='before')fileP=cur().photo?photoFile(cur()):null,fileP&&fileP.catch(()=>{});
+      toast(f?(which==='after'?(p.status?'After photo added. Marked fixed.':'After photo saved.'):'Before photo saved.'):(which==='after'?'After photo removed. You can change the status now.':'Before photo removed.'));
+    }catch(e){toast('Couldn\'t save that photo. Try again.')}
+    finally{busy.classList.remove('busy');refreshBA()}
+  };
+  for(const [id,which] of [['#dBeforeIn','before'],['#dAfterIn','after']])$(id).onchange=e=>{const f=e.target.files&&e.target.files[0];e.target.value='';if(f)photoChange(which,f)};
+  $('#dBA').addEventListener('click',e=>{const b=e.target.closest('[data-rm]');if(!b)return;
+    if(!b.classList.contains('armed')){b.classList.add('armed');b.textContent='Tap again to remove';setTimeout(()=>{if(b.isConnected){b.classList.remove('armed');b.textContent='Remove'}},4000);return}
+    photoChange(b.dataset.rm,null)});
+  $('#dShare').onclick=()=>shareItem(cur(),fileP);
+  $('#dCopy').onclick=()=>copyItem(cur());
+  $('#dText').onclick=()=>copyText(cardText(cur()));
+  const dg=$('#dPng');if(dg)dg.onclick=()=>copyPhoto(cur());
   let armed=false;
   $('#dDel').onclick=async e=>{if(!armed){armed=true;e.target.textContent='Tap again to delete';setTimeout(()=>{armed=false;if(e.target.isConnected)e.target.textContent='Delete'},4000);return}
     try{await store.remove(it);closeSheet();toast('Deleted.')}catch(err){toast('Couldn\'t delete. Try again.')}};
@@ -1793,16 +1823,31 @@ function openDetail(id){
   };
 }
 /* After photos for issues already logged */
+/* Add, replace (file) or remove (null) an issue's before or after photo. Each new photo gets a new
+   revision, so other devices fetch it and the old file leaves Google Drive. */
+async function setItemPhoto(id,which,file){
+  const it=items.find(i=>i.id===id);if(!it)throw new Error('gone');
+  const A=which==='after',rec={...(await getOne('photos',id).catch(()=>null)||{}),id},patch={};
+  if(file){
+    const full=await compress(file,2048,.85),th=await compress(file,480,.75),rev=newRev();
+    if(A){Object.assign(rec,{after:full,afterThumb:th,afterRev:rev});Object.assign(patch,{after:true,afterRev:rev});
+      if(it.status!=='Fixed'){patch.status='Fixed';patch.fixedAt=new Date().toISOString()}}
+    else{Object.assign(rec,{full,thumb:th,photoRev:rev});Object.assign(patch,{photo:true,photoRev:rev})}
+  }else if(A){delete rec.after;delete rec.afterThumb;delete rec.afterRev;Object.assign(patch,{after:false,afterRev:''})}
+  else{delete rec.full;delete rec.thumb;delete rec.photoRev;Object.assign(patch,{photo:false,photoRev:''})}
+  await write([{s:'photos',v:rec}]);setPhotoUrls(rec);
+  await store.patch(id,patch);
+  return patch;
+}
 async function addAfterPhoto(id,file){
-  const it=items.find(i=>i.id===id);if(!it)return;
-  try{
-    const after=await compress(file,2048,.85),afterThumb=await compress(file,480,.75),rev=newRev();
-    const p=await getOne('photos',id).catch(()=>null)||{id};const rec={...p,id,after,afterThumb,afterRev:rev};
-    await write([{s:'photos',v:rec}]);setPhotoUrls(rec);
-    const patch={after:true,afterRev:rev};if(it.status!=='Fixed'){patch.status='Fixed';patch.fixedAt=new Date().toISOString()}
-    await store.patch(id,patch);
-    toast(patch.status?'After photo added. Marked fixed.':'After photo added.');
-  }catch(e){toast('Couldn\'t save that photo. Try again.')}
+  try{const p=await setItemPhoto(id,'after',file);toast(p.status?'After photo added. Marked fixed.':'After photo added.')}
+  catch(e){toast('Couldn\'t save that photo. Try again.')}
+}
+function baHtml(it){
+  const b=it.photo?photoSrc(it):'',a=it.after?(afterUrls.get(it.id)||afterThumbUrls.get(it.id)||''):'';
+  const tools=(which,inId)=>` · <label class="linkish" for="${inId}">Replace</label> · <button type="button" class="linkish rm" data-rm="${which}">Remove</button>`;
+  return `<figure>${it.photo?`<img id="dImg" src="${esc(b)}" alt="Before">`:`<label class="np2 addafter" for="dBeforeIn">+ Add before photo</label>`}<figcaption>Before${it.photo?tools('before','dBeforeIn'):''}</figcaption></figure>
+    <figure>${it.after?`<img id="dAfterImg" src="${esc(a)}" alt="After">`:`<label class="np2 addafter" for="dAfterIn">+ Add after photo</label>`}<figcaption>After${it.after?tools('after','dAfterIn'):''}</figcaption></figure>`;
 }
 async function markFixed(id){
   const it=items.find(i=>i.id===id);if(!it)return;
