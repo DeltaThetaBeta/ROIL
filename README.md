@@ -42,6 +42,7 @@ So after taking the photo, you can scan the tag and the items in one go, then pi
 
 - **Location SKU** (top of the **Where** step): the 7-digit SKU from the shelf tag (ESL). On Android, tap **Scan** and point the camera at the tag's QR code. You can also type it, or use a Bluetooth scanner. Once ROIL has seen a SKU, it fills in the department and planogram you used last time. You can add a product name, and **View on bestbuy.com** opens the product.
 - **Lock-up** (under the SKU): turn this on when customers can't reach the spot. If you pick Customer as the source for a lock-up issue, ROIL warns you. Stats shows lock-up issues separately, as employee-caused.
+- **The shelf tag's product counts as the first item found.** Most of the time the product at fault is the one the tag is for, so setting the location SKU adds it to Items found, marked "from the shelf tag". Scanning that product's own barcode confirms it, a different product is added alongside it, and you can remove it if it isn't there.
 - **Items found** (on the **What's wrong** step): it opens automatically for Placement and Pricing & labels issues, or once you've scanned an item. For other issues, tap **+ Items found**. Scan (the camera stays open) or type the UPC of each product that's actually there. Scanning the same product again adds one to its quantity. Each item is marked:
   - **Correct:** it belongs to this location's SKU.
   - **Wrong item:** it belongs somewhere else.
