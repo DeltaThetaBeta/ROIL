@@ -7,7 +7,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' blob: data:; font-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#0e6a5a">
-<script>/* apply saved appearance before the page draws */try{var a=JSON.parse(localStorage.getItem('roil.appearance')||'null');if(a){var r=document.documentElement;if(a.theme==='light'||a.theme==='dark')r.setAttribute('data-theme',a.theme);['contrast','status','shape','size'].forEach(function(k){if(typeof a[k]==='string')r.setAttribute('data-'+k,a[k])})}}catch(e){}</script>
+<script>/* paint the saved colors before the page draws */try{var p=JSON.parse(localStorage.getItem('roil.apPaint')||'null');if(p){var r=document.documentElement;for(var k in p.attrs)if(/^data-(theme|contrast|status|shape|size)$/.test(k))r.setAttribute(k,String(p.attrs[k]));if(typeof p.css==='string'&&p.css){var st=document.createElement('style');st.id='apStyle';st.textContent=p.css;document.head.appendChild(st)}}}catch(e){}</script>
 <title>Retail Operations Issue Log</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
@@ -165,7 +165,7 @@ textarea{min-height:76px;resize:vertical}
 .sheet .head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px}
 .kv dt{color:var(--muted)} .kv dd{margin:0}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:50;background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 12px 10px 16px;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:15px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);width:max-content;bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:50;background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 12px 10px 16px;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:15px}
 .toast .btn{background:transparent;color:var(--bg);border-color:color-mix(in srgb,var(--bg) 40%,transparent)}
 @media (min-width:900px){.toast{bottom:24px}}
 .note{font-size:14px;color:var(--muted)}
@@ -232,6 +232,21 @@ details.arch .lrows{margin-top:8px}
 @media (prefers-color-scheme: dark){:root[data-status="cb"]:not([data-theme="light"]){--open:#ff9e57;--open-soft:#3d2510;--follow:#8ab4ff;--follow-soft:#1a2a45;--good:#c2ced6;--good-soft:#27323a}}
 :root[data-status="cb"][data-theme="dark"]{--open:#ff9e57;--open-soft:#3d2510;--follow:#8ab4ff;--follow-soft:#1a2a45;--good:#c2ced6;--good-soft:#27323a}
 .swatches{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.sw-theme{display:grid;place-items:center;color:var(--accent-ink);font-weight:700;font-size:13px}
+.pals{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+.pal{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm);padding:6px 8px;cursor:pointer;text-align:left;font-size:13px;min-height:44px;min-width:0}
+.pal>span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pal[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);font-weight:600}
+.pv{position:relative;flex:none;width:34px;height:26px;border-radius:4px;overflow:hidden;border:1px solid rgba(127,127,127,.35);display:flex;align-items:flex-end;gap:2px;padding:3px}
+.pv i{position:absolute;inset:5px 5px 11px 5px;border-radius:2px;border:1px solid transparent}
+.pv b{position:relative;width:7px;height:5px;border-radius:1px}
+.pv-roil{background:linear-gradient(135deg,#eef2f0 50%,#0f1513 50%)}
+.pv-roil i{background:linear-gradient(135deg,#ffffff 50%,#18201d 50%)}
+.pv-roil b{background:#0e6a5a;width:9px}
+.ced{display:grid;gap:10px;margin-top:10px;padding:12px;border:1px dashed var(--line);border-radius:var(--r-sm)}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.cfield{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+.cfield input{width:36px;height:30px;border:1px solid var(--line);border-radius:6px;padding:1px;background:var(--surface);cursor:pointer;flex:none}
 .sw{width:36px;height:36px;border-radius:50%;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
 .sw[aria-pressed="true"]{box-shadow:0 0 0 2px var(--surface),0 0 0 4px var(--ink)}
 .swc{display:inline-flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;color:var(--muted)}
@@ -352,15 +367,40 @@ const dev=(()=>{const ua=navigator.userAgent;const ios=/iPad|iPhone|iPod/.test(u
   const android=/Android/i.test(ua);let coarse=false;try{coarse=matchMedia('(pointer:coarse)').matches}catch(e){}
   return {ios,android,mobile:ios||android||coarse}})();
 const standalone=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}catch(e){return false}};
-/* ---------- appearance ---------- */
-const AP_DEFAULT={theme:'auto',contrast:'normal',accent:'#0e6a5a',status:'default',shape:'rounded',size:'normal',updated:''};
+/* ---------- appearance ----------
+   palette 'roil' is ROIL's own look (follows Auto/Light/Dark). Any other palette sets every
+   color: a built-in editor-style theme, or 'custom' (your own colors or an imported VS Code theme).
+   Whatever the colors, accent and status text are nudged until they're readable on the cards. */
+const AP_DEFAULT={palette:'roil',theme:'auto',contrast:'normal',accent:'',status:'default',shape:'rounded',size:'normal',custom:null,customName:'',updated:''};
 const AP_OPTS={theme:['auto','light','dark'],contrast:['normal','high'],status:['default','cb'],shape:['rounded','soft','square'],size:['compact','normal','large']};
 const ACCENTS=[['Teal','#0e6a5a'],['Blue','#1d5fbf'],['Indigo','#4b4fc4'],['Plum','#7b3f9e'],['Red','#b3261e'],['Orange','#b4530b'],['Green','#2e7d32'],['Graphite','#3d4650']];
+const PAL_KEYS=['bg','surface','ink','muted','line','accent','open','follow','good','bad'];
+const PAL_LABELS={bg:'Background',surface:'Cards',ink:'Text',muted:'Secondary text',line:'Lines',accent:'Accent',open:'Open',follow:'Follow-up',good:'Fixed',bad:'Delete & errors'};
+const PALETTES={
+  'github-light':{name:'GitHub Light',bg:'#f6f8fa',surface:'#ffffff',ink:'#1f2328',muted:'#59636e',line:'#d1d9e0',accent:'#0969da',open:'#bc4c00',follow:'#8250df',good:'#1a7f37',bad:'#cf222e'},
+  'solarized-light':{name:'Solarized Light',bg:'#eee8d5',surface:'#fdf6e3',ink:'#073642',muted:'#586e75',line:'#d6cfb9',accent:'#268bd2',open:'#cb4b16',follow:'#6c71c4',good:'#859900',bad:'#dc322f'},
+  'latte':{name:'Catppuccin Latte',bg:'#e6e9ef',surface:'#eff1f5',ink:'#4c4f69',muted:'#6c6f85',line:'#ccd0da',accent:'#1e66f5',open:'#fe640b',follow:'#8839ef',good:'#40a02b',bad:'#d20f39'},
+  'github-dark':{name:'GitHub Dark',bg:'#010409',surface:'#0d1117',ink:'#e6edf3',muted:'#9198a1',line:'#30363d',accent:'#4493f8',open:'#db6d28',follow:'#ab7df8',good:'#3fb950',bad:'#f85149'},
+  'one-dark':{name:'One Dark',bg:'#21252b',surface:'#282c34',ink:'#dcdfe4',muted:'#9da5b4',line:'#3e4451',accent:'#61afef',open:'#d19a66',follow:'#c678dd',good:'#98c379',bad:'#e06c75'},
+  'dracula':{name:'Dracula',bg:'#21222c',surface:'#282a36',ink:'#f8f8f2',muted:'#a4a8c8',line:'#44475a',accent:'#bd93f9',open:'#ffb86c',follow:'#ff79c6',good:'#50fa7b',bad:'#ff5555'},
+  'nord':{name:'Nord',bg:'#2e3440',surface:'#3b4252',ink:'#eceff4',muted:'#aab3c5',line:'#4c566a',accent:'#88c0d0',open:'#d08770',follow:'#b48ead',good:'#a3be8c',bad:'#bf616a'},
+  'monokai':{name:'Monokai',bg:'#1e1f1c',surface:'#272822',ink:'#f8f8f2',muted:'#a8a48e',line:'#49483e',accent:'#66d9ef',open:'#fd971f',follow:'#ae81ff',good:'#a6e22e',bad:'#f92672'},
+  'solarized-dark':{name:'Solarized Dark',bg:'#002b36',surface:'#073642',ink:'#eee8d5',muted:'#93a1a1',line:'#2a5561',accent:'#268bd2',open:'#cb4b16',follow:'#6c71c4',good:'#859900',bad:'#dc322f'},
+  'gruvbox':{name:'Gruvbox Dark',bg:'#1d2021',surface:'#282828',ink:'#ebdbb2',muted:'#a89984',line:'#504945',accent:'#83a598',open:'#fe8019',follow:'#d3869b',good:'#b8bb26',bad:'#fb4934'},
+  'tokyo-night':{name:'Tokyo Night',bg:'#16161e',surface:'#1a1b26',ink:'#c0caf5',muted:'#9099c0',line:'#292e42',accent:'#7aa2f7',open:'#ff9e64',follow:'#bb9af7',good:'#9ece6a',bad:'#f7768e'},
+  'mocha':{name:'Catppuccin Mocha',bg:'#181825',surface:'#1e1e2e',ink:'#cdd6f4',muted:'#a6adc8',line:'#313244',accent:'#89b4fa',open:'#fab387',follow:'#f5c2e7',good:'#a6e3a1',bad:'#f38ba8'}
+};
+const HEX6=/^#[0-9a-f]{6}$/i;
+function cleanPal(p){if(!p||typeof p!=='object')return null;const o={};for(const k of PAL_KEYS){if(!HEX6.test(p[k]||''))return null;o[k]=p[k].toLowerCase()}return o}
 function cleanAp(a){
   const o={...AP_DEFAULT};
   if(a&&typeof a==='object'){
     for(const k in AP_OPTS)if(AP_OPTS[k].includes(a[k]))o[k]=a[k];
-    if(/^#[0-9a-f]{6}$/i.test(a.accent||''))o.accent=a.accent.toLowerCase();
+    if(HEX6.test(a.accent||''))o.accent=a.accent.toLowerCase();
+    if(o.accent==='#0e6a5a'&&!a.palette)o.accent='';          // older versions stored ROIL's teal as the accent
+    o.custom=cleanPal(a.custom);
+    if(typeof a.customName==='string')o.customName=a.customName.slice(0,60);
+    if(a.palette==='custom'&&o.custom)o.palette='custom';else if(PALETTES[a.palette])o.palette=a.palette;
     if(typeof a.updated==='string')o.updated=a.updated.slice(0,40);
   }
   return o;
@@ -373,27 +413,97 @@ const lum=h=>{const c=hexRgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:((v+.055
 const contrastRatio=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
 const mixHex=(a,b,t)=>{const x=hexRgb(a),y=hexRgb(b);return rgbHex(x.map((v,i)=>v+(y[i]-v)*t))};
 function fitHex(c,bg,target,toward){for(let i=0;i<25&&contrastRatio(c,bg)<target;i++)c=mixHex(c,toward,.12);return c}
+const inkOn=c=>contrastRatio(c,'#ffffff')>=contrastRatio(c,'#0b0f0d')?'#ffffff':'#0b0f0d';
 function accentVars(hex){
   const l=fitHex(hex,'#ffffff',3.2,'#000000'),d=fitHex(hex,'#18201d',4.2,'#ffffff');
   return {l,li:contrastRatio(l,'#ffffff')>=4.5?'#ffffff':'#0b0f0d',ls:mixHex(l,'#ffffff',.84),
           d,di:contrastRatio(d,'#ffffff')>=4.5?'#ffffff':'#06120f',ds:mixHex(d,'#18201d',.75)};
 }
+const isDarkPal=P=>lum(P.bg)<.2;
+function currentPal(){return ap.palette==='custom'?ap.custom:PALETTES[ap.palette]||null}
+/* Turn a palette into the page's color tokens. */
+function paletteCss(P){
+  const dark=isDarkPal(P),s=P.surface,toward=dark?'#ffffff':'#000000';
+  let muted=P.muted,line=P.line;
+  if(ap.contrast==='high'){muted=mixHex(muted,P.ink,.55);line=mixHex(line,P.ink,.4)}
+  const acc=fitHex(ap.accent||P.accent,s,3,toward);
+  const cb=ap.status==='cb'?(dark?{open:'#ff9e57',follow:'#8ab4ff',good:'#c2ced6'}:{open:'#b84f00',follow:'#1f5fbf',good:'#3d4f5c'}):null;
+  const fit=c=>fitHex(c,s,3.5,toward),soft=c=>mixHex(c,s,dark?.8:.86);
+  const open=fit(cb?cb.open:P.open),follow=fit(cb?cb.follow:P.follow),good=fit(cb?cb.good:P.good),bad=fit(P.bad);
+  const v={bg:P.bg,surface:s,sunk:mixHex(P.bg,'#000000',dark?.25:.05),ink:P.ink,muted,line,
+    accent:acc,'accent-ink':inkOn(acc),'accent-soft':mixHex(acc,s,dark?.78:.84),
+    open,'open-soft':soft(open),follow,'follow-soft':soft(follow),good,'good-soft':soft(good),bad};
+  return {dark,css:`:root:root:root{${Object.entries(v).map(([k,x])=>`--${k}:${x}`).join(';')};color-scheme:${dark?'dark':'light'}}`};
+}
 let ap={...AP_DEFAULT};   // loaded from this device's storage just below the storage helper
 function applyAp(){
-  const r=document.documentElement;
-  if(ap.theme==='auto')r.removeAttribute('data-theme');else r.setAttribute('data-theme',ap.theme);
-  for(const k of['contrast','status','shape','size'])r.setAttribute('data-'+k,ap[k]);
+  const r=document.documentElement,P=currentPal();
+  let css='';
+  if(P){
+    const p=paletteCss(P);css=p.css;
+    r.setAttribute('data-theme',p.dark?'dark':'light');r.removeAttribute('data-contrast');r.removeAttribute('data-status');
+  }else{
+    if(ap.theme==='auto')r.removeAttribute('data-theme');else r.setAttribute('data-theme',ap.theme);
+    r.setAttribute('data-contrast',ap.contrast);r.setAttribute('data-status',ap.status);
+    if(ap.accent){const v=accentVars(ap.accent);const L=`--accent:${v.l};--accent-ink:${v.li};--accent-soft:${v.ls}`,D=`--accent:${v.d};--accent-ink:${v.di};--accent-soft:${v.ds}`;
+      css=`:root:root{${L}}@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"]){${D}}}:root:root[data-theme="dark"]{${D}}`}
+  }
+  r.setAttribute('data-shape',ap.shape);r.setAttribute('data-size',ap.size);
   let st=document.getElementById('apStyle');
   if(!st){st=document.createElement('style');st.id='apStyle';document.head.appendChild(st)}
-  if(ap.accent===AP_DEFAULT.accent)st.textContent='';
-  else{const v=accentVars(ap.accent);const L=`--accent:${v.l};--accent-ink:${v.li};--accent-soft:${v.ls}`,D=`--accent:${v.d};--accent-ink:${v.di};--accent-soft:${v.ds}`;
-    st.textContent=`:root{${L}}@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){${D}}}:root[data-theme="dark"]{${D}}`}
-  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=ap.accent;
+  st.textContent=css;
+  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=P?P.surface:(ap.accent||'#0e6a5a');
+  // remembered so the next visit can paint the right colors before the app starts
+  const attrs={};for(const a of['data-theme','data-contrast','data-status','data-shape','data-size'])if(r.hasAttribute(a))attrs[a]=r.getAttribute(a);
+  try{localStorage.setItem('roil.apPaint',JSON.stringify({attrs,css}))}catch(e){}
 }
 function setAp(patch,save=true){
   ap=cleanAp({...ap,...patch,updated:new Date().toISOString()});
   if(save)ls.set('roil.appearance',ap);
   applyAp();
+}
+/* The colors currently on screen, as a palette: the starting point for a custom theme. */
+function paletteOnScreen(){
+  const cs=getComputedStyle(document.documentElement),g=k=>cs.getPropertyValue('--'+k).trim().toLowerCase();
+  const o={};for(const k of PAL_KEYS){const v=g(k);o[k]=HEX6.test(v)?v:'#888888'}
+  return o;
+}
+/* VS Code color themes (.json, comments allowed) → a ROIL palette. */
+function parseJsonc(t){
+  let out='',i=0,str=false;
+  while(i<t.length){const c=t[i],n=t[i+1];
+    if(str){out+=c;if(c==='\\'){out+=n||'';i+=2;continue}if(c==='"')str=false;i++;continue}
+    if(c==='"'){str=true;out+=c;i++;continue}
+    if(c==='/'&&n==='/'){while(i<t.length&&t[i]!=='\n')i++;continue}
+    if(c==='/'&&n==='*'){i+=2;while(i<t.length&&!(t[i]==='*'&&t[i+1]==='/'))i++;i+=2;continue}
+    out+=c;i++}
+  return JSON.parse(out.replace(/,(\s*[}\]])/g,'$1'));
+}
+function hexOf(v,bg){
+  if(typeof v!=='string')return null;v=v.trim().toLowerCase();
+  if(/^#[0-9a-f]{3}$/.test(v))v='#'+v.slice(1).split('').map(c=>c+c).join('');
+  if(/^#[0-9a-f]{8}$/.test(v)){const a=parseInt(v.slice(7),16)/255;v=v.slice(0,7);if(bg&&a<1)v=mixHex(bg,v,a)}
+  return HEX6.test(v)?v:null;
+}
+function vscodeToPalette(th){
+  const c=th&&th.colors;if(!c||typeof c!=='object')throw new Error('no colors');
+  const pick=(...keys)=>{for(const k of keys){const v=hexOf(c[k]);if(v)return v}return null};
+  const ed=pick('editor.background');const bg=pick('sideBar.background','activityBar.background','editorGroupHeader.tabsBackground')||ed;
+  if(!bg)throw new Error('no background');
+  const dark=th.type?/dark|black/i.test(th.type):lum(bg)<.2;
+  const ink=pick('editor.foreground','foreground','sideBar.foreground')||(dark?'#e6e6e6':'#1f1f1f');
+  let surface=ed&&ed!==bg?ed:pick('editorWidget.background','input.background','dropdown.background')||mixHex(bg,ink,.05);
+  if(surface===bg)surface=mixHex(bg,ink,.05);
+  const h=k=>hexOf(c[k],surface);
+  const P={bg,surface,ink,
+    muted:h('descriptionForeground')||h('tab.inactiveForeground')||h('editorLineNumber.activeForeground')||mixHex(ink,surface,.35),
+    line:h('panel.border')||h('editorGroup.border')||h('widget.border')||h('input.border')||h('sideBar.border')||mixHex(ink,surface,.82),
+    accent:h('button.background')||h('focusBorder')||h('activityBarBadge.background')||h('textLink.foreground')||(dark?'#4c9fff':'#0b62d6'),
+    open:h('terminal.ansiYellow')||h('editorWarning.foreground')||'#d08a20',
+    follow:h('terminal.ansiMagenta')||h('terminal.ansiBlue')||'#a070e0',
+    good:h('terminal.ansiGreen')||h('gitDecoration.addedResourceForeground')||'#3a9a50',
+    bad:h('terminal.ansiRed')||h('editorError.foreground')||'#d04040'};
+  return cleanPal(P);
 }
 const installHint=()=>dev.ios?'in Safari, tap Share → Add to Home Screen':dev.android?'in the Chrome menu, tap Add to home screen':'use the install icon in the address bar, or the browser menu → Install ROIL';
 const localDay=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -1110,20 +1220,50 @@ function openDetail(id){
 }
 
 /* ---------- lists editor ---------- */
+function palChip(key,P,label){
+  const on=ap.palette===key;
+  const sw=P?`<span class="pv" style="background:${P.bg}"><i style="background:${P.surface};border-color:${P.line}"></i><b style="background:${P.accent}"></b><b style="background:${P.open}"></b><b style="background:${P.good}"></b></span>`
+           :`<span class="pv pv-roil"><i></i><b></b></span>`;
+  return `<button type="button" class="pal" data-pal="${key}" aria-pressed="${on}">${sw}<span>${esc(label)}</span></button>`;
+}
 function appearanceHtml(){
   const seg=(k,opts)=>`<div class="seg" data-ap="${k}" role="group">${opts.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="${ap[k]===v}">${t}</button>`).join('')}</div>`;
-  const custom=!ACCENTS.some(([,c])=>c===ap.accent);
+  const P=currentPal(),themeAccent=P?P.accent:'#0e6a5a';
+  const custom=ap.accent&&!ACCENTS.some(([,c])=>c===ap.accent);
+  const lights=Object.entries(PALETTES).filter(([,p])=>!isDarkPal(p)),darks=Object.entries(PALETTES).filter(([,p])=>isDarkPal(p));
+  let editor='';
+  if(ap.palette==='custom'&&ap.custom){
+    const C=ap.custom,cr=(a,b)=>contrastRatio(a,b);
+    const warn=[];if(cr(C.ink,C.surface)<4.5)warn.push('Text on cards is hard to read');if(cr(C.muted,C.surface)<3)warn.push('Secondary text is hard to read');
+    editor=`<div class="ced"><div class="cgrid">${PAL_KEYS.map(k=>`<label class="cfield"><input type="color" data-ck="${k}" value="${C[k]}"><span>${PAL_LABELS[k]}</span></label>`).join('')}</div>
+      <p class="note" style="margin:0">${warn.length?`<span class="pill Open">Check</span> ${warn.join('. ')}.`:`Text contrast looks good (${cr(C.ink,C.surface).toFixed(1)}:1 on cards).`} Accent and status colors are adjusted automatically if they'd be hard to read.</p></div>`;
+  }
   return `<section class="panel lsec" id="apPanel"><header><h3>Appearance</h3><button class="btn small ghost" type="button" id="apReset">Reset to default</button></header>
-  <div><span class="label">Theme</span>${seg('theme',[['auto','Auto'],['light','Light'],['dark','Dark']])}</div>
-  <div><span class="label">Accent color</span><div class="swatches">${ACCENTS.map(([n,c])=>`<button type="button" class="sw" data-accent="${c}" style="background:${c}" aria-label="${n}" title="${n}" aria-pressed="${ap.accent===c}"></button>`).join('')}
-    <label class="swc"><input type="color" id="apColor" value="${ap.accent}" aria-label="Custom accent color"><span>${custom?'Custom':'Custom…'}</span></label></div></div>
+  <div><span class="label">Color theme</span>
+    <div class="pals">${palChip('roil',null,'ROIL')}${lights.map(([k,p])=>palChip(k,p,p.name)).join('')}</div>
+    <div class="pals" style="margin-top:8px">${darks.map(([k,p])=>palChip(k,p,p.name)).join('')}${palChip('custom',ap.custom,ap.customName||'Custom')}</div>
+    <div class="row" style="margin-top:10px"><button class="btn small" type="button" id="apImport">Import VS Code theme…</button><input type="file" id="apImportFile" accept=".json,application/json" hidden>
+      ${ap.palette!=='custom'?'<button class="btn small ghost" type="button" id="apCustomize">Customize these colors</button>':''}</div>
+    ${editor}</div>
+  ${P?'<p class="note" style="margin:0">Light or dark comes from the color theme. Choose ROIL to follow your device instead.</p>':`<div><span class="label">Theme</span>${seg('theme',[['auto','Auto'],['light','Light'],['dark','Dark']])}</div>`}
+  <div><span class="label">Accent color</span><div class="swatches">
+    <button type="button" class="sw sw-theme" data-accent="" style="background:${themeAccent}" aria-label="Theme accent" title="Theme accent" aria-pressed="${!ap.accent}"><span>A</span></button>
+    ${ACCENTS.map(([n,c])=>`<button type="button" class="sw" data-accent="${c}" style="background:${c}" aria-label="${n}" title="${n}" aria-pressed="${ap.accent===c}"></button>`).join('')}
+    <label class="swc"><input type="color" id="apColor" value="${ap.accent||themeAccent}" aria-label="Custom accent color"><span>${custom?'Custom':'Custom…'}</span></label></div></div>
   <div><span class="label">Contrast</span>${seg('contrast',[['normal','Normal'],['high','High']])}</div>
-  <div><span class="label">Status colors</span>${seg('status',[['default','Default'],['cb','Color-blind friendly']])}
+  <div><span class="label">Status colors</span>${seg('status',[['default','Theme'],['cb','Color-blind friendly']])}
     <div class="row" style="margin-top:8px"><span class="pill Open">Open</span><span class="pill Needs">Needs follow-up</span><span class="pill Fixed">Fixed</span></div></div>
   <div><span class="label">Shape</span>${seg('shape',[['rounded','Rounded'],['soft','Soft'],['square','Square']])}</div>
   <div><span class="label">Size</span>${seg('size',[['compact','Compact'],['normal','Normal'],['large','Large']])}</div>
   <p class="note" style="margin:0">Saved on this device and included in backups, so a restore brings your look along.</p>
   </section>`;
+}
+function importThemeText(text,fallbackName){
+  let th;try{th=parseJsonc(text)}catch(e){toast('That file isn\'t valid theme JSON.');return}
+  let P;try{P=vscodeToPalette(th)}catch(e){toast('No colors found. Use a VS Code color theme file (it has a "colors" section).');return}
+  if(!P){toast('Couldn\'t read the colors in that theme.');return}
+  setAp({palette:'custom',custom:P,customName:String(th.name||fallbackName||'Imported theme').slice(0,60),accent:''});renderLists();
+  toast(`Imported “${ap.customName}”. Fine-tune any color below.`);
 }
 (function bindAppearance(){
   const el=$('#v-lists');
@@ -1132,11 +1272,27 @@ function appearanceHtml(){
     if(b){setAp({[b.closest('[data-ap]').dataset.ap]:b.dataset.v});renderLists();return}
     const sw=e.target.closest('#apPanel [data-accent]');
     if(sw){setAp({accent:sw.dataset.accent});renderLists();return}
-    if(e.target.closest('#apReset')){setAp({...AP_DEFAULT});renderLists();toast('Appearance reset to default.')}
+    const pal=e.target.closest('#apPanel [data-pal]');
+    if(pal){const k=pal.dataset.pal;
+      if(k==='custom'&&!ap.custom){setAp({palette:'custom',custom:paletteOnScreen(),customName:'Custom',accent:''})}
+      else setAp({palette:k});
+      renderLists();return}
+    if(e.target.closest('#apCustomize')){setAp({palette:'custom',custom:paletteOnScreen(),customName:'Custom',accent:''});renderLists();toast('Copied the current colors into Custom. Change any of them below.');return}
+    if(e.target.closest('#apImport')){$('#apImportFile').click();return}
+    if(e.target.closest('#apReset')){setAp({...AP_DEFAULT,custom:ap.custom,customName:ap.customName});renderLists();toast('Appearance reset to default. Your custom theme is kept under Custom.')}
   });
-  // live preview while dragging in the color picker; saved when the picker closes
-  el.addEventListener('input',e=>{if(e.target.id==='apColor')setAp({accent:e.target.value},false)});
-  el.addEventListener('change',e=>{if(e.target.id==='apColor'){setAp({accent:e.target.value});renderLists()}});
+  // live preview while dragging a color picker; saved when the picker closes
+  el.addEventListener('input',e=>{
+    const t=e.target;
+    if(t.id==='apColor')setAp({accent:t.value},false);
+    else if(t.dataset.ck&&ap.custom)setAp({custom:{...ap.custom,[t.dataset.ck]:t.value}},false);
+  });
+  el.addEventListener('change',e=>{
+    const t=e.target;
+    if(t.id==='apColor'){setAp({accent:t.value});renderLists()}
+    else if(t.dataset.ck&&ap.custom){setAp({custom:{...ap.custom,[t.dataset.ck]:t.value}});renderLists()}
+    else if(t.id==='apImportFile'){const f=t.files&&t.files[0];t.value='';if(f)f.text().then(x=>importThemeText(x,f.name.replace(/\.jsonc?$/i,'')))}
+  });
 })();
 function backupHtml(){
   const d=backupAgeDays();
