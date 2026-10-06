@@ -72,6 +72,38 @@ A shelf-tag QR sets the location SKU, and a product barcode adds an item. For sh
 
 On computers, Chrome can't use the camera to scan, so type codes or use a scanner there.
 
+## Downstock
+Switch between **Issues** and **Downstock** at the top of the screen. Downstock has its own tabs, **Today** and **Days**, and shares Lists, Products, scanning and sync with Issues.
+
+- **Today** is a board of every area. An area is a planogram, or a whole department if it has no planograms.
+  - **Statuses:**
+    - **Not done**
+    - **Partly**
+    - **Done** (the empties are filled)
+    - **Follow-up**, with a reason
+  - **Extras** you can add to any area: **Filled** (restocked beyond the empties) and **LaserLine** (fronted).
+  - A coverage bar shows how much of the store is done today, and each area shows when it was last done.
+  - The board starts fresh each day, and every day is kept.
+- **Runs:** tap **Start a run** and pick the planograms you're about to walk. You can pick them from the list or a saved group, or by scanning shelf tags. Tap **Finish run** when you're done:
+  - Everything is marked **Done** unless you change it.
+  - You can add Filled or LaserLine, or mark an area Partly or Follow-up.
+  - **Save as a group** remembers planograms you always walk together.
+- **Follow-up reasons:**
+  - **Couldn't find in overstock** asks whether a **Delta Buster** was submitted (with an optional number). Until it is, a **"Delta Buster not submitted"** pill shows.
+  - **Needs equipment or help** asks what's needed: a lift (needs a spotter), a ladder, a second person, or it's a heavy or bulky item.
+  - **Waiting on PRS supplies** and **Other** are the defaults too.
+
+  You can rename, add or hide reasons in Lists → Downstock.
+- **Carried over:** follow-ups and partly done areas from earlier days stay at the top until they're done.
+- **Do these first: top stock.** Mark top-stock sections in Lists → Downstock, and they're listed first each morning, together with lift follow-ups from earlier days.
+- **Not downstocked:** in Lists → Downstock, leave out departments or planograms that never get downstocked, so they don't count against coverage.
+- **Someone else's work:** mark an area **Done by someone else**, then spot-check it later as **Looks good** or **Missed empties** (stock was available but the spot was left empty).
+- **Log issue here** on any area opens the issue form with the department and planogram filled in. The issue is tagged **Found while downstocking**.
+- **Shelf tags:** on the board, scanning a shelf tag with a Bluetooth scanner opens that planogram.
+- **Days** shows coverage per day, Delta Busters this month, areas not done lately, and follow-up reasons. **Copy summary** gives you text for Teams.
+
+**PRS not followed** is an issue type under Safety & security. Pick what was missed: spider wrap, clamshell, limit one or other.
+
 ## Notes for later
 Tap **Note** at the top of any screen to jot down a bug, an improvement or a feature idea while you're on the floor. You can also tap the mic on the phone's keyboard and talk instead of typing.
 - **Context is saved with each note:** the screen you were on and the app version.
