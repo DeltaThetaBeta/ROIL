@@ -102,9 +102,24 @@ Switch between **Issues** and **Downstock** at the top of the screen. Downstock 
 - **Someone else's work:** mark an area **Done by someone else**, then spot-check it later as **Looks good** or **Missed empties** (stock was available but the spot was left empty).
 - **Log issue here** on any area opens the issue form with the department and planogram filled in. The issue is tagged **Found while downstocking**.
 - **Shelf tags:** on the board, scanning a shelf tag with a Bluetooth scanner opens that planogram.
-- **Days** shows coverage per day, Delta Busters this month, areas not done lately, and follow-up reasons. **Copy summary** gives you text for Teams.
+- **Trucks:** the board tracks each truck until it's worked.
+  - **Schedule** (Lists → Downstock → Truck schedule): RDC (brown goods) is Monday and DDC (white goods) is Tuesday. The holiday schedule adds Wednesday and Thursday.
+  - **Arrivals:** on a scheduled day the board asks whether the truck came. For an odd day, use **Truck arrived today**.
+  - **Each truck's card has:**
+    - The trailer's stage (**Emptied → Pickup requested → Picked up**), for dropped trailers. DDC is a dropped trailer by default; mark an RDC as one when it's too big for both stores.
+    - **Unbroken truck pallets** (− / +).
+    - **Store pallets waiting** (none / some / a lot).
+    - **Freight left on the sales floor** by department. Each department can log a **Freight left on sales floor** issue with Source: Truck / freight and the truck already filled in.
+    - **Truck finished.**
+  - **Partial** has a **Working truck leftovers** reason.
+- **The week runs Saturday to Friday** and is named by its Monday, so weekend work counts toward the next week.
+  - Each Monday, older follow-ups fold into **From last week**. Unsubmitted Delta Busters and lift jobs stay on the board.
+  - "Not done lately" counts weekdays only.
+- **Days** shows **This week**: coverage, Delta Busters, truck leftover days, freight left on the floor and each truck's timeline. **Copy week summary** gives you text for the Monday huddle. Days also shows coverage per day, Delta Busters this month, areas not done lately, and follow-up reasons. **Copy summary** gives you text for Teams.
 
 **PRS not followed** is an issue type under Safety & security. Pick what was missed: spider wrap, clamshell, limit one or other.
+
+**Freight left on sales floor** is an issue type in the **Truck / freight** category, with **Which truck: RDC / DDC / Not sure**.
 
 ## Notes for later
 Tap **Note** at the top of any screen to jot down a bug, an improvement or a feature idea while you're on the floor. You can also tap the mic on the phone's keyboard and talk instead of typing.

@@ -420,6 +420,18 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 .dsday{display:grid;gap:6px}
 .ghostchip{border-style:dashed}
 .fustack{display:grid;gap:12px}
+.trucks{border-color:var(--open)}
+.trucks>header .btn{margin-left:auto}
+.tprompt{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;background:var(--open-soft);border-radius:var(--r-sm);padding:10px 12px}
+.tcard{display:grid;gap:12px;border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;background:var(--bg)}
+.tstages{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tstage{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm);min-height:48px;padding:6px;cursor:pointer;display:grid;place-items:center;font-size:14px;line-height:1.2;text-align:center}
+.tstage small{display:block;font-family:var(--f-mono);font-size:11px;opacity:.85}
+.tstage.on{background:var(--good);border-color:var(--good);color:var(--surface)}
+.tgrid{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:end}
+@media (max-width:420px){.tgrid{grid-template-columns:1fr}}
+.tfloor{width:auto;min-height:36px;padding:6px 10px;font-size:14px}
+.tlist{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
 .fustack .label{margin-bottom:4px}
 .dupw{display:grid;gap:4px;justify-items:start}
 .dupw .item{width:100%}
@@ -486,6 +498,7 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
       <div class="part" id="part-issue">
         <p class="req" id="reqIssue" hidden>Pick what's wrong</p>
         <div id="fIssue" role="group" aria-label="Issue"></div>
+        <div class="rite" id="fTruckWrap" hidden><span class="label" style="margin:0">Which truck</span><div class="seg" id="fTruck" role="group" aria-label="Which truck"></div></div>
         <div class="rite" id="fPrsWrap" hidden><span class="label" style="margin:0">What was missed</span><div class="chips small-chips" id="fPrs" role="group" aria-label="PRS missed"></div></div>
         <div class="rite" id="fRiteWrap" hidden><label class="switch"><input type="checkbox" id="fRite"><span>RITE ticket submitted</span></label><input type="text" id="fRiteNo" maxlength="40" placeholder="Ticket number (optional)" aria-label="RITE ticket number"></div>
       </div>
@@ -566,11 +579,11 @@ const DEFAULT_LISTS = {
     ["Services / Geek Squad",["Computer Setup","Computer Repair","Device Setup","TV Installation","Home Theater Installation","Appliance Installation","Networking Services","Data Services","Protection Plans","Tech Support"]],
     ["Best Buy Outlet",["Open-Box Products","Clearance Products","Refurbished Products","Returned Merchandise"]]
   ],
-  issues:["Wrong facing / placement","Overstuffed","Mixed product","Missing ESL","ESL not paired","Item in wrong location","RITE","Damaged product or fixture","Not per planogram","Missing signage","Safety / security concern","PRS not followed"],
+  issues:["Wrong facing / placement","Overstuffed","Mixed product","Missing ESL","ESL not paired","Item in wrong location","RITE","Damaged product or fixture","Not per planogram","Missing signage","Safety / security concern","PRS not followed","Freight left on sales floor"],
   causes:["Outdated planogram","Training / process gap","Planogram not followed","Customer left item out","Display not maintained","Stock not on hand","Missed or late reset","Unknown"],
   shifts:["Opening","Mid","Closing"],
   sources:["Truck / freight","Customer","Recovery / zoning","Reset / planogram change","Pricing / ESL system","Vendor / merch partner","Unknown"],
-  categories:["Placement","Pricing & labels","Demo units","Condition","Safety & security"],
+  categories:["Placement","Pricing & labels","Demo units","Condition","Safety & security","Truck / freight"],
   showShift:false
 };
 const STATUSES=["Fixed","Open","Needs follow-up"];
@@ -752,7 +765,7 @@ function ent(x,p,key){
 /* Accepts every lists format ROIL has used (plain names, or entries with ids) and returns entries with ids. */
 function normLists(d){
   const has=d&&typeof d==='object';
-  const l={v:4,departments:[],issues:[],sources:[],causes:[],shifts:[],categories:[],defaultSource:has&&ENTRY_ID.test(d.defaultSource||'')?d.defaultSource:'',showShift:has&&d.showShift===true,updated:has&&typeof d.updated==='string'?d.updated:'',
+  const l={v:5,departments:[],issues:[],sources:[],causes:[],shifts:[],categories:[],defaultSource:has&&ENTRY_ID.test(d.defaultSource||'')?d.defaultSource:'',showShift:has&&d.showShift===true,updated:has&&typeof d.updated==='string'?d.updated:'',
     removed:has&&Array.isArray(d.removed)?d.removed.filter(x=>ENTRY_ID.test(x)).slice(-2000):[],moved:{}};
   if(has&&d.moved&&typeof d.moved==='object')for(const [a,b] of Object.entries(d.moved))if(ENTRY_ID.test(a)&&ENTRY_ID.test(b))l.moved[a]=b;
   const deps=has&&Array.isArray(d.departments)&&d.departments.length?d.departments:DEFAULT_LISTS.departments;
@@ -774,13 +787,14 @@ function normLists(d){
   }
   if(!has||!(d.v>=3))upgradeLists(l);
   if(!(has&&d.v>=4))upgradeLists4(l);
+  if(!(has&&d.v>=5))upgradeLists5(l);
   return l;
 }
 /* Version 3 lists: Source split out of Cause, issue categories, RITE renamed. Runs once on older
    lists (on any device), always with the same ids, so devices that upgrade separately still agree. */
 const CUSTOMER_CAUSE=()=>sid('c','Customer left item out'),CUSTOMER_SOURCE=()=>sid('o','Customer'),DEMO_CAT=()=>sid('g','Demo units');
 const ISSUE_CATS={'Placement':['Wrong facing / placement','Overstuffed','Mixed product','Item in wrong location','Not per planogram'],
-  'Pricing & labels':['Missing ESL','ESL not paired','Missing signage'],'Demo units':['RITE','Demo unit issue'],'Condition':['Damaged product or fixture'],'Safety & security':['Safety / security concern','PRS not followed']};
+  'Pricing & labels':['Missing ESL','ESL not paired','Missing signage'],'Demo units':['RITE','Demo unit issue'],'Condition':['Damaged product or fixture'],'Safety & security':['Safety / security concern','PRS not followed'],'Truck / freight':['Freight left on sales floor']};
 function upgradeLists(l){
   const rite=l.issues.find(e=>e.name.toLowerCase()==='rite');if(rite)rite.name='Demo unit issue';
   for(const [cat,names] of Object.entries(ISSUE_CATS)){const cid=sid('g',cat);
@@ -795,7 +809,14 @@ function upgradeLists4(l){
   if(!l.issues.some(e=>e.id===PRS_ID())&&!l.removed.includes(PRS_ID()))l.issues.push({id:PRS_ID(),name:'PRS not followed',archived:false,cat:sid('g','Safety & security')});
   l.v=4;
 }
-function listsBody(l){return JSON.parse(JSON.stringify({v:4,departments:l.departments,issues:l.issues,sources:l.sources,causes:l.causes,shifts:l.shifts,categories:l.categories,defaultSource:l.defaultSource||'',showShift:!!l.showShift,updated:l.updated||'',removed:l.removed||[],moved:l.moved||{}}))}
+/* Version 5: a "Truck / freight" issue category with "Freight left on sales floor". */
+const FREIGHT_ID=()=>sid('i','Freight left on sales floor'),TRUCK_CAT=()=>sid('g','Truck / freight');
+function upgradeLists5(l){
+  if(!l.categories.some(e=>e.id===TRUCK_CAT())&&!l.removed.includes(TRUCK_CAT()))l.categories.push({id:TRUCK_CAT(),name:'Truck / freight',archived:false});
+  if(!l.issues.some(e=>e.id===FREIGHT_ID())&&!l.removed.includes(FREIGHT_ID()))l.issues.push({id:FREIGHT_ID(),name:'Freight left on sales floor',archived:false,cat:TRUCK_CAT()});
+  l.v=5;
+}
+function listsBody(l){return JSON.parse(JSON.stringify({v:5,departments:l.departments,issues:l.issues,sources:l.sources,causes:l.causes,shifts:l.shifts,categories:l.categories,defaultSource:l.defaultSource||'',showShift:!!l.showShift,updated:l.updated||'',removed:l.removed||[],moved:l.moved||{}}))}
 let IX={dept:new Map(),pog:new Map()};for(const k in KINDS)IX[k]=new Map();
 function reindex(){
   IX={dept:new Map(),pog:new Map()};for(const k in KINDS)IX[k]=new Map();
@@ -872,7 +893,7 @@ let loaded=false;
 let view='log';
 let hf=ls.get('roil.hf',{range:'30',dept:'',issue:'',status:'',q:''});
 let srange=ls.get('roil.srange','30');
-const form={photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,dept:'',sub:'',issue:'',source:null,cause:'',status:'Open',shift:'',sku:'',lockup:false,found:[],prs:[],fromDs:false};
+const form={photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,dept:'',sub:'',issue:'',source:null,cause:'',status:'Open',shift:'',sku:'',lockup:false,found:[],prs:[],fromDs:false,truck:''};
 const last=ls.get('roil.last',{});
 form.dept=last.dept||'';form.sub=last.sub||'';form.shift=last.shift||'';
 const photoUrls=new Map(),thumbUrls=new Map(),afterUrls=new Map(),afterThumbUrls=new Map();   // item id -> blob: URL for photos kept on this device
@@ -905,7 +926,7 @@ function dropLocal(id){
   dropPhotoUrls(id);
   setItems(items.filter(x=>x.id!==id));
 }
-const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','sourceId','causeId','shiftId','dept','planogram','issue','source','cause','shift','note','status','fixedAt','photo','photoRev','after','afterRev','rite','riteNo','sku','lockup','found','prs','ds'];
+const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','sourceId','causeId','shiftId','dept','planogram','issue','source','cause','shift','note','status','fixedAt','photo','photoRev','after','afterRev','rite','riteNo','sku','lockup','found','prs','ds','truck'];
 const REF_FIELDS=['deptId','planogramId','issueId','sourceId','causeId','shiftId'];
 function serverItem(it){const o={};for(const k of ITEM_FIELDS)o[k]=it[k]??(k==='fixedAt'?null:k==='photo'?false:'');o.photo=!!o.photo;o.lockup=!!o.lockup;o.found=cleanFound(o.found);return o}
 
@@ -1025,7 +1046,7 @@ async function mergeIncoming(data,opt={}){
     it.rite=!!it.rite;it.riteNo=String(it.riteNo||'').slice(0,40);it.after=!!it.after;const REV=v=>/^[a-z0-9]{1,20}$/.test(String(v||''))?String(v):'';it.afterRev=REV(it.afterRev);it.photoRev=it.photo?REV(it.photoRev):'';if(!it.after)it.afterRev='';
     it.note=String(it.note).slice(0,2000);
     it.sku=SKU_RE.test(String(x.sku||''))?String(x.sku):'';it.lockup=!!x.lockup;it.found=cleanFound(x.found);
-    it.prs=Array.isArray(x.prs)?x.prs.filter(k=>PRS_OPTS.some(o=>o[0]===k)):[];it.ds=!!x.ds;
+    it.prs=Array.isArray(x.prs)?x.prs.filter(k=>PRS_OPTS.some(o=>o[0]===k)):[];it.ds=!!x.ds;it.truck=['rdc','ddc'].includes(x.truck)?x.truck:'';
     for(const k of REF_FIELDS)it[k]=ENTRY_ID.test(String(it[k]))?String(it[k]):'';
     link(it);
     const cur=have.get(it.id);
@@ -1153,7 +1174,7 @@ const Drive={
 function sortedProds(){const o={skus:{},upcs:{}};for(const t of['skus','upcs'])for(const k of Object.keys(prods[t]).sort())o[t][k]=prods[t][k];return o}
 function syncDocText(){
   const its=items.map(x=>({...x})).sort((a,b)=>a.id<b.id?-1:1);
-  return JSON.stringify({format:'roil-sync',version:2,lists:listsBody(lists),deleted:tombs,products:sortedProds(),notes:Object.fromEntries(Object.keys(notes).sort().map(k=>[k,notes[k]])),downstock:{cfg:dk.cfg,days:Object.fromEntries(Object.keys(dk.days).sort().map(k=>[k,dk.days[k]]))},items:its});
+  return JSON.stringify({format:'roil-sync',version:2,lists:listsBody(lists),deleted:tombs,products:sortedProds(),notes:Object.fromEntries(Object.keys(notes).sort().map(k=>[k,notes[k]])),downstock:{cfg:dk.cfg,days:Object.fromEntries(Object.keys(dk.days).sort().map(k=>[k,dk.days[k]])),trucks:dk.trucks},items:its});
 }
 const pname=(kind,id,rev)=>rev?`${kind}-${id}-${rev}.jpg`:`${kind}-${id}.jpg`;
 async function syncPhotos(folder,files){
@@ -1267,7 +1288,7 @@ function syncHtml(){
 
 /* ---------- Notes for later: quick jots about ROIL itself (bugs, ideas) while you're on the floor ----------
    Synced with your other devices and kept in backups, so you can read them at home. */
-const APP_VERSION='roil-pages-16';
+const APP_VERSION='roil-pages-17';
 const NOTE_TYPES=[['bug','Bug'],['improve','Improvement'],['feature','Feature idea'],['other','Other']];
 const noteType=k=>(NOTE_TYPES.find(t=>t[0]===k)||NOTE_TYPES[3])[1];
 let notes={};   // id -> {id,type,text,ctx,created,updated,done,deleted}
@@ -1347,15 +1368,17 @@ function notesHtml(){
 const DS_HELP=[['lift','Lift (needs a spotter)'],['ladder','Ladder'],['person','Second person'],['heavy','Heavy or bulky']];
 const DS_REASON_DEFAULTS=[["Couldn't find in overstock",'db',0],['Needs equipment or help','help',1],['Waiting on PRS supplies','prs',2],['Overstock in the wrong spot or mixed','',3],['Overstock blocked','',4],['Other','',90]];
 const DS_PRS=[['spider','Spider wraps'],['clam','Clamshells'],['limit','Limit-one tags'],['other','Other']];
-const DS_WHY=[['time','Ran out of time'],['task','Pulled to another task'],['opened','Store opened (lift needs a spotter)'],['other','Other']];
+const DS_WHY=[['time','Ran out of time'],['task','Pulled to another task'],['truck','Working truck leftovers'],['opened','Store opened (lift needs a spotter)'],['other','Other']];
 const DS_ST={none:'Not done',partly:'Partial',done:'Done',follow:'Follow-up'};
-let dk={cfg:{reasons:{},groups:{},top:{},skip:{}},days:{}};
+let dk={cfg:{reasons:{},groups:{},top:{},skip:{},truckCfg:{},dismiss:{}},days:{},trucks:{}};
 function dsDefaults(){
   // starter reasons are added if missing; their kind and order are fixed (names can be changed in Lists)
   DS_REASON_DEFAULTS.forEach(([n,kind,order])=>{const id=sid('r',n),e=dk.cfg.reasons[id];if(!e)dk.cfg.reasons[id]={id,name:n,kind,order,archived:false,updated:''};else{e.kind=kind;e.order=order}});
 }
 function cleanDk(o){
-  const r={cfg:{reasons:{},groups:{},top:{},skip:{}},days:{}};if(!o||typeof o!=='object')return r;const c=o.cfg||{};
+  const r={cfg:{reasons:{},groups:{},top:{},skip:{},truckCfg:{},dismiss:{}},days:{},trucks:{}};if(!o||typeof o!=='object')return r;const c=o.cfg||{};
+  r.trucks=cleanTrucks(o.trucks);r.cfg.truckCfg=cleanTruckCfg(c.truckCfg);
+  for(const [k,v] of Object.entries(c.dismiss||{}))if(/^(rdc|ddc)\|\d{4}-\d{2}-\d{2}$/.test(k)&&v&&typeof v==='object')r.cfg.dismiss[k]={updated:String(v.updated||'').slice(0,40)};
   for(const [k,v] of Object.entries(c.skip||{}))if(ENTRY_ID.test(k)&&v&&typeof v==='object')r.cfg.skip[k]={on:!!v.on,updated:String(v.updated||'').slice(0,40)};
   const T=v=>String(v||'').slice(0,40);
   for(const [k,v] of Object.entries(c.reasons||{}))if(ENTRY_ID.test(k)&&v&&typeof v==='object')r.cfg.reasons[k]={id:k,name:String(v.name||'').slice(0,80)||'Reason',kind:['db','help'].includes(v.kind)?v.kind:'',order:+v.order||0,archived:!!v.archived,updated:T(v.updated)};
@@ -1373,7 +1396,8 @@ function cleanDk(o){
 }
 function mergeDk(a,b){
   const pick=(x,y)=>{const o={...x};for(const [k,v] of Object.entries(y))if(!o[k]||(v.updated||'')>(o[k].updated||''))o[k]=v;return o};
-  return {cfg:{reasons:pick(a.cfg.reasons,b.cfg.reasons),groups:pick(a.cfg.groups,b.cfg.groups),top:pick(a.cfg.top,b.cfg.top),skip:pick(a.cfg.skip||{},b.cfg.skip||{})},days:pick(a.days,b.days)};
+  return {cfg:{reasons:pick(a.cfg.reasons,b.cfg.reasons),groups:pick(a.cfg.groups,b.cfg.groups),top:pick(a.cfg.top,b.cfg.top),skip:pick(a.cfg.skip||{},b.cfg.skip||{}),
+    truckCfg:pick(a.cfg.truckCfg||{},b.cfg.truckCfg||{}),dismiss:pick(a.cfg.dismiss||{},b.cfg.dismiss||{})},days:pick(a.days,b.days),trucks:pick(a.trucks||{},b.trucks||{})};
 }
 async function saveDk(){await write([{s:'meta',v:dk,k:'downstock'}]);markChanged()}
 const today=()=>localDay(new Date());
@@ -1463,7 +1487,10 @@ function renderDs(){
   const n={done:0,partly:0,follow:0,none:0};recs.forEach(r=>n[r?r.st:'none']++);
   const pct=A.length?Math.round(n.done/A.length*100):0;
   const top=A.filter(a=>isTop(a.id)&&!(rec(a.id)&&rec(a.id).st==='done'));
-  const carried=carriedOver();
+  const allCarried=carriedOver(),ws=weekStart(T);
+  // weekly soft reset: older follow-ups fold away, except Delta Busters not yet submitted and lift jobs
+  const pinned=r=>(hasKind(r,'db')&&!r.db)||(r.help||[]).includes('lift');
+  const carried=allCarried.filter(r=>r.day>=ws||pinned(r)),older=allCarried.filter(r=>!(r.day>=ws||pinned(r)));
   const liftCarry=carried.filter(r=>(r.help||[]).includes('lift'));
   const runSet=new Set(dsRun?dsRun.areas:[]);
   const row=a=>{const r=rec(a.id);const ld=lastDone(a.id);
@@ -1478,11 +1505,13 @@ function renderDs(){
       <div class="dsrunlist">${dsRun.areas.map(id=>{const a=dsArea(id);return a?`<span class="chip static">${esc(a.label)}</span>`:''}).join('')}</div>
       <div class="row"><button class="btn primary" type="button" id="dsFinish">Finish run</button><button class="btn" type="button" id="dsAdd">Add areas</button><button class="btn ghost" type="button" id="dsCancel">Cancel run</button></div></div>`
     :`<button class="btn primary big" type="button" id="dsStart">Start a run</button>`}
+  ${trucksHtml()}
   ${top.length||liftCarry.length?`<section class="panel lsec dsfirst"><header><h3>Do these first: top stock</h3><span class="muted mono" style="font-size:12px">${top.length+liftCarry.filter(r=>!top.some(a=>a.id===r.area)).length}</span></header>
     <p class="note" style="margin:0">Use the lift before the store opens; once it's open, it needs a spotter.</p>
     <div class="dsrows">${top.map(row).join('')}${liftCarry.filter(r=>!top.some(a=>a.id===r.area)).map(r=>row(dsArea(r.area))).join('')}</div></section>`:''}
   ${carried.length?`<section class="panel lsec"><header><h3>Carried over</h3><span class="muted mono" style="font-size:12px">${carried.length}</span></header>
     <div class="dsrows">${carried.map(r=>{const a=dsArea(r.area);return `<button type="button" class="dsrow" data-area="${a.id}" data-from="${r.day}"><span class="dsn">${esc(a.label)}</span><span class="dsp">${stPill(r)}</span><span class="dsl muted">${esc(dsAgo(r.day))}${reasonText(r)?' · '+esc(reasonText(r)):''}</span></button>`}).join('')}</div></section>`:''}
+  ${older.length?`<details class="arch"><summary>From last week (${older.length})</summary><div class="dsrows" style="margin-top:8px">${older.map(r=>{const a=dsArea(r.area);return `<button type="button" class="dsrow" data-area="${a.id}"><span class="dsn">${esc(a.label)}</span><span class="dsp">${stPill(r)}</span><span class="dsl muted">${esc(shortDay(r.day))}${reasonText(r)?' · '+esc(reasonText(r)):''}</span></button>`}).join('')}</div></details>`:''}
   <div class="seg" id="dsFilt" role="group" aria-label="Show">${[['all','All'],['todo','Not done'],['follow','Follow-up']].map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${dsFilter===k}">${t}</button>`).join('')}</div>
   <div class="lrows">${[...byDept.values()].map(({d,areas})=>{const sh=areas.filter(want);if(!sh.length)return '';const dn=areas.filter(a=>rec(a.id)&&rec(a.id).st==='done').length;
     return `<details class="dept" data-ddept="${d.id}" ${dsOpenDepts.has(d.id)||dsFilter!=='all'?'open':''}><summary>${esc(d.name)}<span class="cnt">${dn}/${areas.length} done</span></summary><div class="dbody dsrows">${sh.map(row).join('')}</div></details>`}).join('')||'<p class="note">Nothing to show with this filter.</p>'}</div>
@@ -1495,7 +1524,8 @@ function renderDs(){
   const fi=$('#dsFinish');if(fi)fi.onclick=()=>openRunFinish();
   $('#dsCopy').onclick=()=>copyText(dsSummary(T));
 }
-$('#v-ds').addEventListener('click',e=>{const r=e.target.closest('.dsrow');if(r)openAreaSheet(r.dataset.area)});
+$('#v-ds').addEventListener('click',e=>{const tb=e.target.closest('[data-tr]');if(tb){onTruck(tb);return}const r=e.target.closest('.dsrow');if(r)openAreaSheet(r.dataset.area)});
+$('#v-ds').addEventListener('change',e=>{if(e.target.classList.contains('tfloor'))onTruckFloor(e.target)});
 
 /* ---------- one area: set today's status ---------- */
 function openAreaSheet(id){
@@ -1643,10 +1673,16 @@ function renderDsDays(){
   const el=$('#v-dsdays');if(!el)return;
   const days=[...new Set(Object.values(dk.days).map(r=>r.day))].sort().reverse().slice(0,30);if(!days.includes(today()))days.unshift(today());
   const A=dsAreas();
-  const stale=A.map(a=>({a,ld:lastDone(a.id)})).sort((x,y)=>(x.ld||'').localeCompare(y.ld||'')).filter(x=>!x.ld||daysAgo(x.ld)>=2).slice(0,15);
+  const stale=A.map(a=>({a,ld:lastDone(a.id)})).sort((x,y)=>(x.ld||'').localeCompare(y.ld||'')).filter(x=>!x.ld||weekdaysBetween(x.ld,today())>=2).slice(0,15);
+  const W=weekSummary(today()),recentTrucks=liveTrucks().slice(0,8);
   const month=today().slice(0,7);const dbs=Object.values(dk.days).filter(r=>r.day.startsWith(month)&&r.db).length;
   const reasonsM=countBy(Object.values(dk.days).filter(r=>r.day.startsWith(month)&&r.st==='follow').flatMap(r=>r.reasons.map(id=>({n:dsReason(id)?dsReason(id).name:'Other'}))),x=>x.n);
   el.innerHTML=`<h2>Downstock days</h2>
+  <section class="panel lsec"><header><h3>This week</h3><span class="muted" style="font-size:13px">${esc(shortDay(W.ws))} – ${esc(shortDay(W.we))}</span></header>
+    <div class="covbar"><i class="d" style="width:${W.cov}%"></i></div>
+    <p style="margin:0"><b>${W.cov}%</b> of areas done at least once${W.dbs?` · ${W.dbs} Delta Buster${W.dbs===1?'':'s'}`:''}${W.leftover?` · truck leftovers worked ${W.leftover} day${W.leftover===1?'':'s'}`:''}${W.floor?` · freight left on floor ${W.floor}×`:''}</p>
+    ${W.trucks.length?`<ul class="tlist">${W.trucks.map(t=>`<li>${esc(truckLine(t))}</li>`).join('')}</ul>`:''}
+    <div class="row"><button class="btn small" type="button" id="dsWeekCopy">Copy week summary</button></div></section>
   <div class="tiles"><div class="tile"><span class="v">${dbs}</span><span class="k">Delta Busters this month</span></div>
     <div class="tile"><span class="v">${days.length?Math.round(days.slice(0,7).reduce((a,d)=>{const s=dsDayStats(d);return a+(s.total?s.done/s.total:0)},0)/Math.min(7,days.length)*100):0}%</span><span class="k">Average coverage, last ${Math.min(7,days.length)} days</span></div></div>
   <div class="list">${days.map(d=>{const s=dsDayStats(d);const p=s.total?Math.round(s.done/s.total*100):0;
@@ -1654,9 +1690,11 @@ function renderDsDays(){
       <div class="covbar"><i class="d" style="width:${s.total?s.done/s.total*100:0}%"></i><i class="p" style="width:${s.total?(s.partly+s.follow)/s.total*100:0}%"></i></div>
       <span class="muted" style="font-size:13px">${s.done} done · ${s.partly} partial · ${s.follow} follow-up${s.filled?` · ${s.filled} filled`:''}${s.laser?` · ${s.laser} LaserLine`:''}${s.other?` · ${s.other} by others${s.missed?` (${s.missed} missed)`:''}`:''}</span>
       <button class="btn small" type="button" data-sum="${d}">Copy summary</button></div>`}).join('')}</div>
-  <section class="panel lsec"><header><h3>Not done lately</h3></header>${stale.length?`<div class="hot">${stale.map(x=>`<div><b>${x.ld?daysAgo(x.ld)+'d':'—'}</b><span>${esc(x.a.label)}</span></div>`).join('')}</div>`:'<p class="note" style="margin:0">Every area has been done in the last 2 days.</p>'}</section>
+  ${recentTrucks.length?`<section class="panel lsec"><header><h3>Recent trucks</h3></header><ul class="tlist">${recentTrucks.map(t=>`<li>${esc(truckLine(t))}</li>`).join('')}</ul></section>`:''}
+  <section class="panel lsec"><header><h3>Not done lately <span class="lsub">weekdays</span></h3></header>${stale.length?`<div class="hot">${stale.map(x=>`<div><b>${x.ld?weekdaysBetween(x.ld,today())+'d':'—'}</b><span>${esc(x.a.label)}</span></div>`).join('')}</div>`:'<p class="note" style="margin:0">Every area has been done in the last 2 days.</p>'}</section>
   <section class="panel lsec"><header><h3>Follow-up reasons this month</h3></header>${bars(reasonsM,null,8)}</section>`;
   el.querySelectorAll('[data-sum]').forEach(b=>b.onclick=()=>copyText(dsSummary(b.dataset.sum)));
+  $('#dsWeekCopy').onclick=()=>copyText(weekSummary(today()).text);
 }
 
 /* ---------- Lists → Downstock settings ---------- */
@@ -1673,6 +1711,7 @@ function dsListsHtml(){
   <details class="arch" ${dsListOpen.has('top')?'open':''} data-dsopen="top"><summary>Top-stock sections (${nTop})</summary>
     <p class="note">Planograms with stock up top that needs the lift. They're listed first on the board each morning.</p>
     ${[...byDept.values()].filter(({d})=>!isSkip(d.id)).map(({d,areas})=>`<div style="margin-top:8px"><span class="label">${esc(d.name)}</span><div class="chips">${areas.filter(a=>!isSkip(a.id)).map(a=>`<button type="button" class="chip" data-dstop="${a.id}" aria-pressed="${isTop(a.id)}">${esc(a.name)}</button>`).join('')}</div></div>`).join('')}</details>
+  ${truckSettingsHtml()}
   <details class="arch" ${dsListOpen.has('skip')?'open':''} data-dsopen="skip"><summary>Not downstocked (${nSkip})</summary>
     <p class="note">Leave out areas that never get downstocked (services, displays only, online-only). They don't count toward coverage.</p>
     ${[...byDept.values()].map(({d,areas})=>`<div style="margin-top:8px"><button type="button" class="chip${isSkip(d.id)?'':' ghostchip'}" data-dsskip="${d.id}" aria-pressed="${isSkip(d.id)}">${esc(d.name)} (whole department)</button>${isSkip(d.id)?'':`<div class="chips" style="margin-top:6px">${areas.filter(a=>!a.whole).map(a=>`<button type="button" class="chip" data-dsskip="${a.id}" aria-pressed="${isSkip(a.id)}">${esc(a.name)}</button>`).join('')}</div>`}</div>`).join('')}</details>
@@ -1683,15 +1722,139 @@ function dsListsHtml(){
   el.addEventListener('click',async e=>{
     const b=e.target.closest('#dsPanel button');if(!b)return;
     if(b.dataset.dstop){const id=b.dataset.dstop;dk.cfg.top[id]={on:!isTop(id),updated:nowIso()};await saveDk();renderLists();return}
+    if(b.dataset.tcfg){const ty=b.dataset.tcfg,k=b.dataset.k,n=+b.dataset.n,c=truckCfg(ty);c[k]=c[k].includes(n)?c[k].filter(x=>x!==n):[...c[k],n];dk.cfg.truckCfg={...(dk.cfg.truckCfg||{}),[ty]:{...c,updated:nowIso()}};await saveDk();renderLists();return}
     if(b.dataset.dsskip){const id=b.dataset.dsskip;if(!dk.cfg.skip)dk.cfg.skip={};dk.cfg.skip[id]={on:!isSkip(id),updated:nowIso()};await saveDk();renderLists();return}
     if(b.dataset.dsarch){const r=dk.cfg.reasons[b.dataset.dsarch];r.archived=!r.archived;r.updated=nowIso();await saveDk();renderLists();return}
     if(b.dataset.dsdelg){const id=b.dataset.dsdelg;if(armedKey!=='grp:'+id){arm('grp:'+id);return}armedKey=null;dk.cfg.groups[id]={...dk.cfg.groups[id],deleted:true,updated:nowIso()};await saveDk();renderLists();return}
     if(b.dataset.dsact==='addr'){const i=$('#dsNewR');const n=i.value.trim();if(!n)return;const id=rid('r');dk.cfg.reasons[id]={id,name:n.slice(0,80),kind:'',order:50+dsReasons(true).length,archived:false,updated:nowIso()};await saveDk();renderLists()}
   });
-  el.addEventListener('change',async e=>{const t=e.target;if(t.dataset&&t.dataset.dsr){const r=dk.cfg.reasons[t.dataset.dsr];const n=t.value.trim();if(!n){t.value=r.name;return}r.name=n.slice(0,80);r.updated=nowIso();await saveDk()}});
+  el.addEventListener('change',async e=>{const t=e.target;
+    if(t.id==='trHoliday'){dk.cfg.truckCfg={...(dk.cfg.truckCfg||{}),holidayOn:{on:t.checked,updated:nowIso()}};await saveDk();toast(t.checked?'Holiday truck schedule on.':'Holiday truck schedule off.');return}
+    if(t.dataset&&t.dataset.dsr){const r=dk.cfg.reasons[t.dataset.dsr];const n=t.value.trim();if(!n){t.value=r.name;return}r.name=n.slice(0,80);r.updated=nowIso();await saveDk()}});
   el.addEventListener('keydown',e=>{if(e.target.id==='dsNewR'&&e.key==='Enter'){e.preventDefault();$('#dsPanel [data-dsact=addr]').click()}});
   el.addEventListener('toggle',e=>{const d=e.target;if(d.dataset&&d.dataset.dsopen){if(d.open)dsListOpen.add(d.dataset.dsopen);else dsListOpen.delete(d.dataset.dsopen)}},true);
 })();
+
+/* ---------- Trucks: track each delivery until it's worked ----------
+   RDC (brown goods) is normally a live unload; DDC (white goods) is a dropped trailer that sits in the bay.
+   Each truck: trailer stages (dropped trailers), unbroken truck pallets, store pallets waiting, freight left on
+   the sales floor, and finished. Stored in dk.trucks, synced like the rest of Downstock. */
+const TRUCKS={rdc:{name:'RDC',full:'RDC (brown goods)',days:[1],holiday:[3],dropped:false},ddc:{name:'DDC',full:'DDC (white goods)',days:[2],holiday:[4],dropped:true}};
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const STORE_LV=[['none','None'],['some','Some'],['lots','A lot']];
+function truckCfg(type){const c=(dk.cfg.truckCfg||{})[type]||{};return {days:Array.isArray(c.days)?c.days:TRUCKS[type].days,holiday:Array.isArray(c.holiday)?c.holiday:TRUCKS[type].holiday}}
+const holidayOn=()=>!!(dk.cfg.truckCfg&&dk.cfg.truckCfg.holidayOn&&dk.cfg.truckCfg.holidayOn.on);
+function cleanTrucks(o){
+  const r={};if(!o||typeof o!=='object')return r;const D=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||''))?String(v):'';
+  for(const [k,t] of Object.entries(o)){if(!ENTRY_ID.test(k)||!t||typeof t!=='object'||!TRUCKS[t.type])continue;
+    const log={};for(const [d,v] of Object.entries(t.log||{}))if(D(d)&&v&&typeof v==='object')log[d]={pallets:Math.max(0,Math.min(999,parseInt(v.pallets,10)||0)),store:STORE_LV.some(s=>s[0]===v.store)?v.store:'none'};
+    r[k]={id:k,type:t.type,arrived:D(t.arrived),dropped:!!t.dropped,emptied:D(t.emptied),pickupReq:D(t.pickupReq),pickedUp:D(t.pickedUp),
+      pallets:Math.max(0,Math.min(999,parseInt(t.pallets,10)||0)),store:STORE_LV.some(s=>s[0]===t.store)?t.store:'none',
+      floor:Array.isArray(t.floor)?t.floor.filter(x=>ENTRY_ID.test(String(x))).slice(0,40):[],finished:D(t.finished),deleted:!!t.deleted,log,updated:String(t.updated||'').slice(0,40)}}
+  return r;
+}
+function cleanTruckCfg(c){
+  const r={};if(!c||typeof c!=='object')return r;
+  for(const k of Object.keys(TRUCKS))if(c[k]&&typeof c[k]==='object')r[k]={days:(c[k].days||[]).map(Number).filter(n=>n>=0&&n<=6),holiday:(c[k].holiday||[]).map(Number).filter(n=>n>=0&&n<=6),updated:String(c[k].updated||'').slice(0,40)};
+  if(c.holidayOn&&typeof c.holidayOn==='object')r.holidayOn={on:!!c.holidayOn.on,updated:String(c.holidayOn.updated||'').slice(0,40)};
+  return r;
+}
+const dayOf=s=>new Date(s+'T12:00:00');
+const addDays=(s,n)=>{const d=dayOf(s);d.setDate(d.getDate()+n);return localDay(d)};
+const shortDay=s=>dayOf(s).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+const calDays=(a,b)=>Math.round((dayOf(b)-dayOf(a))/86400000);
+/* the downstock week runs Saturday to Friday and is named by its Monday (weekend work counts toward the next week) */
+function weekMonday(s){const d=dayOf(s),w=d.getDay();return addDays(s,w===6?2:w===0?1:1-w)}
+const weekStart=s=>addDays(weekMonday(s),-2),weekEnd=s=>addDays(weekMonday(s),4);
+function weekdaysBetween(a,b){let n=0;for(let d=a;d<b;d=addDays(d,1)){const w=dayOf(addDays(d,1)).getDay();if(w>0&&w<6)n++}return n}
+const liveTrucks=()=>Object.values(dk.trucks||{}).filter(t=>!t.deleted).sort((a,b)=>b.arrived.localeCompare(a.arrived));
+const truckOpen=t=>!t.finished||(t.dropped&&!t.pickedUp);
+function saveTruck(t){t.updated=nowIso();t.log={...t.log,[today()]:{pallets:t.pallets,store:t.store}};dk.trucks[t.id]=t;return saveDk()}
+/* scheduled trucks from the last 2 days that haven't been answered yet */
+function truckPrompts(){
+  const out=[],T=today();
+  for(const type of Object.keys(TRUCKS)){const c=truckCfg(type);const days=new Set([...c.days,...(holidayOn()?c.holiday:[])]);
+    for(let i=0;i<=2;i++){const d=addDays(T,-i);if(!days.has(dayOf(d).getDay()))continue;
+      if(liveTrucks().some(t=>t.type===type&&t.arrived===d))continue;if(dk.cfg.dismiss&&dk.cfg.dismiss[type+'|'+d])continue;out.push({type,day:d})}}
+  return out;
+}
+function newTruck(type,day,dropped){const id=rid('t');const t={id,type,arrived:day,dropped:dropped??TRUCKS[type].dropped,emptied:'',pickupReq:'',pickedUp:'',pallets:0,store:'none',floor:[],finished:'',deleted:false,log:{},updated:''};return saveTruck(t).then(()=>t)}
+function trucksHtml(){
+  const P=truckPrompts(),open=liveTrucks().filter(truckOpen);
+  if(!P.length&&!open.length)return `<div class="row"><button class="btn small ghost" type="button" data-tr="arrived">Truck arrived today</button></div>`;
+  const stage=(t,k,label)=>`<button type="button" class="tstage${t[k]?' on':''}" data-tr="stage" data-k="${k}" data-id="${t.id}">${label}${t[k]?`<small>${esc(shortDay(t[k]))}</small>`:''}</button>`;
+  return `<section class="panel lsec trucks"><header><h3>Trucks</h3><button class="btn small ghost" type="button" data-tr="arrived">Truck arrived today</button></header>
+  ${P.map(p=>`<div class="tprompt"><span><b>${TRUCKS[p.type].full}</b> was due ${p.day===today()?'today':esc(shortDay(p.day))}. Did it come?</span><span class="row"><button class="btn small primary" type="button" data-tr="came" data-type="${p.type}" data-day="${p.day}">It came</button><button class="btn small" type="button" data-tr="nocome" data-type="${p.type}" data-day="${p.day}">It didn't</button></span></div>`).join('')}
+  ${open.map(t=>{const age=calDays(t.arrived,today());const done=!!t.finished;
+    return `<div class="tcard" data-truck="${t.id}"><div class="row" style="justify-content:space-between"><b>${TRUCKS[t.type].name} · arrived ${esc(shortDay(t.arrived))}</b><span class="mono muted">${done?`finished in ${calDays(t.arrived,t.finished)+1} d`:`day ${age+1}`}</span></div>
+      ${t.dropped?`<div><span class="label">Trailer${t.emptied&&!t.pickedUp&&calDays(t.emptied,today())>0?` <span class="lsub">empty and waiting ${calDays(t.emptied,today())} d</span>`:''}</span><div class="tstages">${stage(t,'emptied','Emptied')}${stage(t,'pickupReq','Pickup requested')}${stage(t,'pickedUp','Picked up')}</div></div>`
+        :`<p class="note" style="margin:0">Live unload. <button type="button" class="linkish" data-tr="drop" data-id="${t.id}">It was a dropped trailer</button></p>`}
+      ${done?'':`<div class="tgrid"><div><span class="label">Unbroken truck pallets</span><div class="qty"><button type="button" class="ib" data-tr="pal" data-d="-1" data-id="${t.id}" aria-label="One less">−</button><span class="mono">${t.pallets}</span><button type="button" class="ib" data-tr="pal" data-d="1" data-id="${t.id}" aria-label="One more">+</button></div></div>
+        <div><span class="label">Store pallets waiting</span><div class="seg" role="group">${STORE_LV.map(([k,l])=>`<button type="button" data-tr="store" data-v="${k}" data-id="${t.id}" aria-pressed="${t.store===k}">${l}</button>`).join('')}</div></div></div>
+      <div><span class="label">Freight left on the sales floor</span><div class="chips">${t.floor.map(d=>`<button type="button" class="chip" data-tr="floorx" data-d="${d}" data-id="${t.id}" aria-pressed="true">${esc((IX.dept.get(d)||{name:'?'}).name)} ×</button>`).join('')}
+        <select class="tfloor" data-id="${t.id}" aria-label="Add a department"><option value="">+ Add department…</option>${activeOf(lists.departments).filter(d=>!t.floor.includes(d.id)).map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('')}</select></div></div>`}
+      <div class="row" style="justify-content:space-between">${done?`<button type="button" class="btn small ghost" data-tr="unfinish" data-id="${t.id}">Not finished after all</button>`:`<button type="button" class="btn small ghost" data-tr="delete" data-id="${t.id}">Remove</button><button type="button" class="btn small primary" data-tr="finish" data-id="${t.id}">Truck finished</button>`}</div></div>`}).join('')}
+  </section>`;
+}
+async function onTruck(b){
+  const a=b.dataset.tr,t=b.dataset.id?{...dk.trucks[b.dataset.id]}:null;
+  if(a==='came'){await newTruck(b.dataset.type,b.dataset.day);renderDs();toast(`${TRUCKS[b.dataset.type].name} truck added. Update it as the work goes.`);return}
+  if(a==='nocome'){dk.cfg.dismiss={...(dk.cfg.dismiss||{}),[b.dataset.type+'|'+b.dataset.day]:{updated:nowIso()}};await saveDk();renderDs();return}
+  if(a==='arrived'){openSheet(`<div class="head"><h2>Truck arrived today</h2><button class="btn small" data-close>Cancel</button></div>
+      <p class="note" style="margin:0">For a truck on an unusual day (weather, carrier holiday, running late).</p>
+      <div class="row">${Object.keys(TRUCKS).map(k=>`<button class="btn primary" type="button" data-new="${k}">${TRUCKS[k].full}</button>`).join('')}</div>
+      <label class="switch"><input type="checkbox" id="trDrop"><span>Dropped trailer <span class="lsub">DDC usually is; RDC only when it's too big for both stores</span></span></label>`);
+    $('#sheetHost').querySelectorAll('[data-new]').forEach(x=>x.onclick=async()=>{const ty=x.dataset.new;const dr=$('#trDrop').checked||TRUCKS[ty].dropped;closeSheet();await newTruck(ty,today(),dr);renderDs()});return}
+  if(!t)return;
+  if(a==='stage'){const k=b.dataset.k;t[k]=t[k]?'':today();if(k==='pickedUp'&&t.pickedUp&&!t.emptied)t.emptied=today()}
+  else if(a==='drop')t.dropped=true;
+  else if(a==='pal')t.pallets=Math.max(0,Math.min(999,t.pallets+(+b.dataset.d)));
+  else if(a==='store')t.store=b.dataset.v;
+  else if(a==='floorx')t.floor=t.floor.filter(x=>x!==b.dataset.d);
+  else if(a==='finish'){t.finished=today();t.pallets=0;t.store='none';toast(`${TRUCKS[t.type].name} truck finished: ${calDays(t.arrived,t.finished)+1} day${calDays(t.arrived,t.finished)?'s':''}.${t.dropped&&!t.pickedUp?' The trailer stays on the board until it\'s picked up.':''}`)}
+  else if(a==='unfinish')t.finished='';
+  else if(a==='delete'){if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='Tap again to remove';setTimeout(()=>{if(b.isConnected){b.dataset.armed='';b.textContent='Remove'}},4000);return}t.deleted=true}
+  await saveTruck(t);renderDs();
+}
+async function onTruckFloor(sel){
+  const t={...dk.trucks[sel.dataset.id]},d=sel.value;if(!d)return;
+  t.floor=[...t.floor,d];await saveTruck(t);renderDs();
+  toast(`Freight on the floor in ${IX.dept.get(d).name}.`,[['Log issue',()=>truckIssue(d,t.type)]]);
+}
+/* "Freight left on sales floor" issue, filled in: department, Source Truck / freight, which truck */
+function truckIssue(deptId,type){
+  setMode('issues');
+  Object.assign(form,{dept:deptId,sub:'',issue:FREIGHT_ID(),source:sid('o','Truck / freight'),truck:type||''});
+  buildForm();step=0;renderLog();updateLogUI();toast('Take a photo, then save.');
+}
+function truckLine(t){
+  const fin=t.finished?`finished ${shortDay(t.finished)} (${calDays(t.arrived,t.finished)+1} d)`:`not finished (day ${calDays(t.arrived,today())+1})`;
+  const tr=t.dropped?(t.emptied?` · trailer emptied ${shortDay(t.emptied)}${t.pickedUp?`, picked up ${shortDay(t.pickedUp)} (sat ${calDays(t.emptied,t.pickedUp)} d)`:t.pickupReq?`, pickup requested ${shortDay(t.pickupReq)}`:''}`:' · trailer not emptied'):'';
+  return `${TRUCKS[t.type].name} ${shortDay(t.arrived)}: ${fin}${tr}${t.floor.length?` · freight left on floor in ${t.floor.length} dept${t.floor.length===1?'':'s'}`:''}`;
+}
+function weekSummary(day){
+  const ws=weekStart(day),we=weekEnd(day),end=we<today()?we:today(),A=dsAreas();
+  const inWk=r=>r.day>=ws&&r.day<=we;
+  const doneSet=new Set(Object.values(dk.days).filter(r=>inWk(r)&&r.st==='done').map(r=>r.area));
+  const cov=A.length?Math.round(A.filter(a=>doneSet.has(a.id)).length/A.length*100):0;
+  const dbs=Object.values(dk.days).filter(r=>inWk(r)&&r.db).length;
+  const tr=liveTrucks().filter(t=>t.arrived>=ws&&t.arrived<=we).reverse();
+  const leftoverDays=new Set();for(const t of liveTrucks())for(const [d,v] of Object.entries(t.log||{}))if(d>=ws&&d<=we&&d>t.arrived&&(v.pallets>0||v.store!=='none'))leftoverDays.add(d);
+  for(const r of Object.values(dk.days))if(inWk(r)&&r.why==='truck')leftoverDays.add(r.day);
+  const floor=tr.reduce((a,t)=>a+t.floor.length,0);
+  const L=[`Downstock · week of ${shortDay(weekMonday(day))} (${shortDay(ws)} – ${shortDay(we)})`,`${cov}% of areas done at least once${dbs?` · ${dbs} Delta Buster${dbs===1?'':'s'}`:''}`];
+  if(tr.length)L.push('','Trucks:',...tr.map(t=>'• '+truckLine(t)));
+  if(leftoverDays.size)L.push('',`Morning crew worked truck leftovers ${leftoverDays.size} day${leftoverDays.size===1?'':'s'}.`);
+  if(floor)L.push(`Freight left on the sales floor: ${floor} time${floor===1?'':'s'}.`);
+  return {text:L.join('\n'),cov,dbs,trucks:tr,leftover:leftoverDays.size,floor,ws,we,end};
+}
+function truckSettingsHtml(){
+  const dayChips=(type,k)=>`<div class="chips">${[1,2,3,4,5,6,0].map(n=>`<button type="button" class="chip" data-tcfg="${type}" data-k="${k}" data-n="${n}" aria-pressed="${truckCfg(type)[k].includes(n)}">${DOW[n]}</button>`).join('')}</div>`;
+  return `<details class="arch" ${dsListOpen.has('trucks')?'open':''} data-dsopen="trucks"><summary>Truck schedule</summary>
+    ${Object.keys(TRUCKS).map(k=>`<div style="margin-top:8px"><span class="label">${TRUCKS[k].full}</span>${dayChips(k,'days')}<span class="label" style="margin-top:6px">Extra holiday days</span>${dayChips(k,'holiday')}</div>`).join('')}
+    <label class="switch" style="margin-top:10px"><input type="checkbox" id="trHoliday" ${holidayOn()?'checked':''}><span>Holiday schedule is on <span class="lsub">adds the extra days</span></span></label>
+    <p class="note">On a scheduled day the board asks whether the truck came. For an odd day, use “Truck arrived today”.</p></details>`;
+}
 
 /* ---------- Issues | Downstock switch ---------- */
 let mode=ls.get('roil.mode','issues');
@@ -1788,7 +1951,12 @@ const prsText=a=>(a||[]).map(k=>(PRS_OPTS.find(o=>o[0]===k)||[,''])[1]).filter(B
 const prsChips=sel=>PRS_OPTS.map(([k,t])=>`<button type="button" class="chip" data-prs="${k}" aria-pressed="${(sel||[]).includes(k)}">${t}</button>`).join('');
 function showPrs(){const on=isPrsIssue(form.issue);$('#fPrsWrap').hidden=!on;if(!on)form.prs=[];$('#fPrs').innerHTML=prsChips(form.prs)}
 $('#fPrs').addEventListener('click',e=>{const b=e.target.closest('[data-prs]');if(!b)return;const k=b.dataset.prs;form.prs=(form.prs||[]).includes(k)?form.prs.filter(x=>x!==k):[...(form.prs||[]),k];showPrs()});
-function showRite(){showPrs();const on=isDemoIssue(form.issue);$('#fRiteWrap').hidden=!on;if(!on){$('#fRite').checked=false;$('#fRiteNo').value=''}}
+const TRUCK_OPTS=[['rdc','RDC'],['ddc','DDC'],['','Not sure']];
+const isTruckIssue=id=>{const e=IX.issues.get(id);return !!(e&&e.cat===TRUCK_CAT())};
+const truckSeg=sel=>TRUCK_OPTS.map(([k,t])=>`<button type="button" data-truck="${k}" aria-pressed="${(sel||'')===k}">${t}</button>`).join('');
+function showTruck(){const on=isTruckIssue(form.issue);$('#fTruckWrap').hidden=!on;if(!on)form.truck='';$('#fTruck').innerHTML=truckSeg(form.truck)}
+$('#fTruck').addEventListener('click',e=>{const b=e.target.closest('[data-truck]');if(!b)return;form.truck=b.dataset.truck;showTruck()});
+function showRite(){showPrs();showTruck();const on=isDemoIssue(form.issue);$('#fRiteWrap').hidden=!on;if(!on){$('#fRite').checked=false;$('#fRiteNo').value=''}}
 function tick(){$('#when').textContent=form.photoFile?'Photo taken · '+fmtDT(form.takenAt):'Logged as '+fmtDT(new Date().toISOString());if(view==='follow')renderFollow()}
 function bindChoice(id,key,toggle){
   $(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.classList.contains('ctab'))return;const v=b.dataset.v;
@@ -2400,7 +2568,7 @@ function onFormChoice(key){
   updateLogUI();
   if((key==='source'||key==='lockup')&&lockConflict(form.lockup,form.source))toast(LOCK_WARN);
   if(key==='status')showPhotos();
-  const demo=key==='issue'&&(isDemoIssue(form.issue)||isPrsIssue(form.issue));   // these have more to fill in on this step
+  const demo=key==='issue'&&(isDemoIssue(form.issue)||isPrsIssue(form.issue)||isTruckIssue(form.issue));   // these have more to fill in on this step
   const stay=demo||(key==='issue'&&itemsRelevant(form.issue));   // stay put when there's more to fill in here
   if(partOpen&&['issue','source','cause','shift'].includes(key)&&form[key]&&!stay&&partOpen.key===({issue:'what'}[key]||key))setTimeout(()=>closePart(),180);
   if(logLayout()==='steps'&&key==='issue'&&form.issue&&!stay&&STEPS[step].id==='what')setTimeout(()=>goStep(step+1),220);
@@ -2444,7 +2612,7 @@ async function doSave(skipAfterCheck,skipDup){
     shiftId:lists.showShift?(form.shift||''):'',dept:'',planogram:'',issue:'',source:'',cause:'',shift:'',
     rite:demo&&$('#fRite').checked,riteNo:demo?$('#fRiteNo').value.trim().slice(0,40):'',
     note:$('#fNote').value.trim(),status:form.status,fixedAt:form.status==='Fixed'?now:null,photo:false,after:false,afterRev:'',
-    sku:form.sku||'',lockup:!!form.lockup,found:cleanFound(form.found),prs:isPrsIssue(form.issue)?[...(form.prs||[])]:[],ds:!!form.fromDs};
+    sku:form.sku||'',lockup:!!form.lockup,found:cleanFound(form.found),prs:isPrsIssue(form.issue)?[...(form.prs||[])]:[],ds:!!form.fromDs,truck:isTruckIssue(form.issue)?form.truck||'':''};
   link(item);
   let photo=null;
   try{
@@ -2465,7 +2633,7 @@ async function doSave(skipAfterCheck,skipDup){
 }
 function resetForm(){
   for(const u of[form.photoUrl,form.afterUrl])if(u)URL.revokeObjectURL(u);
-  Object.assign(form,{photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,takenAt:null,issue:'',source:null,cause:'',status:'Open',saveAfterPhoto:false,sku:'',lockup:false,found:[],prs:[],fromDs:false});
+  Object.assign(form,{photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,takenAt:null,issue:'',source:null,cause:'',status:'Open',saveAfterPhoto:false,sku:'',lockup:false,found:[],prs:[],fromDs:false,truck:''});
   $('#fRite').checked=false;$('#fRiteNo').value='';$('#fNote').value='';whyOpenNow=false;foundOpenNow=false;step=0;
   showPhotos();buildForm();tick();if(logBox)logBox.render();renderLog();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -2498,6 +2666,7 @@ function cardText(it){
   if(it.source)lines.push(`Source: ${it.source}`);
   if(it.cause)lines.push(`Cause: ${it.cause}`);
   if(it.prs&&it.prs.length)lines.push(`PRS missed: ${prsText(it.prs)}`);
+  if(it.truck)lines.push(`Truck: ${it.truck.toUpperCase()}`);
   if(it.ds)lines.push('Found while downstocking');
   if(isDemoIssue(it.issueId))lines.push(`RITE: ${it.rite?'submitted'+(it.riteNo?' #'+it.riteNo:''):'not submitted yet'}`);
   lines.push(`Status: ${it.status}${it.status!=='Fixed'?' (open '+age(it.created)+')':''}`);
@@ -2733,9 +2902,9 @@ function save(filename,data){
   setTimeout(()=>URL.revokeObjectURL(u),30000);
 }
 function exportCsv(arr){
-  const head=['Date','Time','Shift','Department','Planogram','Category','Issue','Source','Cause','Status','Fixed at','Hours to fix','RITE ticket','Location SKU','Product','Lock-up','Items found','Wrong items','PRS missed','Found while downstocking','Note','Photo','After photo'];
+  const head=['Date','Time','Shift','Department','Planogram','Category','Issue','Source','Cause','Status','Fixed at','Hours to fix','RITE ticket','Location SKU','Product','Lock-up','Items found','Wrong items','PRS missed','Truck','Found while downstocking','Note','Photo','After photo'];
   const rows=arr.map(it=>{const d=new Date(it.created);const fx=it.fixedAt?new Date(it.fixedAt):null;
-    return [d.toLocaleDateString(),d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}),it.shift,it.dept,it.planogram,catName(it.issueId),it.issue,it.source,it.cause,it.status,fx?fx.toLocaleString():'',fx?((fx-d)/3600000).toFixed(2):'',isDemoIssue(it.issueId)?(it.rite?'Submitted'+(it.riteNo?' #'+it.riteNo:''):'Not submitted'):'',it.sku||'',prodName(it.sku),it.lockup?'Yes':'',foundText(it,it.sku).join('; '),(it.found||[]).filter(f=>verdict(f,it.sku)==='wrong').reduce((a,f)=>a+f.qty,0)||'',prsText(it.prs),it.ds?'Yes':'',it.note,it.photo?'Yes':'No',it.after?'Yes':'No']});
+    return [d.toLocaleDateString(),d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}),it.shift,it.dept,it.planogram,catName(it.issueId),it.issue,it.source,it.cause,it.status,fx?fx.toLocaleString():'',fx?((fx-d)/3600000).toFixed(2):'',isDemoIssue(it.issueId)?(it.rite?'Submitted'+(it.riteNo?' #'+it.riteNo:''):'Not submitted'):'',it.sku||'',prodName(it.sku),it.lockup?'Yes':'',foundText(it,it.sku).join('; '),(it.found||[]).filter(f=>verdict(f,it.sku)==='wrong').reduce((a,f)=>a+f.qty,0)||'',prsText(it.prs),(it.truck||'').toUpperCase(),it.ds?'Yes':'',it.note,it.photo?'Yes':'No',it.after?'Yes':'No']});
   save(`ROIL issues ${localDay(new Date())}.csv`,'﻿'+[head,...rows].map(r=>r.map(csvCell).join(',')).join('\r\n'));
 }
 async function exportReport(arr){
@@ -2782,6 +2951,7 @@ function openDetail(id){
   <div class="two collapse"><div><label class="label" for="dIssue">Issue</label><select id="dIssue">${entryOptions(lists.issues,it.issueId)}</select></div>
   <div><label class="label" for="dCause">Cause</label><select id="dCause">${entryOptions(lists.causes,it.causeId,'Not set')}</select></div></div>
   <div><label class="label" for="dSource">Source</label><select id="dSource">${entryOptions(lists.sources,it.sourceId,'Not set')}</select><p class="warnline" id="dLockWarn" hidden></p></div>
+ <div class="rite" id="dTruckWrap" ${isTruckIssue(it.issueId)?'':'hidden'}><span class="label" style="margin:0">Which truck</span><div class="seg" id="dTruck">${truckSeg(it.truck)}</div></div>
  <div class="rite" id="dPrsWrap" ${isPrsIssue(it.issueId)?'':'hidden'}><span class="label" style="margin:0">What was missed</span><div class="chips small-chips" id="dPrs">${prsChips(it.prs)}</div></div>
   <div class="rite" id="dRiteWrap" ${isDemoIssue(it.issueId)?'':'hidden'}><label class="switch"><input type="checkbox" id="dRite" ${it.rite?'checked':''}><span>RITE ticket submitted</span></label><input type="text" id="dRiteNo" maxlength="40" value="${esc(it.riteNo||'')}" placeholder="Ticket number (optional)" aria-label="RITE ticket number"></div>
   <div><label class="label" for="dNote">Note</label><textarea id="dNote">${esc(it.note)}</textarea></div>
@@ -2791,7 +2961,9 @@ function openDetail(id){
   $('#dStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st=b.dataset.v;$('#dStatus').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===st))});
   $('#dDept').onchange=e=>{$('#dSub').innerHTML=subOptions(e.target.value,'')};
   let dprs=[...(it.prs||[])];
-  $('#dIssue').onchange=e=>{$('#dRiteWrap').hidden=!isDemoIssue(e.target.value);$('#dPrsWrap').hidden=!isPrsIssue(e.target.value)};
+  let dtruck=it.truck||'';
+  $('#dIssue').onchange=e=>{$('#dRiteWrap').hidden=!isDemoIssue(e.target.value);$('#dPrsWrap').hidden=!isPrsIssue(e.target.value);$('#dTruckWrap').hidden=!isTruckIssue(e.target.value)};
+  $('#dTruck').onclick=e=>{const b=e.target.closest('[data-truck]');if(!b)return;dtruck=b.dataset.truck;$('#dTruck').innerHTML=truckSeg(dtruck)};
   $('#dPrs').onclick=e=>{const b=e.target.closest('[data-prs]');if(!b)return;const k=b.dataset.prs;dprs=dprs.includes(k)?dprs.filter(x=>x!==k):[...dprs,k];$('#dPrs').innerHTML=prsChips(dprs)};
   let fileP=it.photo?photoFile(it):null;if(fileP)fileP.catch(()=>{});
   if(it.photo&&!photoUrls.has(it.id))ensureFull(it.id).then(()=>{const im=$('#dImg'),u=photoUrls.get(it.id);if(im&&u)im.src=u});
@@ -2828,7 +3000,7 @@ function openDetail(id){
   $('#dSave').onclick=async()=>{
     const dept=$('#dDept').value;if(!dept){toast('Pick a department.');return}
     const now=new Date().toISOString();
-    const demo=isDemoIssue($('#dIssue').value);const p={sku:ds.sku,lockup:ds.lockup,found:cleanFound(ds.found),prs:isPrsIssue($('#dIssue').value)?dprs:[],status:st,deptId:dept,issueId:$('#dIssue').value,sourceId:$('#dSource').value,causeId:$('#dCause').value,rite:demo&&$('#dRite').checked,riteNo:demo?$('#dRiteNo').value.trim().slice(0,40):'',planogramId:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
+    const demo=isDemoIssue($('#dIssue').value);const p={sku:ds.sku,lockup:ds.lockup,found:cleanFound(ds.found),prs:isPrsIssue($('#dIssue').value)?dprs:[],truck:isTruckIssue($('#dIssue').value)?dtruck:'',status:st,deptId:dept,issueId:$('#dIssue').value,sourceId:$('#dSource').value,causeId:$('#dCause').value,rite:demo&&$('#dRite').checked,riteNo:demo?$('#dRiteNo').value.trim().slice(0,40):'',planogramId:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
     if(st==='Fixed'&&it.status!=='Fixed')p.fixedAt=now;if(st!=='Fixed')p.fixedAt=null;
     const nowFixed=st==='Fixed'&&it.status!=='Fixed';
     try{await store.patch(it.id,p);closeSheet();toast('Saved.');if(nowFixed&&!it.after&&ap.afterPrompt)askAfterFor(it.id,true)}catch(e){toast('Couldn\'t save. Try again.')}
