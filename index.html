@@ -1339,7 +1339,7 @@ function syncHtml(){
 
 /* ---------- Notes for later: quick jots about ROIL itself (bugs, ideas) while you're on the floor ----------
    Synced with your other devices and kept in backups, so you can read them at home. */
-const APP_VERSION='roil-pages-21';
+const APP_VERSION='roil-pages-22';
 const NOTE_TYPES=[['bug','Bug'],['improve','Improvement'],['feature','Feature idea'],['other','Other']];
 const noteType=k=>(NOTE_TYPES.find(t=>t[0]===k)||NOTE_TYPES[3])[1];
 let notes={};   // id -> {id,type,text,ctx,created,updated,done,deleted}
@@ -1853,7 +1853,7 @@ function trucksHtml(){
   ${open.map(t=>{const age=calDays(t.arrived,today());const done=!!t.finished;
     if(t.expected)return `<div class="tcard texp" data-truck="${t.id}"><div class="row" style="justify-content:space-between"><b>${TRUCKS[t.type].name} · expected ${t.arrived===today()?'today':esc(shortDay(t.arrived))}</b><button type="button" class="linkish" data-tr="edit" data-id="${t.id}">Edit load</button></div>
       <div class="tload">${loadText(t)?`<span>${esc(loadText(t))}</span>${t.loadNote?`<span class="muted">${esc(t.loadNote)}</span>`:''}`:'<span class="muted">No load details yet.</span>'}</div>
-      ${t.arrived<=today()?`<div class="row"><span>Has it arrived?</span><button class="btn small primary" type="button" data-tr="arr" data-id="${t.id}">Arrived</button><button class="btn small" type="button" data-tr="noarr" data-id="${t.id}">Didn't arrive</button></div>`:''}</div>`;
+      ${t.arrived<=today()?`<div class="row"><span>Has it arrived?</span><button class="btn small primary" type="button" data-tr="arr" data-id="${t.id}">${t.arrived<today()?'Arrived '+esc(DOW[dayOf(t.arrived).getDay()]):'Arrived'}</button>${t.arrived<today()?`<button class="btn small" type="button" data-tr="arrtoday" data-id="${t.id}">Arrived today</button>`:''}<button class="btn small" type="button" data-tr="noarr" data-id="${t.id}">Didn't arrive</button></div>`:''}</div>`;
     return `<div class="tcard" data-truck="${t.id}"><div class="row" style="justify-content:space-between"><b>${TRUCKS[t.type].name} · arrived ${esc(shortDay(t.arrived))}</b><button type="button" class="linkish" data-tr="edit" data-id="${t.id}">Edit</button><span class="mono muted">${done?`finished in ${calDays(t.arrived,t.finished)+1} d`:`day ${age+1}`}</span></div>
       <div class="tload">${loadText(t)?`<span>${esc(loadText(t))}</span>${t.loadNote?`<span class="muted">${esc(t.loadNote)}</span>`:''}`:'<span class="muted">No load details yet.</span>'}<button type="button" class="linkish" data-tr="edit" data-id="${t.id}">${loadText(t)?'Edit load':'Add pieces & CUBE'}</button></div>
       <div class="seg tunl" role="group" aria-label="Unload">${[['0','Live unload'],['1','Dropped trailer']].map(([v,l])=>`<button type="button" data-tr="drop" data-v="${v}" data-id="${t.id}" aria-pressed="${(t.dropped?'1':'0')===v}">${l}</button>`).join('')}</div>
@@ -1879,7 +1879,8 @@ async function onTruck(b){
       <label class="switch"><input type="checkbox" id="trDrop"><span>Dropped trailer <span class="lsub">DDC usually is; RDC only when it's too big for both stores</span></span></label>`);
     $('#sheetHost').querySelectorAll('[data-new]').forEach(x=>x.onclick=async()=>{const ty=x.dataset.new;const dr=$('#trDrop').checked||TRUCKS[ty].dropped;closeSheet();await newTruck(ty,today(),dr);renderDs()});return}
   if(!t)return;
-  if(a==='arr'){t.expected=false;toast(`${TRUCKS[t.type].name} truck arrived.`)}
+  if(a==='arr'){t.expected=false;toast(`${TRUCKS[t.type].name} truck arrived ${shortDay(t.arrived)}.`)}
+  else if(a==='arrtoday'){t.expected=false;t.arrived=today();toast(`${TRUCKS[t.type].name} truck arrived today (a day late).`)}
   else if(a==='noarr'){t.deleted=true;dk.cfg.dismiss={...(dk.cfg.dismiss||{}),[t.type+'|'+t.arrived]:{updated:nowIso()}};toast('Removed. The load you entered is dropped too.')}
   else if(a==='stage'){const k=b.dataset.k;t[k]=t[k]?'':today();if(k==='pickedUp'&&t.pickedUp&&!t.emptied)t.emptied=today()}
   else if(a==='drop'){t.dropped=b.dataset.v==='1';if(!t.dropped){t.emptied='';t.pickupReq='';t.pickedUp=''}}
