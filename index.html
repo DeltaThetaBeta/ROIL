@@ -431,6 +431,37 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 .tgrid{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:end}
 @media (max-width:420px){.tgrid{grid-template-columns:1fr}}
 .tfloor{width:auto;min-height:36px;padding:6px 10px;font-size:14px}
+.calnav{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;text-align:center}
+.calnav div{display:grid}.calnav .muted{font-size:13px}
+.calgrid{display:grid;gap:4px;padding:10px 8px;overflow:hidden}
+.crow{display:grid;grid-template-columns:0 .55fr .55fr repeat(5,1fr);column-gap:2px;row-gap:2px;align-items:stretch}
+.crow .cl{grid-column:1/-1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
+.chead .cl{display:none}
+.ch{border:0;background:none;padding:4px 0;display:grid;justify-items:center;cursor:pointer;font-size:12px;color:var(--muted);border-radius:6px;min-height:40px}
+.ch b{font-family:var(--f-display);font-size:12px;letter-spacing:.05em;text-transform:uppercase}.ch span{font-size:15px;color:var(--ink)}
+.ch.today{background:var(--accent);color:var(--accent-ink)}.ch.today span{color:var(--accent-ink)}
+.csec{font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
+.cseg{height:24px;border-radius:3px;display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--surface)}
+.st-unload{background:var(--accent)}
+.st-left1{background:color-mix(in srgb,var(--open) 35%,var(--surface))}.st-left2{background:color-mix(in srgb,var(--open) 65%,var(--surface))}.st-left3{background:var(--open)}
+.st-done,.st-picked{background:var(--good)}
+.st-bay{background:var(--follow)}
+.st-empty{background:repeating-linear-gradient(45deg,var(--follow-soft) 0 5px,color-mix(in srgb,var(--follow) 45%,var(--surface)) 5px 10px);color:var(--follow)}
+.cbar{border:0;border-radius:4px;min-height:24px;padding:2px 6px;font-size:12px;font-weight:600;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.cbar.cont-l{border-top-left-radius:0;border-bottom-left-radius:0}.cbar.cont-r{border-top-right-radius:0;border-bottom-right-radius:0}
+.ev-reset{background:color-mix(in srgb,var(--accent) 30%,var(--surface))}.ev-holiday{background:color-mix(in srgb,var(--bad) 22%,var(--surface))}
+.ev-count{background:color-mix(in srgb,var(--follow) 28%,var(--surface))}.ev-staff{background:color-mix(in srgb,var(--open) 28%,var(--surface))}.ev-other{background:var(--sunk)}
+.ccell{border:0;border-radius:4px;background:var(--sunk);min-height:40px;padding:3px 0;cursor:pointer;display:grid;justify-items:center;align-content:center;gap:1px;font-size:12px;position:relative;overflow:hidden}
+.ccell.cov i{position:absolute;left:0;bottom:0;height:4px;width:var(--p);background:var(--good)}
+.ccell.cov b{font-size:12px}
+.ccell.iss{background:color-mix(in srgb,var(--open) calc(var(--h)*45%),var(--sunk))}
+.ccell .add{font-weight:700}.ccell .fix{color:var(--good);font-weight:600}
+.ccell .flag{position:absolute;top:1px;right:3px;font-size:10px;color:var(--bad)}
+.tiles3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.tiles3 b{display:block;font-family:var(--f-display);font-size:28px;line-height:1.1}.tiles3 span{font-size:12px;color:var(--muted)}
+.tiles3 .up{color:var(--open)}.tiles3 .down{color:var(--good)}
+.legend2{display:grid;gap:6px;margin-top:8px;font-size:13px}
+.legend2 span{display:flex;align-items:center;gap:8px}.legend2 i{display:inline-grid;place-items:center;width:28px;height:16px;border-radius:3px;font-style:normal;font-size:11px;color:var(--surface);flex:none}.legend2 i:not([class]){background:var(--sunk);color:var(--bad)}
 .tlist{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14px}
 .fustack .label{margin-bottom:4px}
 .dupw{display:grid;gap:4px;justify-items:start}
@@ -535,10 +566,12 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
   <section id="v-lists" class="stack" hidden></section>
   <section id="v-ds" class="stack" hidden></section>
   <section id="v-dsdays" class="stack" hidden></section>
+  <section id="v-cal" class="stack" hidden></section>
 </div>
 
 <nav class="tabs" id="tabs" aria-label="Sections">
   <button data-v="ds" data-mode="ds"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M7 4v4M12 10v4M17 16v4"/></svg>Today</button>
+  <button data-v="cal" data-mode="ds"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M6 14h5M9 17h7"/></svg>Calendar</button>
   <button data-v="dsdays" data-mode="ds"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Days</button>
   <button data-v="log" data-mode="issues" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Log</button>
   <button data-v="follow" data-mode="issues"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8.5"/></svg>Open<span class="badge" id="fuBadge" hidden></span></button>
@@ -995,7 +1028,7 @@ function b64ToBlob(s,type){const bin=atob(s);const a=new Uint8Array(bin.length);
    doesn't need one giant string. Same item format the server version uses. */
 async function buildBackup(){
   const phs=await getAll('photos');const its=items.map(x=>({...x}));const l=listsBody(lists);
-  const parts=[`{"format":"roil-backup","version":2,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"products":${JSON.stringify(prods)},"notes":${JSON.stringify(notes)},"downstock":${JSON.stringify(dk)},"appearance":${JSON.stringify(ap)},"items":${JSON.stringify(its)},"photos":{`];
+  const parts=[`{"format":"roil-backup","version":2,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"products":${JSON.stringify(prods)},"notes":${JSON.stringify(notes)},"downstock":${JSON.stringify(dk)},"events":${JSON.stringify(events)},"appearance":${JSON.stringify(ap)},"items":${JSON.stringify(its)},"photos":{`];
   let first=true;
   for(const p of phs){
     const full=p.full||p.thumb,af=p.after||p.afterThumb;if(!full&&!af)continue;
@@ -1026,6 +1059,7 @@ async function doBackup(shareIt){
 async function mergeIncoming(data,opt={}){
   if(data.lists&&typeof data.lists==='object'){lists=mergeLists(lists,normLists(data.lists));relinkAll()}
   let noteOp=null;if(data.notes&&typeof data.notes==='object'){const m=mergeNotes(notes,cleanNotes(data.notes));if(JSON.stringify(m)!==JSON.stringify(notes)){notes=m;noteOp={s:'meta',v:notes,k:'notes'};updateNoteBadge()}}
+  let evOp=null;if(data.events&&typeof data.events==='object'){const m=mergeEvents(events,cleanEvents(data.events));if(JSON.stringify(m)!==JSON.stringify(events)){events=m;evOp={s:'meta',v:events,k:'events'}}}
   let dkOp=null;if(data.downstock&&typeof data.downstock==='object'){const m=mergeDk(dk,cleanDk(data.downstock));if(JSON.stringify(m)!==JSON.stringify(dk)){dk=m;dkOp={s:'meta',v:dk,k:'downstock'}}}
   let prodOp=null;if(data.products&&typeof data.products==='object'){const m=mergeProds(prods,cleanProds(data.products));if(JSON.stringify(m)!==JSON.stringify(prods)){prods=m;prodOp={s:'meta',v:prods,k:'products'}}}
   const ID=/^[a-z0-9]{6,40}$/;const have=new Map(items.map(i=>[i.id,i]));const ops=[];let added=0,updated=0,photos=0,removed=0;
@@ -1069,7 +1103,7 @@ async function mergeIncoming(data,opt={}){
   relinkAll([...have.values()]);ops.push({s:'meta',v:listsBody(lists),k:'lists'});buildForm();
   let apChanged=false;
   if(opt.appearance&&data.appearance&&typeof data.appearance==='object'){const inc=cleanAp(data.appearance);if((inc.updated||'')>(ap.updated||'')){ap=inc;ls.set('roil.appearance',ap);applyAp();apChanged=true;if(loaded)renderLog()}}
-  ops.push({s:'meta',v:newTombs,k:'deleted'});if(prodOp)ops.push(prodOp);if(noteOp)ops.push(noteOp);if(dkOp)ops.push(dkOp);
+  ops.push({s:'meta',v:newTombs,k:'deleted'});if(prodOp)ops.push(prodOp);if(noteOp)ops.push(noteOp);if(dkOp)ops.push(dkOp);if(evOp)ops.push(evOp);
   await write(ops);
   tombs=newTombs;
   setItems([...have.values()]);
@@ -1174,7 +1208,7 @@ const Drive={
 function sortedProds(){const o={skus:{},upcs:{}};for(const t of['skus','upcs'])for(const k of Object.keys(prods[t]).sort())o[t][k]=prods[t][k];return o}
 function syncDocText(){
   const its=items.map(x=>({...x})).sort((a,b)=>a.id<b.id?-1:1);
-  return JSON.stringify({format:'roil-sync',version:2,lists:listsBody(lists),deleted:tombs,products:sortedProds(),notes:Object.fromEntries(Object.keys(notes).sort().map(k=>[k,notes[k]])),downstock:{cfg:dk.cfg,days:Object.fromEntries(Object.keys(dk.days).sort().map(k=>[k,dk.days[k]])),trucks:dk.trucks},items:its});
+  return JSON.stringify({format:'roil-sync',version:2,lists:listsBody(lists),deleted:tombs,products:sortedProds(),notes:Object.fromEntries(Object.keys(notes).sort().map(k=>[k,notes[k]])),downstock:{cfg:dk.cfg,days:Object.fromEntries(Object.keys(dk.days).sort().map(k=>[k,dk.days[k]])),trucks:dk.trucks},events:Object.fromEntries(Object.keys(events).sort().map(k=>[k,events[k]])),items:its});
 }
 const pname=(kind,id,rev)=>rev?`${kind}-${id}-${rev}.jpg`:`${kind}-${id}.jpg`;
 async function syncPhotos(folder,files){
@@ -1288,7 +1322,7 @@ function syncHtml(){
 
 /* ---------- Notes for later: quick jots about ROIL itself (bugs, ideas) while you're on the floor ----------
    Synced with your other devices and kept in backups, so you can read them at home. */
-const APP_VERSION='roil-pages-17';
+const APP_VERSION='roil-pages-18';
 const NOTE_TYPES=[['bug','Bug'],['improve','Improvement'],['feature','Feature idea'],['other','Other']];
 const noteType=k=>(NOTE_TYPES.find(t=>t[0]===k)||NOTE_TYPES[3])[1];
 let notes={};   // id -> {id,type,text,ctx,created,updated,done,deleted}
@@ -1773,8 +1807,9 @@ function saveTruck(t){t.updated=nowIso();t.log={...t.log,[today()]:{pallets:t.pa
 /* scheduled trucks from the last 2 days that haven't been answered yet */
 function truckPrompts(){
   const out=[],T=today();
-  for(const type of Object.keys(TRUCKS)){const c=truckCfg(type);const days=new Set([...c.days,...(holidayOn()?c.holiday:[])]);
-    for(let i=0;i<=2;i++){const d=addDays(T,-i);if(!days.has(dayOf(d).getDay()))continue;
+  const holidayFor=d=>holidayOn()||Object.values(events).some(e=>!e.deleted&&e.kind==='holiday'&&e.start<=d&&e.end>=d);
+  for(const type of Object.keys(TRUCKS)){const c=truckCfg(type);
+    for(let i=0;i<=2;i++){const d=addDays(T,-i);const days=new Set([...c.days,...(holidayFor(d)?c.holiday:[])]);if(!days.has(dayOf(d).getDay()))continue;
       if(liveTrucks().some(t=>t.type===type&&t.arrived===d))continue;if(dk.cfg.dismiss&&dk.cfg.dismiss[type+'|'+d])continue;out.push({type,day:d})}}
   return out;
 }
@@ -1853,7 +1888,120 @@ function truckSettingsHtml(){
   return `<details class="arch" ${dsListOpen.has('trucks')?'open':''} data-dsopen="trucks"><summary>Truck schedule</summary>
     ${Object.keys(TRUCKS).map(k=>`<div style="margin-top:8px"><span class="label">${TRUCKS[k].full}</span>${dayChips(k,'days')}<span class="label" style="margin-top:6px">Extra holiday days</span>${dayChips(k,'holiday')}</div>`).join('')}
     <label class="switch" style="margin-top:10px"><input type="checkbox" id="trHoliday" ${holidayOn()?'checked':''}><span>Holiday schedule is on <span class="lsub">adds the extra days</span></span></label>
-    <p class="note">On a scheduled day the board asks whether the truck came. For an odd day, use “Truck arrived today”.</p></details>`;
+    <p class="note">On a scheduled day the board asks whether the truck came. For an odd day, use “Truck arrived today”. A “Holiday schedule” event on the Calendar also turns on the extra days while it lasts.</p></details>`;
+}
+
+/* ================= CALENDAR: week view =================
+   One week (Sat–Fri, named by its Monday) as a small Gantt chart: your own events, each truck's stages,
+   downstock coverage, and issues logged vs fixed per day. Tap a day for its details. */
+const EV_KINDS=[['reset','Reset / planogram change'],['holiday','Holiday schedule'],['count','Inventory count'],['staff','Staffing (someone out)'],['other','Other']];
+let events={};   // id -> {id,kind,title,start,end,note,deleted,updated}  (meta "events", synced)
+function cleanEvents(o){
+  const r={};if(!o||typeof o!=='object')return r;const D=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||''))?String(v):'';
+  for(const [k,e] of Object.entries(o)){if(!ENTRY_ID.test(k)||!e||typeof e!=='object')continue;const st=D(e.start);if(!st)continue;let en=D(e.end)||st;if(en<st)en=st;
+    r[k]={id:k,kind:EV_KINDS.some(x=>x[0]===e.kind)?e.kind:'other',title:String(e.title||'').slice(0,80),start:st,end:en,note:String(e.note||'').slice(0,300),deleted:!!e.deleted,updated:String(e.updated||'').slice(0,40)}}
+  return r;
+}
+function mergeEvents(a,b){const o={...a};for(const [k,v] of Object.entries(b))if(!o[k]||(v.updated||'')>(o[k].updated||''))o[k]=v;return o}
+async function saveEvents(){await write([{s:'meta',v:events,k:'events'}]);markChanged()}
+const evTitle=e=>e.title||(EV_KINDS.find(x=>x[0]===e.kind)||[,'Event'])[1];
+let calWeek=null;   // Monday of the week shown
+function calDaysOf(mon){return [-2,-1,0,1,2,3,4].map(n=>addDays(mon,n))}
+/* what stage a truck's work and its trailer were in on a given day */
+function truckDay(t,d){
+  if(d<t.arrived)return null;
+  const end=t.finished||today();
+  let work=null;
+  if(d===t.arrived)work='unload';
+  else if(t.finished&&d===t.finished)work='done';
+  else if(d<=end&&(!t.finished||d<t.finished)){const logs=Object.keys(t.log||{}).filter(x=>x<=d).sort();const v=logs.length?t.log[logs[logs.length-1]]:{pallets:t.pallets,store:t.store};
+    work=v.pallets>0||v.store==='lots'?'left3':v.store==='some'?'left2':'left1'}
+  if(t.finished&&d>t.finished)work=null;
+  let trailer=null;
+  if(t.dropped){if(t.pickedUp&&d>t.pickedUp)trailer=null;else if(t.pickedUp&&d===t.pickedUp)trailer='picked';else if(!t.emptied||d<t.emptied)trailer='bay';else trailer='empty';
+    if(!t.pickedUp&&d>today())trailer=null}
+  if(d>today()){work=null}
+  return {work,trailer,req:t.pickupReq===d};
+}
+const STAGE_LBL={unload:'Unloading',left1:'Leftovers (a little)',left2:'Leftovers (some)',left3:'Leftovers (a lot)',done:'Finished',bay:'Trailer in bay',empty:'Trailer empty, waiting for pickup',picked:'Trailer picked up'};
+function dayIssues(d){return {logged:items.filter(i=>localDay(new Date(i.created))===d),fixed:items.filter(i=>i.fixedAt&&localDay(new Date(i.fixedAt))===d)}}
+function renderCal(){
+  const el=$('#v-cal');if(!el)return;
+  if(!calWeek)calWeek=weekMonday(today());
+  const D=calDaysOf(calWeek),T=today(),A=dsAreas();
+  const col=i=>`grid-column:${i+2}`;
+  const evs=Object.values(events).filter(e=>!e.deleted&&e.end>=D[0]&&e.start<=D[6]).sort((a,b)=>a.start.localeCompare(b.start));
+  const trs=liveTrucks().filter(t=>{const end=t.dropped?(t.pickedUp||T):(t.finished||T);return t.arrived<=D[6]&&end>=D[0]}).sort((a,b)=>a.arrived.localeCompare(b.arrived));
+  const head=D.map((d,i)=>{const dt=dayOf(d);return `<button type="button" class="ch${d===T?' today':''}${i<2?' we':''}" style="${col(i)}" data-day="${d}"><b>${DOW[dt.getDay()].slice(0,i<2?2:3)}</b><span>${dt.getDate()}</span></button>`}).join('');
+  // events: one row each, bar from first to last visible day
+  const evRows=evs.map(e=>{const a=Math.max(0,D.indexOf(e.start<D[0]?D[0]:e.start)),b=D.indexOf(e.end>D[6]?D[6]:e.end);
+    return `<div class="crow"><button type="button" class="cbar ev ev-${e.kind}${e.start<D[0]?' cont-l':''}${e.end>D[6]?' cont-r':''}" style="grid-column:${a+2}/${b+3}" data-ev="${e.id}">${esc(evTitle(e))}</button></div>`}).join('');
+  // trucks: a work bar and, for dropped trailers, a trailer bar; one cell per day, colored by stage
+  const trRows=trs.map(t=>{const days=D.map(d=>truckDay(t,d));
+    const cells=k=>days.map((x,i)=>x&&x[k]?`<span class="cseg st-${x[k]}" style="${col(i)}" title="${esc(STAGE_LBL[x[k]])}">${x[k]==='done'||x[k]==='picked'?'✓':k==='trailer'&&x.req?'☎':''}</span>`:'').join('');
+    return `<div class="crow"><span class="cl">${TRUCKS[t.type].name} · ${esc(shortDay(t.arrived))}</span>${cells('work')}</div>${t.dropped?`<div class="crow"><span class="cl">${TRUCKS[t.type].name} trailer</span>${cells('trailer')}</div>`:''}`}).join('');
+  const cov=D.map((d,i)=>{if(d>T)return '';const s=dsDayStats(d);const p=s.total?Math.round(s.done/s.total*100):0;const any=s.done+s.partly+s.follow;
+    return `<button type="button" class="ccell cov" style="${col(i)};--p:${p}%" data-day="${d}">${any?`<b>${p}%</b>`:'<span class="muted">–</span>'}<i></i></button>`}).join('');
+  const maxN=Math.max(1,...D.map(d=>dayIssues(d).logged.length));
+  const iss=D.map((d,i)=>{if(d>T)return '';const x=dayIssues(d);const fr=x.logged.some(it=>it.issueId===FREIGHT_ID());
+    return `<button type="button" class="ccell iss" style="${col(i)};--h:${x.logged.length/maxN}" data-day="${d}"><span class="add">+${x.logged.length}</span><span class="fix">✓${x.fixed.length}</span>${fr?'<span class="flag" title="Freight left on sales floor">⚑</span>':''}</button>`}).join('');
+  const W=weekSummary(D[2]);
+  const added=D.reduce((a,d)=>a+dayIssues(d).logged.length,0),fixed=D.reduce((a,d)=>a+dayIssues(d).fixed.length,0);
+  el.innerHTML=`<div class="row" style="justify-content:space-between;align-items:center"><h2>Calendar</h2><button class="btn small" type="button" id="evAdd">+ Event</button></div>
+  <div class="calnav"><button class="btn small" type="button" id="calPrev" aria-label="Previous week">‹</button><div><b>Week of ${esc(shortDay(calWeek))}</b><span class="muted">${esc(shortDay(D[0]))} – ${esc(shortDay(D[6]))}</span></div><button class="btn small" type="button" id="calNext" aria-label="Next week">›</button></div>
+  ${calWeek!==weekMonday(T)?'<button class="btn small ghost" type="button" id="calNow" style="justify-self:center">Back to this week</button>':''}
+  <div class="panel calgrid">
+    <div class="crow chead"><span class="cl"></span>${head}</div>
+    ${evRows?`<div class="csec">Events</div>${evRows}`:''}
+    ${trRows?`<div class="csec">Trucks</div>${trRows}`:''}
+    <div class="csec">Downstock coverage</div><div class="crow">${cov}</div>
+    <div class="csec">Issues <span class="lsub">logged + / fixed ✓</span></div><div class="crow">${iss}</div>
+  </div>
+  <div class="panel lsec"><div class="tiles3"><div><b>${added}</b><span>issues logged</span></div><div><b>${fixed}</b><span>issues fixed</span></div><div><b class="${added>fixed?'up':'down'}">${added>fixed?'+':''}${added-fixed}</b><span>change in open</span></div></div>
+    <p class="note" style="margin:0">${W.cov}% of downstock areas done at least once this week${W.leftover?` · truck leftovers worked ${W.leftover} day${W.leftover===1?'':'s'}`:''}.</p></div>
+  <details class="arch"><summary>What the colors mean</summary><div class="legend2">
+    ${['unload','left1','left2','left3','done','bay','empty','picked'].map(k=>`<span><i class="st-${k}">${k==='done'||k==='picked'?'✓':''}</i>${STAGE_LBL[k]}</span>`).join('')}<span><i class="st-empty">☎</i>Pickup requested</span><span><i>⚑</i>Freight left on the sales floor (issue logged)</span>
+    ${EV_KINDS.map(([k,t])=>`<span><i class="ev-${k}"></i>${t}</span>`).join('')}</div></details>`;
+  $('#calPrev').onclick=()=>{calWeek=addDays(calWeek,-7);renderCal()};
+  $('#calNext').onclick=()=>{calWeek=addDays(calWeek,7);renderCal()};
+  const cn=$('#calNow');if(cn)cn.onclick=()=>{calWeek=weekMonday(T);renderCal()};
+  $('#evAdd').onclick=()=>openEventSheet(null);
+}
+$('#v-cal').addEventListener('click',e=>{const ev=e.target.closest('[data-ev]');if(ev){openEventSheet(ev.dataset.ev);return}const d=e.target.closest('[data-day]');if(d)openDaySheet(d.dataset.day)});
+function openDaySheet(d){
+  const x=dayIssues(d),s=dsDayStats(d),A=dsAreas();
+  const evs=Object.values(events).filter(e=>!e.deleted&&e.start<=d&&e.end>=d);
+  const tr=liveTrucks().map(t=>({t,s:truckDay(t,d)})).filter(o=>o.s&&(o.s.work||o.s.trailer));
+  const fol=A.map(a=>({a,r:rec(a.id,d)})).filter(o=>o.r&&(o.r.st==='follow'||o.r.st==='partly'));
+  openSheet(`<div class="head"><h2>${esc(dayOf(d).toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'}))}</h2><button class="btn small" data-close>Close</button></div>
+    ${evs.length?`<div><span class="label">Events</span>${evs.map(e=>`<button type="button" class="cbar ev ev-${e.kind}" data-ev="${e.id}" style="display:block;width:100%;margin-bottom:4px">${esc(evTitle(e))}${e.note?' · '+esc(e.note):''}</button>`).join('')}</div>`:''}
+    ${tr.length?`<div><span class="label">Trucks</span><ul class="tlist">${tr.map(o=>`<li><b>${TRUCKS[o.t.type].name}</b> (arrived ${esc(shortDay(o.t.arrived))}): ${[o.s.work&&STAGE_LBL[o.s.work],o.s.trailer&&STAGE_LBL[o.s.trailer],o.s.req&&'pickup requested'].filter(Boolean).join(' · ')}</li>`).join('')}</ul></div>`:''}
+    <div><span class="label">Downstock</span><p style="margin:0">${s.done} of ${s.total} areas done${s.partly?` · ${s.partly} partial`:''}${s.follow?` · ${s.follow} follow-up`:''}${s.filled?` · ${s.filled} filled`:''}${s.laser?` · ${s.laser} LaserLine`:''}</p>
+      ${fol.length?`<ul class="tlist">${fol.map(o=>`<li>${esc(o.a.label)}: ${esc(DS_ST[o.r.st])}${reasonText(o.r)?' · '+esc(reasonText(o.r)):''}</li>`).join('')}</ul>`:''}</div>
+    <div><span class="label">Issues logged (${x.logged.length})</span>${x.logged.length?`<div class="list">${x.logged.map(it=>itemCard(it)).join('')}</div>`:'<p class="note" style="margin:0">None.</p>'}</div>
+    <div><span class="label">Issues fixed (${x.fixed.length})</span>${x.fixed.length?`<div class="list">${x.fixed.map(it=>itemCard(it)).join('')}</div>`:'<p class="note" style="margin:0">None.</p>'}</div>
+    <button class="btn small" type="button" id="dayEv">+ Event on this day</button>`);
+  $('#sheetHost').querySelectorAll('.item').forEach(b=>b.addEventListener('click',()=>{closeSheet();openDetail(b.dataset.id)}));
+  $('#sheetHost').querySelectorAll('[data-ev]').forEach(b=>b.addEventListener('click',()=>openEventSheet(b.dataset.ev)));
+  $('#dayEv').onclick=()=>openEventSheet(null,d);
+}
+function openEventSheet(id,day){
+  const e0=id?events[id]:{kind:'reset',title:'',start:day||today(),end:day||today(),note:''};if(!e0)return;
+  const s={...e0};
+  openSheet(`<div class="head"><h2>${id?'Edit event':'New event'}</h2><button class="btn small" data-close>Cancel</button></div>
+    <div><span class="label">Kind</span><div class="chips" id="evKind">${EV_KINDS.map(([k,t])=>`<button type="button" class="chip" data-v="${k}" aria-pressed="${s.kind===k}">${t}</button>`).join('')}</div></div>
+    <div><label class="label" for="evTitle">Title <span class="lsub">optional</span></label><input type="text" id="evTitle" maxlength="80" value="${esc(s.title)}" placeholder="e.g. Laptop wall reset, Jordan on vacation"></div>
+    <div class="two"><div><label class="label" for="evStart">From</label><input type="date" id="evStart" value="${s.start}"></div><div><label class="label" for="evEnd">To</label><input type="date" id="evEnd" value="${s.end}"></div></div>
+    <div><label class="label" for="evNote">Note <span class="lsub">optional</span></label><input type="text" id="evNote" maxlength="300" value="${esc(s.note)}"></div>
+    <div class="row" style="justify-content:space-between">${id?'<button class="btn small danger" type="button" id="evDel">Delete</button>':'<span></span>'}<button class="btn primary" type="button" id="evSave">Save</button></div>`);
+  $('#evKind').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;s.kind=b.dataset.v;$('#evKind').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b))};
+  $('#evStart').onchange=ev=>{if($('#evEnd').value<ev.target.value)$('#evEnd').value=ev.target.value};
+  $('#evSave').onclick=async()=>{
+    const st=$('#evStart').value,en=$('#evEnd').value||st;if(!st){toast('Pick a start date.');return}if(en<st){toast('The end date is before the start.');return}
+    const nid=id||rid('e');events[nid]={id:nid,kind:s.kind,title:$('#evTitle').value.trim().slice(0,80),start:st,end:en,note:$('#evNote').value.trim().slice(0,300),deleted:false,updated:nowIso()};
+    await saveEvents();closeSheet();calWeek=weekMonday(st);if(view==='cal')renderCal();toast(id?'Event updated.':'Event added.')};
+  const dl=$('#evDel');if(dl)dl.onclick=async ev=>{if(ev.target.dataset.armed!=='1'){ev.target.dataset.armed='1';ev.target.textContent='Tap again to delete';return}
+    events[id]={...events[id],deleted:true,updated:nowIso()};await saveEvents();closeSheet();if(view==='cal')renderCal();toast('Event deleted.')};
 }
 
 /* ---------- Issues | Downstock switch ---------- */
@@ -1872,8 +2020,8 @@ async function boot(){
   dsDefaults();setMode(mode,true);if(mode==='ds')setView('ds');
   buildForm();showPhotos();renderLog();renderAll();tick();setInterval(tick,30000);setSync();
   try{
-    const [its,phs,l,dl,pr,nt,dsd]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists'),getOne('meta','deleted'),getOne('meta','products'),getOne('meta','notes'),getOne('meta','downstock')]);
-    if(pr)prods=cleanProds(pr);if(nt)notes=cleanNotes(nt);updateNoteBadge();if(dsd)dk=cleanDk(dsd);dsDefaults();
+    const [its,phs,l,dl,pr,nt,dsd,evd]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists'),getOne('meta','deleted'),getOne('meta','products'),getOne('meta','notes'),getOne('meta','downstock'),getOne('meta','events')]);
+    if(pr)prods=cleanProds(pr);if(nt)notes=cleanNotes(nt);updateNoteBadge();if(dsd)dk=cleanDk(dsd);dsDefaults();if(evd)events=cleanEvents(evd);
     for(const p of phs)setPhotoUrls(p);
     if(l)lists=normLists(l);
     if(dl&&typeof dl==='object')tombs=dl;
@@ -2742,7 +2890,7 @@ async function copyPhoto(it){
 /* ---------- views ---------- */
 function setView(v){
   view=v;
-  for(const s of['log','follow','history','stats','lists','ds','dsdays'])$('#v-'+s).hidden=s!==v;
+  for(const s of['log','follow','history','stats','lists','ds','dsdays','cal'])$('#v-'+s).hidden=s!==v;
   document.querySelectorAll('#tabs button').forEach(b=>{if(b.dataset.v===v)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   if(v==='lists')refreshStorage();
   renderAll();window.scrollTo({top:0});
@@ -2761,6 +2909,7 @@ function renderAll(){
   if(view==='lists')renderLists();
   if(view==='ds')renderDs();
   if(view==='dsdays')renderDsDays();
+  if(view==='cal')renderCal();
 }
 function thumb(it){const b=thumbSrc(it),a=it.after?afterThumbUrls.get(it.id)||'':'';if(b&&a)return `<span class="thumb ba"><img src="${esc(b)}" alt=""><img src="${esc(a)}" alt=""></span>`;const x=b||a;return x?`<img class="thumb" src="${esc(x)}" alt="" loading="lazy">`:`<span class="thumb">${it.photo?'PHOTO':'NO PHOTO'}</span>`}
 function itemCard(it,extra=''){
@@ -2880,9 +3029,10 @@ function renderStats(){
     <div class="panel"><span class="label">Repeat spots</span>${combos.length?`<div class="hot">${combos.map(([k,v])=>`<div><b>${v}×</b><span>${esc(k)}</span></div>`).join('')}</div>`:'<p class="note">No department and issue pair has come up twice yet.</p>'}</div>
     <div class="panel"><span class="label">Repeat planograms</span>${pogs.length?`<div class="hot">${pogs.map(([k,v])=>`<div><b>${v}×</b><span>${esc(k)}</span></div>`).join('')}</div>`:'<p class="note">No planogram has come up twice yet.</p>'}</div>
   </div>
-  <div class="row"><button class="btn small" id="copySum">Copy summary for Teams</button><button class="btn small" id="sExport">Download report</button></div>`}`;
+  <div class="row"><button class="btn small" id="sCal">Week calendar</button><button class="btn small" id="copySum">Copy summary for Teams</button><button class="btn small" id="sExport">Download report</button></div>`}`;
   $('#sRange').onchange=e=>{srange=e.target.value;ls.set('roil.srange',srange);renderStats()};
   const cs=$('#copySum');if(cs)cs.onclick=()=>copyText(summaryText(arr,r));
+  const sc=$('#sCal');if(sc)sc.onclick=()=>setView('cal');
   const se=$('#sExport');if(se)se.onclick=()=>exportReport(arr);
 }
 function summaryText(arr,r){
