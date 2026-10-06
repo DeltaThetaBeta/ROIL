@@ -419,6 +419,8 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 .rfrow .seg button{min-height:40px;padding:6px 4px;font-size:14px}
 .dsday{display:grid;gap:6px}
 .ghostchip{border-style:dashed}
+.fustack{display:grid;gap:12px}
+.fustack .label{margin-bottom:4px}
 .dupw{display:grid;gap:4px;justify-items:start}
 .dupw .item{width:100%}
 </style>
@@ -1265,7 +1267,7 @@ function syncHtml(){
 
 /* ---------- Notes for later: quick jots about ROIL itself (bugs, ideas) while you're on the floor ----------
    Synced with your other devices and kept in backups, so you can read them at home. */
-const APP_VERSION='roil-pages-15';
+const APP_VERSION='roil-pages-16';
 const NOTE_TYPES=[['bug','Bug'],['improve','Improvement'],['feature','Feature idea'],['other','Other']];
 const noteType=k=>(NOTE_TYPES.find(t=>t[0]===k)||NOTE_TYPES[3])[1];
 let notes={};   // id -> {id,type,text,ctx,created,updated,done,deleted}
@@ -1338,16 +1340,19 @@ function notesHtml(){
 
 /* ================= DOWNSTOCK =================
    A daily coverage board: every planogram (or a department with no planograms) is an "area".
-   Each day an area is Not done, Partly done, Done, or Follow-up (with a reason), plus the extras
+   Each day an area is Not done, Partial, Done, or Follow-up (with a reason), plus the extras
    Filled (restocked beyond empties) and LaserLine (fronted). Others' work can be marked
    "Done by someone else" and spot-checked. Runs group the areas you walk together.
    Synced (meta "downstock"): cfg.reasons, cfg.groups, cfg.top, and day records, merged entry by entry. */
 const DS_HELP=[['lift','Lift (needs a spotter)'],['ladder','Ladder'],['person','Second person'],['heavy','Heavy or bulky']];
-const DS_REASON_DEFAULTS=[["Couldn't find in overstock",'db'],['Needs equipment or help','help'],['Waiting on PRS supplies',''],['Other','']];
-const DS_ST={none:'Not done',partly:'Partly done',done:'Done',follow:'Follow-up'};
+const DS_REASON_DEFAULTS=[["Couldn't find in overstock",'db',0],['Needs equipment or help','help',1],['Waiting on PRS supplies','prs',2],['Overstock in the wrong spot or mixed','',3],['Overstock blocked','',4],['Other','',90]];
+const DS_PRS=[['spider','Spider wraps'],['clam','Clamshells'],['limit','Limit-one tags'],['other','Other']];
+const DS_WHY=[['time','Ran out of time'],['task','Pulled to another task'],['opened','Store opened (lift needs a spotter)'],['other','Other']];
+const DS_ST={none:'Not done',partly:'Partial',done:'Done',follow:'Follow-up'};
 let dk={cfg:{reasons:{},groups:{},top:{},skip:{}},days:{}};
 function dsDefaults(){
-  DS_REASON_DEFAULTS.forEach(([n,kind],i)=>{const id=sid('r',n);if(!dk.cfg.reasons[id])dk.cfg.reasons[id]={id,name:n,kind,order:i,archived:false,updated:''}});
+  // starter reasons are added if missing; their kind and order are fixed (names can be changed in Lists)
+  DS_REASON_DEFAULTS.forEach(([n,kind,order])=>{const id=sid('r',n),e=dk.cfg.reasons[id];if(!e)dk.cfg.reasons[id]={id,name:n,kind,order,archived:false,updated:''};else{e.kind=kind;e.order=order}});
 }
 function cleanDk(o){
   const r={cfg:{reasons:{},groups:{},top:{},skip:{}},days:{}};if(!o||typeof o!=='object')return r;const c=o.cfg||{};
@@ -1358,8 +1363,10 @@ function cleanDk(o){
   for(const [k,v] of Object.entries(c.top||{}))if(ENTRY_ID.test(k)&&v&&typeof v==='object')r.cfg.top[k]={on:!!v.on,updated:T(v.updated)};
   for(const [k,v] of Object.entries(o.days||{})){
     const m=/^(\d{4}-\d{2}-\d{2})\|([a-z0-9_]{1,40})$/.exec(k);if(!m||!v||typeof v!=='object')continue;
-    r.days[k]={day:m[1],area:m[2],st:DS_ST[v.st]?v.st:'none',filled:!!v.filled,laser:!!v.laser,reason:ENTRY_ID.test(String(v.reason||''))?String(v.reason):'',
-      help:DS_HELP.some(h=>h[0]===v.help)?v.help:'',db:!!v.db,dbNo:String(v.dbNo||'').slice(0,40),note:String(v.note||'').slice(0,300),
+    const arr=(x,ok)=>(Array.isArray(x)?x:x?[x]:[]).map(String).filter(ok).slice(0,10);
+    r.days[k]={day:m[1],area:m[2],st:DS_ST[v.st]?v.st:'none',filled:!!v.filled,laser:!!v.laser,
+      reasons:arr(v.reasons||v.reason,x=>ENTRY_ID.test(x)),help:arr(v.help,x=>DS_HELP.some(h=>h[0]===x)),prsSup:arr(v.prsSup,x=>DS_PRS.some(h=>h[0]===x)),
+      why:DS_WHY.some(w=>w[0]===v.why)?v.why:'',db:!!v.db,dbNo:String(v.dbNo||'').slice(0,40),note:String(v.note||'').slice(0,300),
       by:v.by==='other'?'other':'me',check:['good','missed'].includes(v.check)?v.check:'',t:T(v.t),updated:T(v.updated)};
   }
   return r;
@@ -1386,9 +1393,11 @@ function dsAreas(all){
 const dsArea=id=>dsAreas(true).find(a=>a.id===id);
 const rec=(area,day=today())=>dk.days[day+'|'+area];
 function setRec(area,patch,day=today()){
-  const k=day+'|'+area,cur=dk.days[k]||{day,area,st:'none',filled:false,laser:false,reason:'',help:'',db:false,dbNo:'',note:'',by:'me',check:'',t:''};
+  const k=day+'|'+area,cur=dk.days[k]||{day,area,st:'none',filled:false,laser:false,reasons:[],help:[],prsSup:[],why:'',db:false,dbNo:'',note:'',by:'me',check:'',t:''};
   const n={...cur,...patch,updated:nowIso()};if(patch.st&&patch.st!==cur.st)n.t=nowIso();
-  if(n.st!=='follow'){n.reason='';n.help='';n.db=false;n.dbNo=''}
+  if(n.st!=='follow'){n.reasons=[];n.help=[];n.prsSup=[];n.db=false;n.dbNo=''}
+  else{const kinds=n.reasons.map(id=>(dsReason(id)||{}).kind);if(!kinds.includes('db')){n.db=false;n.dbNo=''}if(!kinds.includes('help'))n.help=[];if(!kinds.includes('prs'))n.prsSup=[]}
+  if(n.st!=='partly')n.why='';
   if(n.st==='none'){n.filled=false;n.laser=false}
   if(n.by!=='other')n.check='';
   dk.days[k]=n;return n;
@@ -1396,7 +1405,7 @@ function setRec(area,patch,day=today()){
 function lastDone(area){let best='';for(const r of Object.values(dk.days))if(r.area===area&&(r.st==='done')&&r.day>best)best=r.day;return best}
 function daysAgo(day){if(!day)return null;const a=new Date(day+'T00:00:00'),b=new Date(today()+'T00:00:00');return Math.round((b-a)/86400000)}
 const dsAgo=day=>{const n=daysAgo(day);return n==null?'never':n===0?'today':n===1?'yesterday':n+' days ago'};
-/* follow-ups and partly-done areas from earlier days that haven't been done since */
+/* follow-ups and partial-done areas from earlier days that haven't been done since */
 function carriedOver(){
   const latest=new Map();
   for(const r of Object.values(dk.days))if(r.day<today()){const c=latest.get(r.area);if(!c||r.day>c.day)latest.set(r.area,r)}
@@ -1407,15 +1416,39 @@ function carriedOver(){
 const isTop=id=>!!(dk.cfg.top[id]&&dk.cfg.top[id].on);
 function stPill(r){
   if(!r||r.st==='none')return '<span class="pill">Not done</span>';
-  const s=r.st==='done'?'<span class="pill Fixed">Done</span>':r.st==='partly'?'<span class="pill Open">Partly done</span>':'<span class="pill Needs">Follow-up</span>';
+  const s=r.st==='done'?'<span class="pill Fixed">Done</span>':r.st==='partly'?'<span class="pill Open">Partial</span>':'<span class="pill Needs">Follow-up</span>';
   return s+(r.filled?'<span class="pill dsx">Filled</span>':'')+(r.laser?'<span class="pill dsx">LaserLine</span>':'')+(r.by==='other'?`<span class="pill">${r.check==='missed'?'Others · missed empties':r.check==='good'?'Others · checked':'Done by others'}</span>`:'')
-    +(r.st==='follow'&&dsReason(r.reason)&&dsReason(r.reason).kind==='db'&&!r.db?'<span class="pill bad">Delta Buster not submitted</span>':'');
+    +(r.st==='follow'&&hasKind(r,'db')&&!r.db?'<span class="pill bad">Delta Buster not submitted</span>':'');
 }
+const hasKind=(r,kind)=>(r.reasons||[]).some(id=>(dsReason(id)||{}).kind===kind);
+const lbl=(L,keys)=>(keys||[]).map(k=>(L.find(x=>x[0]===k)||[,k])[1].toLowerCase()).join(', ');
 function reasonText(r){
-  const R=dsReason(r.reason);if(!R)return r.note||'';
-  let t=R.name;if(R.kind==='db')t+=r.db?` (Delta Buster${r.dbNo?' #'+r.dbNo:''} submitted)`:' (Delta Buster not submitted)';
-  if(R.kind==='help'&&r.help)t+=` (${DS_HELP.find(h=>h[0]===r.help)[1].toLowerCase()})`;
-  if(r.note)t+=': '+r.note;return t;
+  const parts=[];
+  if(r.st==='partly'&&r.why)parts.push(DS_WHY.find(w=>w[0]===r.why)[1]);
+  for(const id of r.reasons||[]){const R=dsReason(id);if(!R)continue;let t=R.name;
+    if(R.kind==='db')t+=r.db?` (Delta Buster${r.dbNo?' #'+r.dbNo:''} submitted)`:' (Delta Buster not submitted)';
+    if(R.kind==='help'&&r.help.length)t+=` (${lbl(DS_HELP,r.help)})`;
+    if(R.kind==='prs'&&r.prsSup.length)t+=` (${lbl(DS_PRS,r.prsSup)})`;
+    parts.push(t)}
+  let t=parts.join('; ');if(r.note)t+=(t?': ':'')+r.note;return t;
+}
+/* the follow-up choices, shared by the area sheet and Finish run. s = the area's working state */
+function followHtml(s){
+  const on=k=>s.reasons.some(id=>(dsReason(id)||{}).kind===k);
+  return `<div class="fustack"><div class="chips">${dsReasons().map(R=>`<button type="button" class="chip" data-reason="${R.id}" aria-pressed="${s.reasons.includes(R.id)}">${esc(R.name)}</button>`).join('')}</div>
+    ${on('db')?`<div class="rite"><label class="switch"><input type="checkbox" data-db ${s.db?'checked':''}><span>Delta Buster submitted</span></label><input type="text" data-dbno maxlength="40" value="${esc(s.dbNo||'')}" placeholder="Delta Buster number (optional)" aria-label="Delta Buster number"></div>`:''}
+    ${on('help')?`<div><span class="label">What's needed <span class="lsub">pick any</span></span><div class="chips">${DS_HELP.map(([k,t])=>`<button type="button" class="chip" data-help="${k}" aria-pressed="${s.help.includes(k)}">${t}</button>`).join('')}</div></div>`:''}
+    ${on('prs')?`<div><span class="label">What's short <span class="lsub">pick any</span></span><div class="chips">${DS_PRS.map(([k,t])=>`<button type="button" class="chip" data-prss="${k}" aria-pressed="${s.prsSup.includes(k)}">${t}</button>`).join('')}</div></div>`:''}</div>`;
+}
+function whyHtml(s){return `<div><span class="label">Why partial</span><div class="chips">${DS_WHY.map(([k,t])=>`<button type="button" class="chip" data-why="${k}" aria-pressed="${s.why===k}">${t}</button>`).join('')}</div></div>`}
+/* handles a tap on any follow-up / partial choice; returns true if it changed s */
+function followTap(b,s){
+  const tog=(a,k)=>a.includes(k)?a.filter(x=>x!==k):[...a,k];
+  if(b.dataset.reason){s.reasons=tog(s.reasons,b.dataset.reason);return true}
+  if(b.dataset.help){s.help=tog(s.help,b.dataset.help);return true}
+  if(b.dataset.prss){s.prsSup=tog(s.prsSup,b.dataset.prss);return true}
+  if(b.dataset.why){s.why=s.why===b.dataset.why?'':b.dataset.why;return true}
+  return false;
 }
 
 /* ---------- the current run (kept on this device) ---------- */
@@ -1431,7 +1464,7 @@ function renderDs(){
   const pct=A.length?Math.round(n.done/A.length*100):0;
   const top=A.filter(a=>isTop(a.id)&&!(rec(a.id)&&rec(a.id).st==='done'));
   const carried=carriedOver();
-  const liftCarry=carried.filter(r=>r.help==='lift');
+  const liftCarry=carried.filter(r=>(r.help||[]).includes('lift'));
   const runSet=new Set(dsRun?dsRun.areas:[]);
   const row=a=>{const r=rec(a.id);const ld=lastDone(a.id);
     return `<button type="button" class="dsrow${runSet.has(a.id)?' inrun':''}" data-area="${a.id}"><span class="dsn">${esc(a.whole?a.name:a.name)}${isTop(a.id)?' <span class="toptag">top stock</span>':''}</span>
@@ -1439,7 +1472,7 @@ function renderDs(){
   const want=a=>{const r=rec(a.id),st=r?r.st:'none';return dsFilter==='all'||(dsFilter==='todo'&&st!=='done')||(dsFilter==='follow'&&(st==='follow'||st==='partly'))};
   const byDept=new Map();for(const a of A){if(!byDept.has(a.dept.id))byDept.set(a.dept.id,{d:a.dept,areas:[]});byDept.get(a.dept.id).areas.push(a)}
   el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Downstock · ${esc(new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}))}</h2></div>
-  <div class="panel dscov"><div class="covtop"><b>${pct}%</b><span>${n.done} of ${A.length} areas done${n.partly?` · ${n.partly} partly`:''}${n.follow?` · ${n.follow} follow-up`:''}</span></div>
+  <div class="panel dscov"><div class="covtop"><b>${pct}%</b><span>${n.done} of ${A.length} areas done${n.partly?` · ${n.partly} partial`:''}${n.follow?` · ${n.follow} follow-up`:''}</span></div>
     <div class="covbar"><i class="d" style="width:${A.length?n.done/A.length*100:0}%"></i><i class="p" style="width:${A.length?(n.partly+n.follow)/A.length*100:0}%"></i></div></div>
   ${dsRun?`<div class="panel dsrun"><div><b>Run in progress</b><span class="muted"> · ${dsRun.areas.length} area${dsRun.areas.length===1?'':'s'} · started ${esc(fmtDT(dsRun.started))}</span></div>
       <div class="dsrunlist">${dsRun.areas.map(id=>{const a=dsArea(id);return a?`<span class="chip static">${esc(a.label)}</span>`:''}).join('')}</div>
@@ -1467,21 +1500,20 @@ $('#v-ds').addEventListener('click',e=>{const r=e.target.closest('.dsrow');if(r)
 /* ---------- one area: set today's status ---------- */
 function openAreaSheet(id){
   const a=dsArea(id);if(!a)return;
-  const r0=rec(id)||{st:'none',filled:false,laser:false,reason:'',help:'',db:false,dbNo:'',note:'',by:'me',check:''};
-  const s={...r0};const prev=carriedOver().find(x=>x.area===id);
+  const r0=rec(id)||{st:'none',filled:false,laser:false,reasons:[],help:[],prsSup:[],why:'',db:false,dbNo:'',note:'',by:'me',check:''};
+  const s={...r0,reasons:[...(r0.reasons||[])],help:[...(r0.help||[])],prsSup:[...(r0.prsSup||[])]};const prev=carriedOver().find(x=>x.area===id);
   const seg=(k,opts,cur)=>`<div class="seg" data-f="${k}" role="group">${opts.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="${cur===v}">${t}</button>`).join('')}</div>`;
   const paint=()=>{
     $('#asBody').innerHTML=`
-      <div><span class="label">Today</span>${seg('st',[['none','Not done'],['partly','Partly'],['done','Done'],['follow','Follow-up']],s.st)}</div>
+      <div><span class="label">Today</span>${seg('st',[['none','Not done'],['partly','Partial'],['done','Done'],['follow','Follow-up']],s.st)}</div>
       ${s.st!=='none'?`<div><span class="label">Extras <span class="lsub">pick any</span></span><div class="chips"><button type="button" class="chip" data-x="filled" aria-pressed="${s.filled}">Filled</button><button type="button" class="chip" data-x="laser" aria-pressed="${s.laser}">LaserLine</button></div></div>
       <div><span class="label">Who did it</span>${seg('by',[['me','Me'],['other','Someone else']],s.by)}</div>
       ${s.by==='other'?`<div><span class="label">Spot-check</span>${seg('check',[['','Not checked'],['good','Looks good'],['missed','Missed empties']],s.check)}${s.check==='missed'?'<p class="note" style="margin:4px 0 0">Missed empties means stock was available but the spot was left empty.</p>':''}</div>`:''}`:''}
-      ${s.st==='follow'?`<div><span class="label">Why it needs follow-up</span><div class="chips">${dsReasons().map(R=>`<button type="button" class="chip" data-reason="${R.id}" aria-pressed="${s.reason===R.id}">${esc(R.name)}</button>`).join('')}</div></div>
-        ${dsReason(s.reason)&&dsReason(s.reason).kind==='db'?`<div class="rite"><label class="switch"><input type="checkbox" id="asDb" ${s.db?'checked':''}><span>Delta Buster submitted</span></label><input type="text" id="asDbNo" maxlength="40" value="${esc(s.dbNo)}" placeholder="Delta Buster number (optional)" aria-label="Delta Buster number"></div>`:''}
-        ${dsReason(s.reason)&&dsReason(s.reason).kind==='help'?`<div><span class="label">What's needed</span><div class="chips">${DS_HELP.map(([k,t])=>`<button type="button" class="chip" data-help="${k}" aria-pressed="${s.help===k}">${t}</button>`).join('')}</div></div>`:''}`:''}
+      ${s.st==='follow'?`<div><span class="label">Why it needs follow-up <span class="lsub">pick any</span></span>${followHtml(s)}</div>`:''}
+      ${s.st==='partly'?whyHtml(s):''}
       ${s.st!=='none'?`<div><label class="label" for="asNote">Note <span class="lsub">optional, e.g. stopped at bay 4</span></label><input type="text" id="asNote" maxlength="300" value="${esc(s.note)}"></div>`:''}`;
-    const dbi=$('#asDb');if(dbi)dbi.onchange=()=>{s.db=dbi.checked};
-    const dbn=$('#asDbNo');if(dbn)dbn.oninput=()=>{s.dbNo=dbn.value.trim()};
+    const dbi=$('#asBody [data-db]');if(dbi)dbi.onchange=()=>{s.db=dbi.checked};
+    const dbn=$('#asBody [data-dbno]');if(dbn)dbn.oninput=()=>{s.dbNo=dbn.value.trim()};
     const nt=$('#asNote');if(nt)nt.oninput=()=>{s.note=nt.value.trim()};
   };
   openSheet(`<div class="head"><div><h2>${esc(a.name)}</h2><span class="muted" style="font-size:13px">${esc(a.whole?'Whole department':a.dept.name)} · last done ${esc(dsAgo(lastDone(id)))}${isTop(id)?' · top stock':''}</span></div><button class="btn small" data-close>Close</button></div>
@@ -1491,14 +1523,13 @@ function openAreaSheet(id){
   paint();
   $('#asBody').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
     const f=b.closest('[data-f]');
-    if(f){s[f.dataset.f]=b.dataset.v;if(f.dataset.f==='st'&&s.st==='follow'&&prev&&prev.st==='follow'&&!s.reason){s.reason=prev.reason;s.help=prev.help;s.db=prev.db;s.dbNo=prev.dbNo}paint();return}
+    if(f){s[f.dataset.f]=b.dataset.v;if(f.dataset.f==='st'&&s.st==='follow'&&prev&&prev.st==='follow'&&!s.reasons.length){Object.assign(s,{reasons:[...prev.reasons],help:[...prev.help],prsSup:[...prev.prsSup],db:prev.db,dbNo:prev.dbNo})}paint();return}
     if(b.dataset.x){s[b.dataset.x]=!s[b.dataset.x];paint();return}
-    if(b.dataset.reason){s.reason=s.reason===b.dataset.reason?'':b.dataset.reason;paint();return}
-    if(b.dataset.help){s.help=s.help===b.dataset.help?'':b.dataset.help;paint()}
+    if(followTap(b,s))paint();
   });
   $('#asSave').onclick=async()=>{
-    if(s.st==='follow'&&!s.reason){toast('Pick why it needs follow-up.');return}
-    setRec(id,{st:s.st,filled:s.filled,laser:s.laser,reason:s.reason,help:s.help,db:s.db,dbNo:s.dbNo,note:s.note,by:s.by,check:s.check});
+    if(s.st==='follow'&&!s.reasons.length){toast('Pick why it needs follow-up.');return}
+    setRec(id,{st:s.st,filled:s.filled,laser:s.laser,reasons:s.reasons,help:s.help,prsSup:s.prsSup,why:s.why,db:s.db,dbNo:s.dbNo,note:s.note,by:s.by,check:s.check});
     try{await saveDk();closeSheet();renderDs();toast(`${a.name}: ${DS_ST[s.st]}.`,s.check==='missed'?[['Log issue',()=>dsLogIssue(id,'Missed empties on a downstock run (spot-check)')]]:[])}catch(err){toast('Couldn\'t save. Try again.')}
   };
   $('#asIssue').onclick=()=>{closeSheet();dsLogIssue(id)};
@@ -1561,31 +1592,29 @@ function openRunPicker(){
 }
 function openRunFinish(){
   if(!dsRun)return;
-  const st=new Map(dsRun.areas.filter(id=>dsArea(id)).map(id=>[id,{st:'done',filled:false,laser:false,reason:'',db:false,help:''}]));
+  const st=new Map(dsRun.areas.filter(id=>dsArea(id)).map(id=>[id,{st:'done',filled:false,laser:false,reasons:[],help:[],prsSup:[],why:'',db:false,dbNo:''}]));
   const paint=()=>{
     $('#rfBody').innerHTML=[...st].map(([id,s])=>{const a=dsArea(id);
       return `<li class="rfrow" data-id="${id}"><div class="rfname">${esc(a.label)}</div>
-        <div class="seg" data-f="st">${[['done','Done'],['partly','Partly'],['follow','Follow-up'],['none','Not done']].map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="${s.st===v}">${t}</button>`).join('')}</div>
+        <div class="seg" data-f="st">${[['done','Done'],['partly','Partial'],['follow','Follow-up'],['none','Not done']].map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="${s.st===v}">${t}</button>`).join('')}</div>
         ${s.st==='done'||s.st==='partly'?`<div class="chips"><button type="button" class="chip" data-x="filled" aria-pressed="${s.filled}">Filled</button><button type="button" class="chip" data-x="laser" aria-pressed="${s.laser}">LaserLine</button></div>`:''}
-        ${s.st==='follow'?`<div class="chips">${dsReasons().map(R=>`<button type="button" class="chip" data-reason="${R.id}" aria-pressed="${s.reason===R.id}">${esc(R.name)}</button>`).join('')}</div>
-          ${dsReason(s.reason)&&dsReason(s.reason).kind==='db'?`<label class="switch"><input type="checkbox" data-db ${s.db?'checked':''}><span>Delta Buster submitted</span></label>`:''}
-          ${dsReason(s.reason)&&dsReason(s.reason).kind==='help'?`<div class="chips">${DS_HELP.map(([k,t])=>`<button type="button" class="chip" data-help="${k}" aria-pressed="${s.help===k}">${t}</button>`).join('')}</div>`:''}`:''}</li>`}).join('');
+        ${s.st==='follow'?followHtml(s):''}${s.st==='partly'?whyHtml(s):''}</li>`}).join('');
   };
   openSheet(`<div class="head"><div><h2>Finish run</h2><span class="muted" style="font-size:13px">Everything is Done unless you change it.</span></div><button class="btn small" data-close>Back</button></div>
     <ul class="rflist" id="rfBody"></ul>
-    <p class="note" style="margin:0">Delta Buster numbers and notes can be added afterwards by tapping the area on the board.</p>
+    <p class="note" style="margin:0">Notes can be added afterwards by tapping the area on the board.</p>
     <button class="btn primary big" type="button" id="rfSave">Save run</button>`);
   paint();
   $('#rfBody').addEventListener('click',e=>{const b=e.target.closest('button');const li=e.target.closest('.rfrow');if(!b||!li)return;const s=st.get(li.dataset.id);
     if(b.closest('[data-f]')){s.st=b.dataset.v;paint();return}
     if(b.dataset.x){s[b.dataset.x]=!s[b.dataset.x];paint();return}
-    if(b.dataset.reason){s.reason=s.reason===b.dataset.reason?'':b.dataset.reason;paint();return}
-    if(b.dataset.help){s.help=s.help===b.dataset.help?'':b.dataset.help;paint()}
+    if(followTap(b,s))paint();
   });
   $('#rfBody').addEventListener('change',e=>{if(e.target.matches('[data-db]')){st.get(e.target.closest('.rfrow').dataset.id).db=e.target.checked}});
+  $('#rfBody').addEventListener('input',e=>{if(e.target.matches('[data-dbno]')){st.get(e.target.closest('.rfrow').dataset.id).dbNo=e.target.value.trim()}});
   $('#rfSave').onclick=async()=>{
-    for(const [id,s] of st)if(s.st==='follow'&&!s.reason){toast(`Pick why ${dsArea(id).name} needs follow-up.`);return}
-    for(const [id,s] of st)if(s.st!=='none')setRec(id,{st:s.st,filled:s.filled,laser:s.laser,reason:s.reason,help:s.help,db:s.db,by:'me',check:''});
+    for(const [id,s] of st)if(s.st==='follow'&&!s.reasons.length){toast(`Pick why ${dsArea(id).name} needs follow-up.`);return}
+    for(const [id,s] of st)if(s.st!=='none')setRec(id,{st:s.st,filled:s.filled,laser:s.laser,reasons:s.reasons,help:s.help,prsSup:s.prsSup,why:s.why,db:s.db,dbNo:s.dbNo,by:'me',check:''});
     dsRun=null;saveRun();
     try{await saveDk();closeSheet();renderDs();const d=[...st.values()].filter(s=>s.st==='done').length;toast(`Run saved: ${d} done${st.size-d?`, ${st.size-d} other`:''}.`)}catch(e){toast('Couldn\'t save. Try again.')}
   };
@@ -1603,7 +1632,7 @@ function dsSummary(day){
   const fol=A.map(a=>({a,r:rec(a.id,day)})).filter(x=>x.r&&x.r.st==='follow');
   if(fol.length)L.push('',`Follow-up (${fol.length}):`,...fol.map(x=>`• ${x.a.label}: ${reasonText(x.r)}`));
   const par=A.map(a=>({a,r:rec(a.id,day)})).filter(x=>x.r&&x.r.st==='partly');
-  if(par.length)L.push('',`Partly done (${par.length}):`,...par.map(x=>`• ${x.a.label}${x.r.note?': '+x.r.note:''}`));
+  if(par.length)L.push('',`Partial (${par.length}):`,...par.map(x=>`• ${x.a.label}${reasonText(x.r)?': '+reasonText(x.r):''}`));
   const nd=A.filter(a=>{const r=rec(a.id,day);return !r||r.st==='none'});
   if(nd.length){const g=new Map();for(const a of nd){if(!g.has(a.dept.name))g.set(a.dept.name,[]);if(!a.whole)g.get(a.dept.name).push(a.name)}
     L.push('',`Not done (${nd.length}):`,...[...g].map(([dn,ps])=>`• ${dn}${ps.length>4?` (${ps.length})`:ps.length?': '+ps.join(', '):''}`))}
@@ -1616,14 +1645,14 @@ function renderDsDays(){
   const A=dsAreas();
   const stale=A.map(a=>({a,ld:lastDone(a.id)})).sort((x,y)=>(x.ld||'').localeCompare(y.ld||'')).filter(x=>!x.ld||daysAgo(x.ld)>=2).slice(0,15);
   const month=today().slice(0,7);const dbs=Object.values(dk.days).filter(r=>r.day.startsWith(month)&&r.db).length;
-  const reasonsM=countBy(Object.values(dk.days).filter(r=>r.day.startsWith(month)&&r.st==='follow'),r=>dsReason(r.reason)?dsReason(r.reason).name:'Other');
+  const reasonsM=countBy(Object.values(dk.days).filter(r=>r.day.startsWith(month)&&r.st==='follow').flatMap(r=>r.reasons.map(id=>({n:dsReason(id)?dsReason(id).name:'Other'}))),x=>x.n);
   el.innerHTML=`<h2>Downstock days</h2>
   <div class="tiles"><div class="tile"><span class="v">${dbs}</span><span class="k">Delta Busters this month</span></div>
     <div class="tile"><span class="v">${days.length?Math.round(days.slice(0,7).reduce((a,d)=>{const s=dsDayStats(d);return a+(s.total?s.done/s.total:0)},0)/Math.min(7,days.length)*100):0}%</span><span class="k">Average coverage, last ${Math.min(7,days.length)} days</span></div></div>
   <div class="list">${days.map(d=>{const s=dsDayStats(d);const p=s.total?Math.round(s.done/s.total*100):0;
     return `<div class="panel dsday"><div class="row" style="justify-content:space-between"><b>${esc(new Date(d+'T12:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}))}</b><span class="mono">${p}%</span></div>
       <div class="covbar"><i class="d" style="width:${s.total?s.done/s.total*100:0}%"></i><i class="p" style="width:${s.total?(s.partly+s.follow)/s.total*100:0}%"></i></div>
-      <span class="muted" style="font-size:13px">${s.done} done · ${s.partly} partly · ${s.follow} follow-up${s.filled?` · ${s.filled} filled`:''}${s.laser?` · ${s.laser} LaserLine`:''}${s.other?` · ${s.other} by others${s.missed?` (${s.missed} missed)`:''}`:''}</span>
+      <span class="muted" style="font-size:13px">${s.done} done · ${s.partly} partial · ${s.follow} follow-up${s.filled?` · ${s.filled} filled`:''}${s.laser?` · ${s.laser} LaserLine`:''}${s.other?` · ${s.other} by others${s.missed?` (${s.missed} missed)`:''}`:''}</span>
       <button class="btn small" type="button" data-sum="${d}">Copy summary</button></div>`}).join('')}</div>
   <section class="panel lsec"><header><h3>Not done lately</h3></header>${stale.length?`<div class="hot">${stale.map(x=>`<div><b>${x.ld?daysAgo(x.ld)+'d':'—'}</b><span>${esc(x.a.label)}</span></div>`).join('')}</div>`:'<p class="note" style="margin:0">Every area has been done in the last 2 days.</p>'}</section>
   <section class="panel lsec"><header><h3>Follow-up reasons this month</h3></header>${bars(reasonsM,null,8)}</section>`;
@@ -1639,7 +1668,7 @@ function dsListsHtml(){
   return `<section class="panel lsec" id="dsPanel"><header><h3>Downstock</h3></header>
   <div><span class="label">Follow-up reasons</span><ul class="lrows">${R.map(r=>`<li class="ladd"><input type="text" data-dsr="${r.id}" value="${esc(r.name)}" maxlength="80" aria-label="Reason name" ${r.archived?'disabled':''}><button class="btn small${r.archived?'':' ghost'}" type="button" data-dsarch="${r.id}">${r.archived?'Restore':'Hide'}</button></li>`).join('')}</ul>
     <div class="ladd" style="margin-top:6px"><input type="text" id="dsNewR" maxlength="80" placeholder="Add a reason"><button class="btn small" type="button" data-dsact="addr">Add</button></div>
-    <p class="note" style="margin:4px 0 0">“${esc(dsReason(sid('r',DS_REASON_DEFAULTS[0][0]))?.name||'')}” asks about a Delta Buster; “${esc(dsReason(sid('r',DS_REASON_DEFAULTS[1][0]))?.name||'')}” asks what's needed (lift, ladder…).</p></div>
+    <p class="note" style="margin:4px 0 0">Some starter reasons ask for details: “${esc(dsReason(sid('r',DS_REASON_DEFAULTS[0][0]))?.name||'')}” asks about a Delta Buster, “${esc(dsReason(sid('r',DS_REASON_DEFAULTS[1][0]))?.name||'')}” what's needed, and “${esc(dsReason(sid('r',DS_REASON_DEFAULTS[2][0]))?.name||'')}” what's short.</p></div>
   <div><span class="label">Saved groups <span class="lsub">planograms you walk together; make them when starting a run</span></span>${groups.length?`<ul class="lrows">${groups.map(g=>`<li class="arow"><span>${esc(g.name)}</span><span class="muted mono">${g.areas.length}</span><span></span><button class="ib del${armedKey==='grp:'+g.id?' armed':''}" type="button" data-dsdelg="${g.id}" aria-label="Delete group"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></li>`).join('')}</ul>`:'<p class="note" style="margin:0">None yet. On the Downstock board, start a run, pick planograms, then tap Save as a group.</p>'}</div>
   <details class="arch" ${dsListOpen.has('top')?'open':''} data-dsopen="top"><summary>Top-stock sections (${nTop})</summary>
     <p class="note">Planograms with stock up top that needs the lift. They're listed first on the board each morning.</p>
@@ -1657,7 +1686,7 @@ function dsListsHtml(){
     if(b.dataset.dsskip){const id=b.dataset.dsskip;if(!dk.cfg.skip)dk.cfg.skip={};dk.cfg.skip[id]={on:!isSkip(id),updated:nowIso()};await saveDk();renderLists();return}
     if(b.dataset.dsarch){const r=dk.cfg.reasons[b.dataset.dsarch];r.archived=!r.archived;r.updated=nowIso();await saveDk();renderLists();return}
     if(b.dataset.dsdelg){const id=b.dataset.dsdelg;if(armedKey!=='grp:'+id){arm('grp:'+id);return}armedKey=null;dk.cfg.groups[id]={...dk.cfg.groups[id],deleted:true,updated:nowIso()};await saveDk();renderLists();return}
-    if(b.dataset.dsact==='addr'){const i=$('#dsNewR');const n=i.value.trim();if(!n)return;const id=rid('r');dk.cfg.reasons[id]={id,name:n.slice(0,80),kind:'',order:dsReasons(true).length,archived:false,updated:nowIso()};await saveDk();renderLists()}
+    if(b.dataset.dsact==='addr'){const i=$('#dsNewR');const n=i.value.trim();if(!n)return;const id=rid('r');dk.cfg.reasons[id]={id,name:n.slice(0,80),kind:'',order:50+dsReasons(true).length,archived:false,updated:nowIso()};await saveDk();renderLists()}
   });
   el.addEventListener('change',async e=>{const t=e.target;if(t.dataset&&t.dataset.dsr){const r=dk.cfg.reasons[t.dataset.dsr];const n=t.value.trim();if(!n){t.value=r.name;return}r.name=n.slice(0,80);r.updated=nowIso();await saveDk()}});
   el.addEventListener('keydown',e=>{if(e.target.id==='dsNewR'&&e.key==='Enter'){e.preventDefault();$('#dsPanel [data-dsact=addr]').click()}});
