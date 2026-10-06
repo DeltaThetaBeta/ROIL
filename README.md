@@ -78,7 +78,7 @@ Switch between **Issues** and **Downstock** at the top of the screen. Downstock 
 - **Today** is a board of every area. An area is a planogram, or a whole department if it has no planograms.
   - **Statuses:**
     - **Not done**
-    - **Partly**
+    - **Partial**
     - **Done** (the empties are filled)
     - **Follow-up**, with a reason
   - **Extras** you can add to any area: **Filled** (restocked beyond the empties) and **LaserLine** (fronted).
@@ -86,15 +86,17 @@ Switch between **Issues** and **Downstock** at the top of the screen. Downstock 
   - The board starts fresh each day, and every day is kept.
 - **Runs:** tap **Start a run** and pick the planograms you're about to walk. You can pick them from the list or a saved group, or by scanning shelf tags. Tap **Finish run** when you're done:
   - Everything is marked **Done** unless you change it.
-  - You can add Filled or LaserLine, or mark an area Partly or Follow-up.
+  - You can add Filled or LaserLine, or mark an area Partial or Follow-up.
   - **Save as a group** remembers planograms you always walk together.
-- **Follow-up reasons:**
+- **Follow-up reasons** (pick as many as apply to one planogram):
   - **Couldn't find in overstock** asks whether a **Delta Buster** was submitted (with an optional number). Until it is, a **"Delta Buster not submitted"** pill shows.
-  - **Needs equipment or help** asks what's needed: a lift (needs a spotter), a ladder, a second person, or it's a heavy or bulky item.
-  - **Waiting on PRS supplies** and **Other** are the defaults too.
+  - **Needs equipment or help** asks what's needed (pick any): a lift (needs a spotter), a ladder, a second person, or a heavy or bulky item.
+  - **Waiting on PRS supplies** asks what's short (pick any): spider wraps, clamshells, limit-one tags or other.
+  - **Overstock in the wrong spot or mixed**, **Overstock blocked** and **Other** are the defaults too.
+- **Partial** asks why: ran out of time, pulled to another task, store opened (the lift needs a spotter) or other. The note is for things like "stopped at bay 4".
 
   You can rename, add or hide reasons in Lists → Downstock.
-- **Carried over:** follow-ups and partly done areas from earlier days stay at the top until they're done.
+- **Carried over:** follow-ups and partial areas from earlier days stay at the top until they're done.
 - **Do these first: top stock.** Mark top-stock sections in Lists → Downstock, and they're listed first each morning, together with lift follow-ups from earlier days.
 - **Not downstocked:** in Lists → Downstock, leave out departments or planograms that never get downstocked, so they don't count against coverage.
 - **Someone else's work:** mark an area **Done by someone else**, then spot-check it later as **Looks good** or **Missed empties** (stock was available but the spot was left empty).
