@@ -468,6 +468,16 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 .tunl button{min-height:38px;font-size:14px}
 .texp{border-style:dashed}
 .st-exp{background:transparent;border:2px dashed var(--accent);color:var(--accent)}
+.thead{display:flex;align-items:flex-start;gap:8px}.thead .linkish{font-size:13px;padding-top:2px}
+.tsum{flex:1;display:flex;gap:8px;align-items:flex-start;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit;cursor:pointer;min-height:40px}
+.tsum>span{display:grid;gap:2px}.tsum small{font-size:13px;color:var(--muted)}.tsum em{font-style:normal;font-weight:700;color:var(--follow)}
+.tsum .chev{width:14px;height:14px;flex:none;margin-top:4px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.tsum[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.tcard.folded{padding:8px 12px;gap:0}.tcard.attn{border-color:var(--follow)}
+.st-sb{background:repeating-linear-gradient(45deg,var(--accent-soft,var(--sunk)) 0 5px,color-mix(in srgb,var(--accent) 40%,var(--surface)) 5px 10px);color:var(--accent)}
+.st-sbreq{background:color-mix(in srgb,var(--good) 70%,var(--surface))}
+.st-miss{background:var(--bad)}.cseg svg,.legend2 i svg{width:11px;height:11px;fill:currentColor;stroke:currentColor;stroke-width:1.2;stroke-linejoin:round}
+.warnline{color:var(--bad)}.flagi svg{width:12px;height:12px;fill:currentColor;stroke:currentColor;stroke-width:1.2;margin-right:5px;vertical-align:-1px}
 .tpaper{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px}.tpaper .linkish{font-size:13px}.tpaper b{letter-spacing:.02em}
 .tload{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:14px}.tload .linkish{font-size:13px}
 .tload3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.tload3 label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
@@ -1343,7 +1353,7 @@ function syncHtml(){
 
 /* ---------- Notes for later: quick jots about ROIL itself (bugs, ideas) while you're on the floor ----------
    Synced with your other devices and kept in backups, so you can read them at home. */
-const APP_VERSION='roil-pages-24';
+const APP_VERSION='roil-pages-25';
 const NOTE_TYPES=[['bug','Bug'],['improve','Improvement'],['feature','Feature idea'],['other','Other']];
 const noteType=k=>(NOTE_TYPES.find(t=>t[0]===k)||NOTE_TYPES[3])[1];
 let notes={};   // id -> {id,type,text,ctx,created,updated,done,deleted}
@@ -1818,6 +1828,7 @@ function cleanTrucks(o){
     r[k]={id:k,type:t.type,arrived:D(t.arrived),expected:!!t.expected,dropped:!!t.dropped,emptied:D(t.emptied),pickupReq:D(t.pickupReq),pickedUp:D(t.pickedUp),
       pieces:Math.max(0,Math.min(99999,parseInt(t.pieces,10)||0)),cube:Math.max(0,Math.min(99999,Math.round((parseFloat(t.cube)||0)*10)/10)),
       palTotal:t.palTotal===''||t.palTotal==null?'':Math.max(0,Math.min(999,parseInt(t.palTotal,10)||0)),loadNote:String(t.loadNote||'').slice(0,200),manifest:paperId(t.manifest),trailer:paperId(t.trailer),
+      sb:!!(t.sb&&t.dropped),sbBol:paperId(t.sbBol),sbReqs:Array.isArray(t.sbReqs)?[...new Set(t.sbReqs.map(D).filter(Boolean))].sort().slice(-30):[],sbMiss:Array.isArray(t.sbMiss)?[...new Set(t.sbMiss.map(D).filter(Boolean))].sort().slice(-30):[],sbChk:D(t.sbChk),
       pallets:Math.max(0,Math.min(999,parseInt(t.pallets,10)||0)),store:STORE_LV.some(s=>s[0]===t.store)?t.store:'none',
       floor:Array.isArray(t.floor)?t.floor.filter(x=>ENTRY_ID.test(String(x))).slice(0,40):[],finished:D(t.finished),deleted:!!t.deleted,log,updated:String(t.updated||'').slice(0,40)}}
   return r;
@@ -1838,7 +1849,23 @@ function weekMonday(s){const d=dayOf(s),w=d.getDay();return addDays(s,w===6?2:w=
 const weekStart=s=>addDays(weekMonday(s),-2),weekEnd=s=>addDays(weekMonday(s),4);
 function weekdaysBetween(a,b){let n=0;for(let d=a;d<b;d=addDays(d,1)){const w=dayOf(addDays(d,1)).getDay();if(w>0&&w<6)n++}return n}
 const liveTrucks=()=>Object.values(dk.trucks||{}).filter(t=>!t.deleted).sort((a,b)=>b.arrived.localeCompare(a.arrived));
-const truckOpen=t=>t.expected||!t.finished||(t.dropped&&!t.pickedUp);
+/* Southbound: an emptied inbound trailer loaded with RLC and other outbound freight.
+   Requesting pickup counts as picked up; the next Monday asks whether it's still here. */
+function nextMonday(d){let x=addDays(d,1);while(dayOf(x).getDay()!==1)x=addDays(x,1);return x}
+function sbLastReq(t,d=today()){const r=(t.sbReqs||[]).filter(x=>x<=d);return r.length?r[r.length-1]:''}
+function sbLastMiss(t,d=today()){const r=(t.sbMiss||[]).filter(x=>x<=d);return r.length?r[r.length-1]:''}
+function sbState(t,d=today()){   // 'load' (not requested) | 'req' (requested, counted as gone) | 'miss' (still here) | 'picked'
+  if(t.pickedUp&&d>=t.pickedUp)return 'picked';
+  const r=sbLastReq(t,d),m=sbLastMiss(t,d);
+  if(!r&&!m)return 'load';if(!m)return 'req';if(!r)return 'miss';return r>=m?'req':'miss';
+}
+function trailerGone(t){if(t.pickedUp)return t.pickedUp;return t.sb&&sbState(t)==='req'?sbLastReq(t):''}
+function sbCheckDue(t){
+  if(!t.sb||t.pickedUp||sbState(t)!=='req')return '';
+  const mon=nextMonday(sbLastReq(t)),T=today();
+  return T>=mon&&T<=addDays(mon,2)&&t.sbChk!==mon?mon:'';
+}
+const truckOpen=t=>t.expected||!t.finished||(t.dropped&&!trailerGone(t))||!!sbCheckDue(t);
 const arrivedTrucks=()=>liveTrucks().filter(t=>!t.expected);   // expected trucks (load entered from the email, not here yet) stay out of stats
 function saveTruck(t){t.updated=nowIso();t.log={...t.log,[today()]:{pallets:t.pallets,store:t.store}};dk.trucks[t.id]=t;return saveDk()}
 /* scheduled trucks from the last 2 days that haven't been answered yet */
@@ -1850,21 +1877,22 @@ function truckPrompts(){
       if(liveTrucks().some(t=>t.type===type&&t.arrived===d))continue;if(dk.cfg.dismiss&&dk.cfg.dismiss[type+'|'+d])continue;out.push({type,day:d})}}
   return out;
 }
-function newTruck(type,day,dropped){const id=rid('t');const t={id,type,arrived:day,pieces:0,cube:0,palTotal:'',loadNote:'',manifest:'',trailer:'',dropped:dropped??TRUCKS[type].dropped,emptied:'',pickupReq:'',pickedUp:'',pallets:0,store:'none',floor:[],finished:'',deleted:false,log:{},updated:''};return saveTruck(t).then(()=>t)}
+function newTruck(type,day,dropped){const id=rid('t');const t={id,type,arrived:day,pieces:0,cube:0,palTotal:'',loadNote:'',manifest:'',trailer:'',sb:false,sbBol:'',sbReqs:[],sbMiss:[],sbChk:'',dropped:dropped??TRUCKS[type].dropped,emptied:'',pickupReq:'',pickedUp:'',pallets:0,store:'none',floor:[],finished:'',deleted:false,log:{},updated:''};return saveTruck(t).then(()=>t)}
 function trucksHtml(){
   const P=truckPrompts(),open=liveTrucks().filter(truckOpen);
   if(!P.length&&!open.length)return `<div class="row"><button class="btn small ghost" type="button" data-tr="arrived">Truck arrived today</button><button class="btn small ghost" type="button" data-tr="past">Add a past truck</button></div>`;
   const stage=(t,k,label)=>`<button type="button" class="tstage${t[k]?' on':''}" data-tr="stage" data-k="${k}" data-id="${t.id}">${label}${t[k]?`<small>${esc(shortDay(t[k]))}</small>`:''}</button>`;
   return `<section class="panel lsec trucks"><header><h3>Trucks</h3><button class="btn small ghost" type="button" data-tr="arrived">Arrived today</button><button class="btn small ghost" type="button" data-tr="past">Add past</button></header>
   ${P.map(p=>`<div class="tprompt"><span><b>${TRUCKS[p.type].full}</b> ${p.day===today()?'is due today':'was due '+esc(shortDay(p.day))}. Has it arrived?</span><span class="row"><button class="btn small primary" type="button" data-tr="came" data-type="${p.type}" data-day="${p.day}">Arrived</button><button class="btn small" type="button" data-tr="nocome" data-type="${p.type}" data-day="${p.day}">Didn't arrive</button><button class="btn small ghost" type="button" data-tr="expect" data-type="${p.type}" data-day="${p.day}">Add load from email</button></span></div>`).join('')}
-  ${open.map(t=>{const age=calDays(t.arrived,today());const done=!!t.finished;
-    if(t.expected)return `<div class="tcard texp" data-truck="${t.id}"><div class="row" style="justify-content:space-between"><b>${TRUCKS[t.type].name} · expected ${t.arrived===today()?'today':esc(shortDay(t.arrived))}</b><button type="button" class="linkish" data-tr="edit" data-id="${t.id}">Edit load</button></div>${paperHtml(t,true)}
+  ${open.map(t=>{const age=calDays(t.arrived,today());const done=!!t.finished;const isOpen=tFoldOpen(t);
+    if(!isOpen)return `<div class="tcard folded${truckAttn(t)?' attn':''}" data-truck="${t.id}">${tHead(t,false)}</div>`;
+    if(t.expected)return `<div class="tcard texp" data-truck="${t.id}">${tHead(t,true)}${paperHtml(t,true)}
       <div class="tload">${loadText(t)?`<span>${esc(loadText(t))}</span>${t.loadNote?`<span class="muted">${esc(t.loadNote)}</span>`:''}`:'<span class="muted">No load details yet.</span>'}</div>
       ${t.arrived<=today()?`<div class="row"><span>Has it arrived?</span><button class="btn small primary" type="button" data-tr="arr" data-id="${t.id}">${t.arrived<today()?'Arrived '+esc(DOW[dayOf(t.arrived).getDay()]):'Arrived'}</button>${t.arrived<today()?`<button class="btn small" type="button" data-tr="arrtoday" data-id="${t.id}">Arrived today</button>`:''}<button class="btn small" type="button" data-tr="noarr" data-id="${t.id}">Didn't arrive</button></div>`:''}</div>`;
-    return `<div class="tcard" data-truck="${t.id}"><div class="row" style="justify-content:space-between"><b>${TRUCKS[t.type].name} · arrived ${esc(shortDay(t.arrived))}</b><button type="button" class="linkish" data-tr="edit" data-id="${t.id}">Edit</button><span class="mono muted">${done?`finished in ${calDays(t.arrived,t.finished)+1} d`:`day ${age+1}`}</span></div>${paperHtml(t)}
-      <div class="tload">${loadText(t)?`<span>${esc(loadText(t))}</span>${t.loadNote?`<span class="muted">${esc(t.loadNote)}</span>`:''}`:'<span class="muted">No load details yet.</span>'}<button type="button" class="linkish" data-tr="edit" data-id="${t.id}">${loadText(t)?'Edit load':'Add pieces & CUBE'}</button></div>
+    return `<div class="tcard" data-truck="${t.id}">${tHead(t,true)}${paperHtml(t)}
+      ${done&&!loadText(t)?'':`<div class="tload">${loadText(t)?`<span>${esc(loadText(t))}</span>${t.loadNote?`<span class="muted">${esc(t.loadNote)}</span>`:''}`:'<span class="muted">No load details yet.</span>'}<button type="button" class="linkish" data-tr="edit" data-id="${t.id}">${loadText(t)?'Edit load':'Add pieces & CUBE'}</button></div>`}
       <div class="seg tunl" role="group" aria-label="Unload">${[['0','Live unload'],['1','Dropped trailer']].map(([v,l])=>`<button type="button" data-tr="drop" data-v="${v}" data-id="${t.id}" aria-pressed="${(t.dropped?'1':'0')===v}">${l}</button>`).join('')}</div>
-      ${t.dropped?`<div><span class="label">Trailer${t.trailer?' '+esc(t.trailer):''}${t.emptied&&!t.pickedUp&&calDays(t.emptied,today())>0?` <span class="lsub">empty and waiting ${calDays(t.emptied,today())} d</span>`:''}</span><div class="tstages">${stage(t,'emptied','Emptied')}${stage(t,'pickupReq','Pickup requested')}${stage(t,'pickedUp','Picked up')}</div>${t.emptied&&!t.pickedUp?(t.trailer?`<button type="button" class="btn small ghost" data-tr="copyreq" data-id="${t.id}" style="margin-top:6px">Copy pickup request</button>`:`<button type="button" class="linkish" data-tr="edit" data-id="${t.id}" style="margin-top:6px">Add the trailer ID for a pickup request</button>`):''}</div>`
+      ${t.dropped&&t.sb?sbHtml(t):t.dropped?`<div><span class="label">Trailer${t.trailer?' '+esc(t.trailer):''}${t.emptied&&!t.pickedUp&&calDays(t.emptied,today())>0?` <span class="lsub">empty and waiting ${calDays(t.emptied,today())} d</span>`:''}</span><div class="tstages">${stage(t,'emptied','Emptied')}${stage(t,'pickupReq','Pickup requested')}${stage(t,'pickedUp','Picked up')}</div>${t.emptied&&!t.pickedUp&&!t.pickupReq?`<button type="button" class="chip" data-tr="sbon" data-id="${t.id}" aria-pressed="false" style="margin-top:6px">Loading it as the Southbound</button>`:''}${t.emptied&&!t.pickedUp?(t.trailer?`<button type="button" class="btn small ghost" data-tr="copyreq" data-id="${t.id}" style="margin-top:6px">Copy pickup request</button>`:`<button type="button" class="linkish" data-tr="edit" data-id="${t.id}" style="margin-top:6px">Add the trailer ID for a pickup request</button>`):''}</div>`
         :''}
       ${done?'':`<div class="tgrid"><div><span class="label">Unbroken truck pallets</span><div class="qty"><button type="button" class="ib" data-tr="pal" data-d="-1" data-id="${t.id}" aria-label="One less">−</button><span class="mono">${t.pallets}</span><button type="button" class="ib" data-tr="pal" data-d="1" data-id="${t.id}" aria-label="One more">+</button></div></div>
         <div><span class="label">Store pallets waiting</span><div class="seg" role="group">${STORE_LV.map(([k,l])=>`<button type="button" data-tr="store" data-v="${k}" data-id="${t.id}" aria-pressed="${t.store===k}">${l}</button>`).join('')}</div></div></div>
@@ -1873,11 +1901,58 @@ function trucksHtml(){
       <div class="row" style="justify-content:space-between">${done?`<button type="button" class="btn small ghost" data-tr="unfinish" data-id="${t.id}">Not finished after all</button>`:`<button type="button" class="btn small ghost" data-tr="delete" data-id="${t.id}">Remove</button><button type="button" class="btn small primary" data-tr="finish" data-id="${t.id}">Truck finished</button>`}</div></div>`}).join('')}
   </section>`;
 }
+/* ---- truck card folding (remembered per device) ---- */
+function truckAttn(t){   // a short reason when the card needs a look; '' otherwise
+  const T=today();
+  if(t.expected)return t.arrived<=T?'Has it arrived?':'';
+  const mon=sbCheckDue(t);if(mon)return 'Southbound still here?';
+  if(t.sb&&sbState(t)==='miss')return 'Southbound missed pickup';
+  if(t.sb&&sbState(t)==='load'&&dayOf(T).getDay()===5)return 'Request Southbound pickup';
+  return '';
+}
+function truckAttnKey(t){const a=truckAttn(t);return a?a+'|'+today():''}
+function tFoldOpen(t){
+  const st=(ls.get('roil.tfold',{})||{})[t.id];
+  if(st==='o')return true;
+  const k=truckAttnKey(t);if(k)return st!=='c:'+k;
+  if(st&&String(st).startsWith('c'))return false;
+  return t.expected||!t.finished;
+}
+function setFold(id,open,t){const m=ls.get('roil.tfold',{})||{};
+  for(const k of Object.keys(m))if(!dk.trucks[k]||!truckOpen(dk.trucks[k]))delete m[k];
+  m[id]=open?'o':'c:'+truckAttnKey(t);ls.set('roil.tfold',m)}
+function truckStatus(t){
+  if(t.expected)return t.arrived===today()?'expected today':'expected '+shortDay(t.arrived);
+  const bits=[];
+  if(t.finished)bits.push('finished ✓');else{bits.push('day '+(calDays(t.arrived,today())+1));if(t.pallets)bits.push(t.pallets+' pallet'+(t.pallets===1?'':'s')+' left');else if(t.store!=='none')bits.push((t.store==='lots'?'a lot':'some')+' on store pallets')}
+  if(t.dropped){const x=truckDay(t,today());const S={bay:'trailer in bay',empty:'trailer empty',req:'pickup requested',picked:'trailer picked up',sb:'Southbound loading',sbreq:'Southbound requested',miss:'Southbound missed pickup'};if(x&&x.trailer&&S[x.trailer])bits.push(S[x.trailer])}
+  return bits.join(' · ');
+}
+function tHead(t,open){
+  const a=truckAttn(t);
+  return `<div class="thead"><button type="button" class="tsum" data-tr="fold" data-id="${t.id}" aria-expanded="${open}"><svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M4 2.5 7.5 6 4 9.5"/></svg>
+    <span><b>${TRUCKS[t.type].name} · ${t.expected?'expected':'arrived'} ${esc(shortDay(t.arrived))}</b>${!open&&t.trailer?` <span class="mono muted">${esc(t.trailer)}</span>`:''}
+    <small>${a?`<em>${esc(a)}</em> · `:''}${esc(truckStatus(t))}</small></span></button>
+    <button type="button" class="linkish" data-tr="edit" data-id="${t.id}">Edit</button></div>`;
+}
+function sbHtml(t){
+  const st=sbState(t),mon=sbCheckDue(t),r=sbLastReq(t),m=sbLastMiss(t);
+  const tid=t.trailer?' '+esc(t.trailer):'';
+  const copy=t.trailer?`<button type="button" class="btn small ghost" data-tr="copyreq" data-id="${t.id}">Copy pickup request</button>`:`<button type="button" class="linkish" data-tr="edit" data-id="${t.id}">Add the trailer ID for a pickup request</button>`;
+  let body='';
+  if(mon)body=`<div class="tprompt"><span>Pickup was requested ${esc(shortDay(r))}. Is the Southbound${tid} still here?</span><span class="row"><button class="btn small primary" type="button" data-tr="sbgone" data-id="${t.id}">Gone</button><button class="btn small" type="button" data-tr="sbhere" data-id="${t.id}">Still here</button></span></div>`;
+  else if(st==='load')body=`<div class="row">${copy}<button type="button" class="btn small primary" data-tr="sbreq" data-id="${t.id}">Pickup requested today</button></div>`;
+  else if(st==='req')body=`<p class="note" style="margin:0">Pickup requested ${esc(shortDay(r))}; counted as picked up. You'll be asked ${esc(DOW[1])} whether it's still here.</p><div class="row"><button type="button" class="btn small ghost" data-tr="sbundo" data-id="${t.id}">Undo request</button></div>`;
+  else if(st==='miss')body=`<p class="note warnline" style="margin:0"><span class="flagi">${FLAG_SVG}</span>Still here ${esc(shortDay(m))}${r?`, pickup was requested ${esc(shortDay(r))}`:''}. Missed pickup${t.sbMiss.length>1?` (${t.sbMiss.length} times)`:''}.</p><div class="row">${copy}<button type="button" class="btn small primary" data-tr="sbreq" data-id="${t.id}">Requested again today</button><button type="button" class="btn small" data-tr="stage" data-k="pickedUp" data-id="${t.id}">Picked up today</button></div>`;
+  return `<div class="stack" style="gap:6px"><span class="label">Southbound${tid}${t.sbBol?` <span class="lsub">BOL ${esc(t.sbBol)}</span>`:''}</span>${body}
+    ${st==='load'?`<button type="button" class="chip" data-tr="sbon" data-id="${t.id}" aria-pressed="true" style="justify-self:start">Southbound ×</button>`:''}</div>`;
+}
 function paperHtml(t,exp){
   if(t.trailer||t.manifest)return `<div class="tpaper">${t.trailer?`<span>Trailer <b class="mono">${esc(t.trailer)}</b></span>`:''}${t.manifest?`<span>Manifest <b class="mono">${esc(t.manifest)}</b></span>`:''}</div>`;
   return exp?'':`<div class="tpaper"><button type="button" class="linkish" data-tr="edit" data-id="${t.id}">Add manifest # & trailer ID</button></div>`;
 }
 function pickupText(t){
+  if(t.sb)return `Southbound trailer ${t.trailer} is loaded and ready for pickup${t.sbBol?`, BOL ${t.sbBol}`:''}.`;
   return `Trailer ${t.trailer} is empty and ready for pickup. ${TRUCKS[t.type].full} delivered ${shortDay(t.arrived)}${t.manifest?`, manifest ${t.manifest}`:''}${t.emptied?`; emptied ${shortDay(t.emptied)}`:''}.`;
 }
 /* Other trucks with the same trailer ID or manifest #, so two trucks don't get mixed up. */
@@ -1887,10 +1962,13 @@ function paperClash(t){
     if(t.manifest&&idKey(o.manifest)===idKey(t.manifest))out.push(`Manifest ${t.manifest} is also on the ${TRUCKS[o.type].name} from ${shortDay(o.arrived)}.`)}
   return out;
 }
+async function sbRequest(id){const x={...dk.trucks[id]};const T=today();x.sbReqs=[...new Set([...(x.sbReqs||[]),T])].sort();x.pickupReq=T;await saveTruck(x);
+  toast(`Southbound pickup requested. Counted as picked up; ROIL asks ${nextMonday(T)===addDays(T,3)?'Monday':shortDay(nextMonday(T))} if it's still there.`)}
 async function onTruck(b){
   const a=b.dataset.tr,t=b.dataset.id?{...dk.trucks[b.dataset.id]}:null;
+  if(a==='fold'){setFold(t.id,b.getAttribute('aria-expanded')!=='true',t);renderDs();return}
   if(a==='copyreq'){const txt=pickupText(t);let ok=false;try{await navigator.clipboard.writeText(txt);ok=true}catch(e){}
-    const acts=t.pickupReq?[]:[['Mark requested today',async()=>{const x={...dk.trucks[t.id],pickupReq:today(),updated:nowIso()};if(x.emptied&&x.pickupReq<x.emptied)x.pickupReq=x.emptied;await saveTruck(x);rerenderDsViews()}]];
+    const acts=t.sb?(sbState(t)==='req'?[]:[['Mark requested today',async()=>{await sbRequest(t.id);rerenderDsViews()}]]):t.pickupReq?[]:[['Mark requested today',async()=>{const x={...dk.trucks[t.id],pickupReq:today(),updated:nowIso()};if(x.emptied&&x.pickupReq<x.emptied)x.pickupReq=x.emptied;await saveTruck(x);rerenderDsViews()}]];
     toast(ok?'Pickup request copied.':txt,acts);return}
   if(a==='came'){const nt=await newTruck(b.dataset.type,b.dataset.day);renderDs();toast(`${TRUCKS[b.dataset.type].name} truck added.`,[['Add paperwork & load',()=>openTruckSheet(nt.id)]]);return}
   if(a==='expect'){const nt=await newTruck(b.dataset.type,b.dataset.day);nt.expected=true;await saveTruck(nt);renderDs();openTruckSheet(nt.id);return}
@@ -1903,11 +1981,16 @@ async function onTruck(b){
       <label class="switch"><input type="checkbox" id="trDrop"><span>Dropped trailer <span class="lsub">DDC usually is; RDC only when it's too big for both stores</span></span></label>`);
     $('#sheetHost').querySelectorAll('[data-new]').forEach(x=>x.onclick=async()=>{const ty=x.dataset.new;const dr=$('#trDrop').checked||TRUCKS[ty].dropped;closeSheet();await newTruck(ty,today(),dr);renderDs()});return}
   if(!t)return;
-  if(a==='arr'){t.expected=false;toast(`${TRUCKS[t.type].name} truck arrived ${shortDay(t.arrived)}.`)}
+  if(a==='sbreq'){await sbRequest(t.id);rerenderDsViews();return}
+  if(a==='sbon'){t.sb=!t.sb;if(!t.sb){t.sbReqs=[];t.sbMiss=[];t.sbChk=''}}
+  else if(a==='sbundo'){const r=sbLastReq(t);t.sbReqs=(t.sbReqs||[]).filter(x=>x!==r);t.pickupReq=sbLastReq(t)}
+  else if(a==='sbgone'){t.sbChk=sbCheckDue(t);toast('Southbound gone. Thanks.')}
+  else if(a==='sbhere'){const mon=sbCheckDue(t);t.sbMiss=[...new Set([...(t.sbMiss||[]),mon])].sort();toast('Logged as a missed pickup.',[['Copy pickup request',()=>onTruck({dataset:{tr:'copyreq',id:t.id}})]])}
+  else if(a==='arr'){t.expected=false;toast(`${TRUCKS[t.type].name} truck arrived ${shortDay(t.arrived)}.`)}
   else if(a==='arrtoday'){t.expected=false;t.arrived=today();toast(`${TRUCKS[t.type].name} truck arrived today (a day late).`)}
   else if(a==='noarr'){t.deleted=true;dk.cfg.dismiss={...(dk.cfg.dismiss||{}),[t.type+'|'+t.arrived]:{updated:nowIso()}};toast('Removed. The load you entered is dropped too.')}
   else if(a==='stage'){const k=b.dataset.k;t[k]=t[k]?'':today();if(k==='pickedUp'&&t.pickedUp&&!t.emptied)t.emptied=today()}
-  else if(a==='drop'){t.dropped=b.dataset.v==='1';if(!t.dropped){t.emptied='';t.pickupReq='';t.pickedUp=''}}
+  else if(a==='drop'){t.dropped=b.dataset.v==='1';if(!t.dropped){t.emptied='';t.pickupReq='';t.pickedUp='';t.sb=false;t.sbReqs=[];t.sbMiss=[];t.sbChk=''}}
   else if(a==='pal')t.pallets=Math.max(0,Math.min(999,t.pallets+(+b.dataset.d)));
   else if(a==='store')t.store=b.dataset.v;
   else if(a==='floorx')t.floor=t.floor.filter(x=>x!==b.dataset.d);
@@ -1923,8 +2006,8 @@ async function onTruckFloor(sel){
 }
 /* Edit everything about a truck, including past ones, or add one after the fact. */
 function openTruckSheet(id){
-  const t0=id?dk.trucks[id]:{type:'rdc',arrived:addDays(today(),-1),dropped:false,emptied:'',pickupReq:'',pickedUp:'',pallets:0,store:'none',floor:[],finished:'',log:{},pieces:0,cube:0,palTotal:'',loadNote:'',manifest:'',trailer:''};if(!t0)return;
-  const s={pieces:0,cube:0,palTotal:'',loadNote:'',manifest:'',trailer:'',...t0,floor:[...t0.floor]};if(s.palTotal==null)s.palTotal='';
+  const t0=id?dk.trucks[id]:{type:'rdc',arrived:addDays(today(),-1),dropped:false,emptied:'',pickupReq:'',pickedUp:'',pallets:0,store:'none',floor:[],finished:'',log:{},pieces:0,cube:0,palTotal:'',loadNote:'',manifest:'',trailer:'',sb:false,sbBol:'',sbReqs:[],sbMiss:[],sbChk:''};if(!t0)return;
+  const s={pieces:0,cube:0,palTotal:'',loadNote:'',manifest:'',trailer:'',sb:false,sbBol:'',sbChk:'',...t0,floor:[...t0.floor],sbReqs:[...(t0.sbReqs||[])],sbMiss:[...(t0.sbMiss||[])]};if(s.palTotal==null)s.palTotal='';
   const date=(k,label)=>`<div><label class="label" for="te-${k}">${label}</label><div class="ladd"><input type="date" id="te-${k}" value="${s[k]||''}"><button type="button" class="btn small ghost" data-clr="${k}">Clear</button></div></div>`;
   const paint=()=>{
     $('#teBody').innerHTML=`<div><span class="label">Truck</span><div class="seg" data-f="type">${Object.keys(TRUCKS).map(k=>`<button type="button" data-v="${k}" aria-pressed="${s.type===k}">${TRUCKS[k].full}</button>`).join('')}</div></div>
@@ -1940,7 +2023,12 @@ function openTruckSheet(id){
         <p class="note" id="te-est" style="margin:4px 0 0">${s.type==='rdc'?palEstNote(s.cube):'DDC isn\'t palletized.'}</p>
         <input type="text" id="te-lnote" maxlength="200" value="${esc(s.loadNote||'')}" placeholder="Load note (optional), e.g. 12 XXL TVs, 17 major appliances" style="margin-top:6px"></div>
       <div class="seg" data-f="dropped">${[['0','Live unload'],['1','Dropped trailer']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${(s.dropped?'1':'0')===v}">${l}</button>`).join('')}</div>
-      ${s.dropped?`${date('emptied','Trailer emptied')}${date('pickupReq','Pickup requested')}${date('pickedUp','Trailer picked up')}`:''}
+      ${s.dropped?`${date('emptied','Trailer emptied')}
+        <label class="switch"><input type="checkbox" id="te-sb" ${s.sb?'checked':''}><span>Southbound <span class="lsub">emptied trailer loaded with RLC and outbound freight</span></span></label>
+        ${s.sb?`<div><label class="label" for="te-bol">BOL #</label><input type="text" id="te-bol" maxlength="40" autocapitalize="characters" autocomplete="off" spellcheck="false" value="${esc(s.sbBol||'')}"></div>
+          ${date('pickupReq','Southbound pickup requested')}<p class="note" style="margin:-6px 0 0">Requesting counts as picked up. Set Picked up only if you saw it leave.</p>
+          ${(s.sbMiss||[]).length?`<div><span class="label">Missed pickups <span class="lsub">still here on</span></span><div class="chips">${s.sbMiss.map(m=>`<button type="button" class="chip" data-unmiss="${m}" aria-pressed="true">${esc(shortDay(m))} ×</button>`).join('')}</div></div>`:''}`
+          :date('pickupReq','Pickup requested')}${date('pickedUp','Trailer picked up')}`:''}
       ${date('finished','Truck finished')}
       <div class="tgrid"><div><label class="label" for="te-pal">Unbroken pallets</label><input type="number" id="te-pal" min="0" max="999" value="${s.pallets}" style="width:6em"></div>
         <div><span class="label">Store pallets waiting</span><div class="seg" data-f="store">${STORE_LV.map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${s.store===k}">${l}</button>`).join('')}</div></div></div>
@@ -1950,25 +2038,30 @@ function openTruckSheet(id){
     const ex=$('#te-exp');if(ex)s.expected=ex.checked;
     const pc=$('#te-pieces');if(pc)s.pieces=Math.max(0,parseInt(pc.value,10)||0);const cu=$('#te-cube');if(cu)s.cube=Math.max(0,Math.round((parseFloat(cu.value)||0)*10)/10);
     const pt=$('#te-palt');if(pt)s.palTotal=pt.value===''?'':Math.max(0,parseInt(pt.value,10)||0);const ln=$('#te-lnote');if(ln)s.loadNote=ln.value.trim().slice(0,200);
-    const tri=$('#te-trailer');if(tri)s.trailer=paperId(tri.value);const mi=$('#te-manifest');if(mi)s.manifest=paperId(mi.value);
+    const tri=$('#te-trailer');if(tri)s.trailer=paperId(tri.value);const sbx=$('#te-sb');if(sbx)s.sb=sbx.checked;const bo=$('#te-bol');if(bo)s.sbBol=paperId(bo.value);const mi=$('#te-manifest');if(mi)s.manifest=paperId(mi.value);
     for(const k of['arrived','emptied','pickupReq','pickedUp','finished']){const i=$('#te-'+k);if(i)s[k]=i.value||''}const pl=$('#te-pal');if(pl)s.pallets=Math.max(0,Math.min(999,parseInt(pl.value,10)||0))};
   openSheet(`<div class="head"><h2>${id?'Edit truck':'Add a truck'}</h2><button class="btn small" data-close>Cancel</button></div>
     <p class="note" style="margin:0">${id?'Fix anything that was entered wrong or missed.':'For a truck you didn\'t log on the day.'} Dates can be in the past.</p>
     <div class="stack" id="teBody" style="gap:12px"></div>
     <div class="row" style="justify-content:space-between">${id?'<button class="btn small danger" type="button" id="teDel">Delete</button>':'<span></span>'}<button class="btn primary" type="button" id="teSave">Save</button></div>`);
   paint();
-  $('#teBody').addEventListener('change',e=>{if(e.target.id==='te-exp'){read();paint()}});
+  $('#teBody').addEventListener('change',e=>{if(e.target.id==='te-exp'||e.target.id==='te-sb'){read();paint()}});
   $('#teBody').addEventListener('input',e=>{if(e.target.id==='te-cube'){const c=parseFloat(e.target.value)||0;const est=$('#te-est'),pt=$('#te-palt');if(est&&s.type==='rdc')est.textContent=palEstNote(c);if(pt)pt.placeholder=c?'≈'+palletsFromCube(c):'after unload'}});
   $('#teBody').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;read();
     const f=b.closest('[data-f]');if(f){s[f.dataset.f]=f.dataset.f==='dropped'?b.dataset.v==='1':b.dataset.v;paint();return}
     if(b.dataset.clr){s[b.dataset.clr]='';paint();return}
+    if(b.dataset.unmiss){s.sbMiss=s.sbMiss.filter(x=>x!==b.dataset.unmiss);paint();return}
     if(b.dataset.fl){const d=b.dataset.fl;s.floor=s.floor.includes(d)?s.floor.filter(x=>x!==d):[...s.floor,d];paint()}});
   $('#teSave').onclick=async()=>{read();
     if(!s.arrived){toast('Pick the day it arrived.');return}
     if(s.expected?s.arrived>addDays(today(),3):s.arrived>today()){toast(s.expected?'Expected more than 3 days out. Add it closer to the day.':'The arrival day is in the future. Turn on “Not arrived yet” for a truck that\'s still coming.');return}
     if(s.expected){s.emptied='';s.pickupReq='';s.pickedUp='';s.finished=''}
     for(const k of['emptied','pickupReq','pickedUp','finished'])if(s[k]&&s[k]<s.arrived){toast('A date is before the truck arrived.');return}
-    if(!s.dropped){s.emptied='';s.pickupReq='';s.pickedUp=''}
+    if(!s.dropped){s.emptied='';s.pickupReq='';s.pickedUp='';s.sb=false}
+    if(!s.sb||!s.emptied){if(s.sb&&!s.emptied){toast('A Southbound trailer has to be emptied first. Set the Trailer emptied date.');return}s.sbReqs=[];s.sbMiss=[];s.sbChk=''}
+    else{const lm=s.sbMiss.length?s.sbMiss[s.sbMiss.length-1]:'';
+      s.sbReqs=s.pickupReq?[...new Set([...s.sbReqs.filter(x=>x<s.pickupReq),s.pickupReq])].sort():s.sbReqs.filter(x=>lm&&x<=lm);
+      if(s.sbReqs.some(x=>x<s.emptied)){toast('A pickup request is before the trailer was emptied.');return}}
     const t={...s,id:id||rid('t'),deleted:false,log:{...(s.log||{})},updated:nowIso()};
     dk.trucks[t.id]=t;if(dk.cfg.dismiss)delete dk.cfg.dismiss[t.type+'|'+t.arrived];
     await saveDk();closeSheet();rerenderDsViews();const cl=paperClash(t);toast((id?'Truck updated.':'Truck added.')+(cl.length?' '+cl.join(' ')+' Check the paperwork.':''))};
@@ -2002,7 +2095,8 @@ function loadText(t){
 }
 function truckLine(t){
   const fin=t.finished?`finished ${shortDay(t.finished)} (${calDays(t.arrived,t.finished)+1} d)`:`not finished (day ${calDays(t.arrived,today())+1})`;
-  const tr=t.dropped?(t.emptied?` · trailer emptied ${shortDay(t.emptied)}${t.pickedUp?`, picked up ${shortDay(t.pickedUp)} (sat ${calDays(t.emptied,t.pickedUp)} d)`:t.pickupReq?`, pickup requested ${shortDay(t.pickupReq)}`:''}`:' · trailer not emptied'):'';
+  const sbt=t.sb?` · Southbound${t.sbBol?' (BOL '+t.sbBol+')':''}: ${sbState(t)==='picked'?'picked up '+shortDay(t.pickedUp):sbState(t)==='req'?'pickup requested '+shortDay(sbLastReq(t)):sbState(t)==='miss'?'still here '+shortDay(sbLastMiss(t)):'loading, pickup not requested'}${t.sbMiss.length?` · missed pickup ${t.sbMiss.length}× (${t.sbMiss.map(shortDay).join(', ')})`:''}`:'';
+  const tr=t.sb?` · trailer emptied ${shortDay(t.emptied)}`+sbt:t.dropped?(t.emptied?` · trailer emptied ${shortDay(t.emptied)}${t.pickedUp?`, picked up ${shortDay(t.pickedUp)} (sat ${calDays(t.emptied,t.pickedUp)} d)`:t.pickupReq?`, pickup requested ${shortDay(t.pickupReq)}`:''}`:' · trailer not emptied'):'';
   const ld=loadText(t);
   const pw=[t.trailer&&'trailer '+t.trailer,t.manifest&&'manifest '+t.manifest].filter(Boolean).join(', ');
   return `${TRUCKS[t.type].name} ${shortDay(t.arrived)}${pw?' ['+pw+']':''}${ld?' ('+ld+')':''}: ${fin}${tr}${t.floor.length?` · freight left on floor in ${t.floor.length} dept${t.floor.length===1?'':'s'}`:''}`;
@@ -2061,13 +2155,16 @@ function truckDay(t,d){
     work=v.pallets>0||v.store==='lots'?'left3':v.store==='some'?'left2':'left1'}
   if(t.finished&&d>t.finished)work=null;
   let trailer=null;
-  if(t.dropped){if(t.pickedUp&&d>t.pickedUp)trailer=null;else if(t.pickedUp&&d===t.pickedUp)trailer='picked';else if(!t.emptied||d<t.emptied)trailer='bay';else if(t.pickupReq&&d>=t.pickupReq)trailer='req';else trailer='empty';
+  if(t.dropped&&t.sb&&t.emptied&&d>=t.emptied){const st=sbState(t,d);
+    trailer=st==='picked'?(d===t.pickedUp?'picked':null):(t.sbMiss||[]).includes(d)||st==='miss'?'miss':st==='load'?'sb':(d===sbLastReq(t,d)?'sbreq':null);
+    if(d>today())trailer=null}
+  else if(t.dropped){if(t.pickedUp&&d>t.pickedUp)trailer=null;else if(t.pickedUp&&d===t.pickedUp)trailer='picked';else if(!t.emptied||d<t.emptied)trailer='bay';else if(t.pickupReq&&d>=t.pickupReq)trailer='req';else trailer='empty';
     if(!t.pickedUp&&d>today())trailer=null}
   if(d>today()){work=null}
   return {work,trailer,req:t.pickupReq===d};
 }
 const FLAG_SVG='<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 11V1.5M2.5 2h6.5l-1.6 2.5L9 7H2.5"/></svg>';
-const STAGE_LBL={exp:'Expected (load entered, not arrived yet)',unload:'Unloading',left1:'Leftovers (a little)',left2:'Leftovers (some)',left3:'Leftovers (a lot)',done:'Finished',bay:'Trailer in bay',empty:'Trailer empty, pickup not requested yet',req:'Pickup requested, waiting',picked:'Trailer picked up'};
+const STAGE_LBL={exp:'Expected (load entered, not arrived yet)',unload:'Unloading',left1:'Leftovers (a little)',left2:'Leftovers (some)',left3:'Leftovers (a lot)',done:'Finished',bay:'Trailer in bay',empty:'Trailer empty, pickup not requested yet',req:'Pickup requested, waiting',picked:'Trailer picked up',sb:'Southbound loading, pickup not requested yet',sbreq:'Southbound pickup requested (counts as picked up)',miss:'Southbound still here on Monday (missed pickup)'};
 function dayIssues(d){return {logged:items.filter(i=>localDay(new Date(i.created))===d),fixed:items.filter(i=>i.fixedAt&&localDay(new Date(i.fixedAt))===d)}}
 function renderCal(){
   const el=$('#v-cal');if(!el)return;
@@ -2075,15 +2172,15 @@ function renderCal(){
   const D=calDaysOf(calWeek),T=today(),A=dsAreas();
   const col=i=>`grid-column:${i+2}`;
   const evs=Object.values(events).filter(e=>!e.deleted&&e.end>=D[0]&&e.start<=D[6]).sort((a,b)=>a.start.localeCompare(b.start));
-  const trs=liveTrucks().filter(t=>{const end=t.dropped?(t.pickedUp||T):(t.finished||T);return t.arrived<=D[6]&&end>=D[0]}).sort((a,b)=>a.arrived.localeCompare(b.arrived));
+  const trs=liveTrucks().filter(t=>{const end=t.dropped?(trailerGone(t)||T):(t.finished||T);return t.arrived<=D[6]&&end>=D[0]}).sort((a,b)=>a.arrived.localeCompare(b.arrived));
   const head=D.map((d,i)=>{const dt=dayOf(d);return `<button type="button" class="ch${d===T?' today':''}${i<2?' we':''}" style="${col(i)}" data-day="${d}"><b>${DOW[dt.getDay()].slice(0,i<2?2:3)}</b><span>${dt.getDate()}</span></button>`}).join('');
   // events: one row each, bar from first to last visible day
   const evRows=evs.map(e=>{const a=Math.max(0,D.indexOf(e.start<D[0]?D[0]:e.start)),b=D.indexOf(e.end>D[6]?D[6]:e.end);
     return `<div class="crow"><button type="button" class="cbar ev ev-${e.kind}${e.start<D[0]?' cont-l':''}${e.end>D[6]?' cont-r':''}" style="grid-column:${a+2}/${b+3}" data-ev="${e.id}">${esc(evTitle(e))}</button></div>`}).join('');
   // trucks: a work bar and, for dropped trailers, a trailer bar; one cell per day, colored by stage
   const trRows=trs.map(t=>{const days=D.map(d=>truckDay(t,d));
-    const cells=k=>days.map((x,i)=>x&&x[k]?`<span class="cseg st-${x[k]}" style="${col(i)}" title="${esc(STAGE_LBL[x[k]])}">${x[k]==='done'||x[k]==='picked'?'✓':''}</span>`:'').join('');
-    return `<div class="crow ctr" data-truck="${t.id}"><span class="cl">${TRUCKS[t.type].name} · ${esc(shortDay(t.arrived))} <span class="linkish">edit</span></span>${cells('work')}</div>${t.dropped?`<div class="crow ctr" data-truck="${t.id}"><span class="cl">${TRUCKS[t.type].name} trailer</span>${cells('trailer')}</div>`:''}`}).join('');
+    const cells=k=>days.map((x,i)=>x&&x[k]?`<span class="cseg st-${x[k]}" style="${col(i)}" title="${esc(STAGE_LBL[x[k]])}">${x[k]==='done'||x[k]==='picked'||x[k]==='sbreq'?'✓':x[k]==='miss'?FLAG_SVG:''}</span>`:'').join('');
+    return `<div class="crow ctr" data-truck="${t.id}"><span class="cl">${TRUCKS[t.type].name} · ${esc(shortDay(t.arrived))} <span class="linkish">edit</span></span>${cells('work')}</div>${t.dropped?`<div class="crow ctr" data-truck="${t.id}"><span class="cl">${TRUCKS[t.type].name} ${t.sb?'Southbound':'trailer'}</span>${cells('trailer')}</div>`:''}`}).join('');
   const cov=D.map((d,i)=>{if(d>T)return '';const s=dsDayStats(d);const p=s.total?Math.round(s.done/s.total*100):0;const any=s.done+s.partly+s.follow;
     return `<button type="button" class="ccell cov" style="${col(i)};--p:${p}%" data-day="${d}">${any?`<b>${p}%</b>`:'<span class="muted">–</span>'}<i></i></button>`}).join('');
   const maxN=Math.max(1,...D.map(d=>dayIssues(d).logged.length));
@@ -2104,7 +2201,7 @@ function renderCal(){
   <div class="panel lsec"><div class="tiles3"><div><b>${added}</b><span>issues logged</span></div><div><b>${fixed}</b><span>issues fixed</span></div><div><b class="${added>fixed?'up':'down'}">${added>fixed?'+':''}${added-fixed}</b><span>change in open</span></div></div>
     <p class="note" style="margin:0">${W.cov}% of downstock areas done at least once this week${W.leftover?` · truck leftovers worked ${W.leftover} day${W.leftover===1?'':'s'}`:''}.</p></div>
   <details class="arch"><summary>What the colors mean</summary><div class="legend2">
-    ${['exp','unload','left1','left2','left3','done','bay','empty','req','picked'].map(k=>`<span><i class="st-${k}">${k==='done'||k==='picked'?'✓':''}</i>${STAGE_LBL[k]}</span>`).join('')}<span><i class="lgflag">${FLAG_SVG}</i>Freight left on the sales floor (issue logged)</span>
+    ${['exp','unload','left1','left2','left3','done','bay','empty','req','picked','sb','sbreq','miss'].map(k=>`<span><i class="st-${k}">${k==='done'||k==='picked'||k==='sbreq'?'✓':k==='miss'?FLAG_SVG:''}</i>${STAGE_LBL[k]}</span>`).join('')}<span><i class="lgflag">${FLAG_SVG}</i>Freight left on the sales floor (issue logged)</span>
     ${EV_KINDS.map(([k,t])=>`<span><i class="ev-${k}"></i>${t}</span>`).join('')}</div></details>`;
   $('#calPrev').onclick=()=>{calWeek=addDays(calWeek,-7);renderCal()};
   $('#calNext').onclick=()=>{calWeek=addDays(calWeek,7);renderCal()};
