@@ -104,9 +104,9 @@ Switch between **Issues** and **Downstock** at the top of the screen. Downstock 
 - **Shelf tags:** on the board, scanning a shelf tag with a Bluetooth scanner opens that planogram.
 - **Trucks:** the board tracks each truck until it's worked.
   - **Schedule** (Lists → Downstock → Truck schedule): RDC (brown goods) is Monday and DDC (white goods) is Tuesday. The holiday schedule adds Wednesday and Thursday.
-  - **Arrivals:** on a scheduled day the board asks whether the truck came. For an odd day, use **Truck arrived today**.
+  - **Arrivals:** on a scheduled day the board asks **Has it arrived?** For an odd day, use **Arrived today**. To log a truck after the fact, use **Add past**. Tap **Edit** on a truck card, a truck row in the Calendar, or a truck under Days → Recent trucks to fix any date or detail, or to delete it.
   - **Each truck's card has:**
-    - The trailer's stage (**Emptied → Pickup requested → Picked up**), for dropped trailers. DDC is a dropped trailer by default; mark an RDC as one when it's too big for both stores.
+    - **Live unload** or **Dropped trailer**: DDC starts as dropped and RDC as live, and you can switch either one. For dropped trailers, the trailer's stage is **Emptied → Pickup requested → Picked up**.
     - **Unbroken truck pallets** (− / +).
     - **Store pallets waiting** (none / some / a lot).
     - **Freight left on the sales floor** by department. Each department can log a **Freight left on sales floor** issue with Source: Truck / freight and the truck already filled in.
@@ -132,6 +132,25 @@ Switch between **Issues** and **Downstock** at the top of the screen. Downstock 
 - **Weekly totals:** issues logged, issues fixed, and the change in open issues.
 
 Tap a day to see everything that happened that day. Use ‹ › to move between weeks.
+
+## Fixing the past
+- **Downstock:** use ‹ › next to the date on the Today board to view an earlier day. Changes there are saved to that day. The Calendar's day sheet also has **Edit downstock for this day**.
+- **Trucks:** use **Add past** or **Edit** (see Trucks above).
+- **Issues:** on the issue screen, **Change dates** lets you set when it was logged and when it was fixed.
+
+## Debug tools
+**Lists → Debug tools** shows:
+- the app version
+- how much data is stored
+- the sync status and any changes waiting to sync
+- the last errors on this device
+
+It also has buttons to:
+- **Sync now**
+- **Check for app update** and **Reload app**
+- **Copy debug report**, to paste into a chat when something's wrong
+- **Download data** (no photos)
+- **Re-ask skipped truck days**
 
 ## Notes for later
 Tap **Note** at the top of any screen to jot down a bug, an improvement or a feature idea while you're on the floor. You can also tap the mic on the phone's keyboard and talk instead of typing.
