@@ -128,9 +128,9 @@ Switch between **Issues** and **Downstock** at the top of the screen. Downstock 
 - **Events:** your own, spanning days. The kinds are reset / planogram change, holiday schedule, inventory count, staffing (someone out) and other. Tap **+ Event**, or tap a bar to edit it. A **Holiday schedule** event also turns on the holiday truck days while it lasts.
 - **Trucks:** one row per truck, and one per dropped trailer, colored by stage:
   - **Work:** unloading, then leftovers (darker = more left), then finished ✓.
-  - **Trailer:** in the bay, then empty and waiting for pickup (☎ = pickup requested), then picked up ✓.
+  - **Trailer:** in the bay, then empty and waiting, then pickup requested, then picked up ✓.
 - **Downstock coverage** for each day.
-- **Issues** logged (+) and fixed (✓) each day. ⚑ marks freight left on the sales floor.
+- **Issues** logged (+) and fixed (✓) each day. A small flag marks freight left on the sales floor.
 - **Weekly totals:** issues logged, issues fixed, and the change in open issues.
 
 Tap a day to see everything that happened that day. Use ‹ › to move between weeks.

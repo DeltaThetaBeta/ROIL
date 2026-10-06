@@ -446,6 +446,9 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 .st-left1{background:color-mix(in srgb,var(--open) 35%,var(--surface))}.st-left2{background:color-mix(in srgb,var(--open) 65%,var(--surface))}.st-left3{background:var(--open)}
 .st-done,.st-picked{background:var(--good)}
 .st-bay{background:var(--follow)}
+.st-req{background:color-mix(in srgb,var(--follow) 60%,var(--surface))}
+.ccell .flag svg,.legend2 .lgflag svg{width:11px;height:11px;fill:currentColor;stroke:currentColor;stroke-width:1.2;stroke-linejoin:round}
+.legend2 .lgflag{background:var(--sunk);color:var(--bad)}
 .st-empty{background:repeating-linear-gradient(45deg,var(--follow-soft) 0 5px,color-mix(in srgb,var(--follow) 45%,var(--surface)) 5px 10px);color:var(--follow)}
 .cbar{border:0;border-radius:4px;min-height:24px;padding:2px 6px;font-size:12px;font-weight:600;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
 .cbar.cont-l{border-top-left-radius:0;border-bottom-left-radius:0}.cbar.cont-r{border-top-right-radius:0;border-bottom-right-radius:0}
@@ -1339,7 +1342,7 @@ function syncHtml(){
 
 /* ---------- Notes for later: quick jots about ROIL itself (bugs, ideas) while you're on the floor ----------
    Synced with your other devices and kept in backups, so you can read them at home. */
-const APP_VERSION='roil-pages-22';
+const APP_VERSION='roil-pages-23';
 const NOTE_TYPES=[['bug','Bug'],['improve','Improvement'],['feature','Feature idea'],['other','Other']];
 const noteType=k=>(NOTE_TYPES.find(t=>t[0]===k)||NOTE_TYPES[3])[1];
 let notes={};   // id -> {id,type,text,ctx,created,updated,done,deleted}
@@ -2032,12 +2035,13 @@ function truckDay(t,d){
     work=v.pallets>0||v.store==='lots'?'left3':v.store==='some'?'left2':'left1'}
   if(t.finished&&d>t.finished)work=null;
   let trailer=null;
-  if(t.dropped){if(t.pickedUp&&d>t.pickedUp)trailer=null;else if(t.pickedUp&&d===t.pickedUp)trailer='picked';else if(!t.emptied||d<t.emptied)trailer='bay';else trailer='empty';
+  if(t.dropped){if(t.pickedUp&&d>t.pickedUp)trailer=null;else if(t.pickedUp&&d===t.pickedUp)trailer='picked';else if(!t.emptied||d<t.emptied)trailer='bay';else if(t.pickupReq&&d>=t.pickupReq)trailer='req';else trailer='empty';
     if(!t.pickedUp&&d>today())trailer=null}
   if(d>today()){work=null}
   return {work,trailer,req:t.pickupReq===d};
 }
-const STAGE_LBL={exp:'Expected (load entered, not arrived yet)',unload:'Unloading',left1:'Leftovers (a little)',left2:'Leftovers (some)',left3:'Leftovers (a lot)',done:'Finished',bay:'Trailer in bay',empty:'Trailer empty, waiting for pickup',picked:'Trailer picked up'};
+const FLAG_SVG='<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 11V1.5M2.5 2h6.5l-1.6 2.5L9 7H2.5"/></svg>';
+const STAGE_LBL={exp:'Expected (load entered, not arrived yet)',unload:'Unloading',left1:'Leftovers (a little)',left2:'Leftovers (some)',left3:'Leftovers (a lot)',done:'Finished',bay:'Trailer in bay',empty:'Trailer empty, pickup not requested yet',req:'Pickup requested, waiting',picked:'Trailer picked up'};
 function dayIssues(d){return {logged:items.filter(i=>localDay(new Date(i.created))===d),fixed:items.filter(i=>i.fixedAt&&localDay(new Date(i.fixedAt))===d)}}
 function renderCal(){
   const el=$('#v-cal');if(!el)return;
@@ -2052,13 +2056,13 @@ function renderCal(){
     return `<div class="crow"><button type="button" class="cbar ev ev-${e.kind}${e.start<D[0]?' cont-l':''}${e.end>D[6]?' cont-r':''}" style="grid-column:${a+2}/${b+3}" data-ev="${e.id}">${esc(evTitle(e))}</button></div>`}).join('');
   // trucks: a work bar and, for dropped trailers, a trailer bar; one cell per day, colored by stage
   const trRows=trs.map(t=>{const days=D.map(d=>truckDay(t,d));
-    const cells=k=>days.map((x,i)=>x&&x[k]?`<span class="cseg st-${x[k]}" style="${col(i)}" title="${esc(STAGE_LBL[x[k]])}">${x[k]==='done'||x[k]==='picked'?'✓':k==='trailer'&&x.req?'☎':''}</span>`:'').join('');
+    const cells=k=>days.map((x,i)=>x&&x[k]?`<span class="cseg st-${x[k]}" style="${col(i)}" title="${esc(STAGE_LBL[x[k]])}">${x[k]==='done'||x[k]==='picked'?'✓':''}</span>`:'').join('');
     return `<div class="crow ctr" data-truck="${t.id}"><span class="cl">${TRUCKS[t.type].name} · ${esc(shortDay(t.arrived))} <span class="linkish">edit</span></span>${cells('work')}</div>${t.dropped?`<div class="crow ctr" data-truck="${t.id}"><span class="cl">${TRUCKS[t.type].name} trailer</span>${cells('trailer')}</div>`:''}`}).join('');
   const cov=D.map((d,i)=>{if(d>T)return '';const s=dsDayStats(d);const p=s.total?Math.round(s.done/s.total*100):0;const any=s.done+s.partly+s.follow;
     return `<button type="button" class="ccell cov" style="${col(i)};--p:${p}%" data-day="${d}">${any?`<b>${p}%</b>`:'<span class="muted">–</span>'}<i></i></button>`}).join('');
   const maxN=Math.max(1,...D.map(d=>dayIssues(d).logged.length));
   const iss=D.map((d,i)=>{if(d>T)return '';const x=dayIssues(d);const fr=x.logged.some(it=>it.issueId===FREIGHT_ID());
-    return `<button type="button" class="ccell iss" style="${col(i)};--h:${x.logged.length/maxN}" data-day="${d}"><span class="add">+${x.logged.length}</span><span class="fix">✓${x.fixed.length}</span>${fr?'<span class="flag" title="Freight left on sales floor">⚑</span>':''}</button>`}).join('');
+    return `<button type="button" class="ccell iss" style="${col(i)};--h:${x.logged.length/maxN}" data-day="${d}"><span class="add">+${x.logged.length}</span><span class="fix">✓${x.fixed.length}</span>${fr?`<span class="flag" title="Freight left on sales floor">${FLAG_SVG}</span>`:''}</button>`}).join('');
   const W=weekSummary(D[2]);
   const added=D.reduce((a,d)=>a+dayIssues(d).logged.length,0),fixed=D.reduce((a,d)=>a+dayIssues(d).fixed.length,0);
   el.innerHTML=`<div class="row" style="justify-content:space-between;align-items:center"><h2>Calendar</h2><button class="btn small" type="button" id="evAdd">+ Event</button></div>
@@ -2074,7 +2078,7 @@ function renderCal(){
   <div class="panel lsec"><div class="tiles3"><div><b>${added}</b><span>issues logged</span></div><div><b>${fixed}</b><span>issues fixed</span></div><div><b class="${added>fixed?'up':'down'}">${added>fixed?'+':''}${added-fixed}</b><span>change in open</span></div></div>
     <p class="note" style="margin:0">${W.cov}% of downstock areas done at least once this week${W.leftover?` · truck leftovers worked ${W.leftover} day${W.leftover===1?'':'s'}`:''}.</p></div>
   <details class="arch"><summary>What the colors mean</summary><div class="legend2">
-    ${['exp','unload','left1','left2','left3','done','bay','empty','picked'].map(k=>`<span><i class="st-${k}">${k==='done'||k==='picked'?'✓':''}</i>${STAGE_LBL[k]}</span>`).join('')}<span><i class="st-empty">☎</i>Pickup requested</span><span><i>⚑</i>Freight left on the sales floor (issue logged)</span>
+    ${['exp','unload','left1','left2','left3','done','bay','empty','req','picked'].map(k=>`<span><i class="st-${k}">${k==='done'||k==='picked'?'✓':''}</i>${STAGE_LBL[k]}</span>`).join('')}<span><i class="lgflag">${FLAG_SVG}</i>Freight left on the sales floor (issue logged)</span>
     ${EV_KINDS.map(([k,t])=>`<span><i class="ev-${k}"></i>${t}</span>`).join('')}</div></details>`;
   $('#calPrev').onclick=()=>{calWeek=addDays(calWeek,-7);renderCal()};
   $('#calNext').onclick=()=>{calWeek=addDays(calWeek,7);renderCal()};
@@ -2089,7 +2093,7 @@ function openDaySheet(d){
   const fol=A.map(a=>({a,r:rec(a.id,d)})).filter(o=>o.r&&(o.r.st==='follow'||o.r.st==='partly'));
   openSheet(`<div class="head"><h2>${esc(dayOf(d).toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'}))}</h2><button class="btn small" data-close>Close</button></div>
     ${evs.length?`<div><span class="label">Events</span>${evs.map(e=>`<button type="button" class="cbar ev ev-${e.kind}" data-ev="${e.id}" style="display:block;width:100%;margin-bottom:4px">${esc(evTitle(e))}${e.note?' · '+esc(e.note):''}</button>`).join('')}</div>`:''}
-    ${tr.length?`<div><span class="label">Trucks</span><ul class="tlist">${tr.map(o=>`<li><b>${TRUCKS[o.t.type].name}</b> (arrived ${esc(shortDay(o.t.arrived))}): ${[o.s.work&&STAGE_LBL[o.s.work],o.s.trailer&&STAGE_LBL[o.s.trailer],o.s.req&&'pickup requested'].filter(Boolean).join(' · ')}</li>`).join('')}</ul></div>`:''}
+    ${tr.length?`<div><span class="label">Trucks</span><ul class="tlist">${tr.map(o=>`<li><b>${TRUCKS[o.t.type].name}</b> (arrived ${esc(shortDay(o.t.arrived))}): ${[o.s.work&&STAGE_LBL[o.s.work],o.s.trailer&&STAGE_LBL[o.s.trailer],o.s.req&&'pickup requested this day'].filter(Boolean).join(' · ')}</li>`).join('')}</ul></div>`:''}
     <div><span class="label">Downstock</span><p style="margin:0">${s.done} of ${s.total} areas done${s.partly?` · ${s.partly} partial`:''}${s.follow?` · ${s.follow} follow-up`:''}${s.filled?` · ${s.filled} filled`:''}${s.laser?` · ${s.laser} LaserLine`:''}</p>
       ${fol.length?`<ul class="tlist">${fol.map(o=>`<li>${esc(o.a.label)}: ${esc(DS_ST[o.r.st])}${reasonText(o.r)?' · '+esc(reasonText(o.r)):''}</li>`).join('')}</ul>`:''}</div>
     <div><span class="label">Issues logged (${x.logged.length})</span>${x.logged.length?`<div class="list">${x.logged.map(it=>itemCard(it)).join('')}</div>`:'<p class="note" style="margin:0">None.</p>'}</div>
