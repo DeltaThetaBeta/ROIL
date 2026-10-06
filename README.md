@@ -159,9 +159,10 @@ It also has buttons to:
 - **Re-ask skipped truck days**
 
 ## Notes for later
-Tap **Note** at the top of any screen to jot down a bug, an improvement or a feature idea while you're on the floor. You can also tap the mic on the phone's keyboard and talk instead of typing.
+Tap **Note** at the top of any screen to jot something down while you're on the floor. Pick a kind: **Bug** (doesn't work or shows the wrong thing), **Improvement** (works, but should work or look differently), **New feature** (something ROIL doesn't do yet) or **Other**. A hint under the buttons explains each one. You can also tap the mic on the phone's keyboard and talk instead of typing.
 - **Context is saved with each note:** the screen you were on and the app version.
 - **Read them in Lists → Notes for later.** Tick off the ones that are done, or **Copy** or **Share** them (for example, to paste into a chat).
+- **Edit** on any note changes its kind, text, the screen it was written on, or whether it's done. Delete is there too.
 - **Notes sync to your other devices** and are included in backups.
 - **What you've typed is kept if you close the note without saving.**
 

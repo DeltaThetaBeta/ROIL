@@ -1353,8 +1353,10 @@ function syncHtml(){
 
 /* ---------- Notes for later: quick jots about ROIL itself (bugs, ideas) while you're on the floor ----------
    Synced with your other devices and kept in backups, so you can read them at home. */
-const APP_VERSION='roil-pages-25';
-const NOTE_TYPES=[['bug','Bug'],['improve','Improvement'],['feature','Feature idea'],['other','Other']];
+const APP_VERSION='roil-pages-26';
+/* keys stay the same for old notes and sync; v26 added the hints and renamed Feature idea to New feature */
+const NOTE_TYPES=[['bug','Bug'],['improve','Improvement'],['feature','New feature'],['other','Other']];
+const NOTE_HINT={bug:'Something doesn\'t work, crashes, or shows the wrong thing.',improve:'Something that works, but should work or look differently.',feature:'Something ROIL doesn\'t do yet.',other:'Questions, reminders, anything else.'};
 const noteType=k=>(NOTE_TYPES.find(t=>t[0]===k)||NOTE_TYPES[3])[1];
 let notes={};   // id -> {id,type,text,ctx,created,updated,done,deleted}
 function cleanNotes(o){
@@ -1370,31 +1372,41 @@ const liveNotes=()=>Object.values(notes).filter(n=>!n.deleted).sort((a,b)=>(b.cr
 function updateNoteBadge(){const b=$('#noteBadge');if(!b)return;const n=liveNotes().filter(x=>!x.done).length;b.textContent=n;b.hidden=!n}
 /* where you were when you wrote it, so a bug note says which screen it was about */
 function noteContext(){
-  const names={log:'Log',follow:'Open',history:'History',stats:'Stats',lists:'Lists'};
+  const names={log:'Log',follow:'Open',history:'History',stats:'Stats',lists:'Lists',ds:'Downstock · Today',cal:'Calendar',dsdays:'Downstock · Days'};
   let w=names[view]||view;
   if(view==='log'){const L=logLayout();w+=L==='steps'?` (Steps · ${STEPS[step].title})`:` (${L[0].toUpperCase()+L.slice(1)})`}
   if($('#sheetHost').innerHTML&&$('#sheetHost h2'))w+=` › ${$('#sheetHost h2').textContent.slice(0,40)}`;
   return `${w} · ${APP_VERSION} · ${dev.mobile?'phone':'computer'}`;
 }
 let noteDraft={type:'improve',text:''};
-function openNoteSheet(){
-  const ctx=noteContext();
-  openSheet(`<div class="head"><h2>Note for later</h2><button class="btn small" data-close>Close</button></div>
-  <div class="seg" id="nType" role="group" aria-label="Kind of note">${NOTE_TYPES.map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${noteDraft.type===k}">${t}</button>`).join('')}</div>
-  <textarea id="nText" placeholder="What you noticed or want changed. Tip: tap the mic on the keyboard to talk instead of typing." style="min-height:120px">${esc(noteDraft.text)}</textarea>
-  <p class="note" style="margin:0">Saved with: ${esc(ctx)}. Read them later in Lists → Notes for later.</p>
-  <button class="btn primary big" type="button" id="nSave">Save note</button>`);
-  const ta=$('#nText');setTimeout(()=>ta.focus(),60);
-  ta.addEventListener('input',()=>{noteDraft.text=ta.value});   // closing without saving keeps what you typed
-  $('#nType').onclick=e=>{const b=e.target.closest('button');if(!b)return;noteDraft.type=b.dataset.v;$('#nType').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b))};
+function openNoteSheet(id){
+  const ed=typeof id==='string'&&notes[id]&&!notes[id].deleted?notes[id]:null;
+  const ctx=ed?ed.ctx:noteContext();
+  const d=ed?{type:ed.type,text:ed.text}:noteDraft;
+  openSheet(`<div class="head"><h2>${ed?'Edit note':'Note for later'}</h2><button class="btn small" data-close>${ed?'Cancel':'Close'}</button></div>
+  <div class="seg" id="nType" role="group" aria-label="Kind of note">${NOTE_TYPES.map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${d.type===k}">${t}</button>`).join('')}</div>
+  <p class="note" id="nHint" style="margin:-4px 0 0">${esc(NOTE_HINT[d.type]||'')}</p>
+  <textarea id="nText" placeholder="What you noticed or want changed. Tip: tap the mic on the keyboard to talk instead of typing." style="min-height:120px">${esc(d.text)}</textarea>
+  ${ed?`<div><label class="label" for="nCtx">Where <span class="lsub">the screen it was written on</span></label><input type="text" id="nCtx" maxlength="200" value="${esc(ed.ctx)}"></div>
+    <label class="switch"><input type="checkbox" id="nDone" ${ed.done?'checked':''}><span>Done</span></label>
+    <p class="note" style="margin:0">Written ${esc(fmtDT(ed.created))}${ed.updated&&ed.updated!==ed.created?` · last changed ${esc(fmtDT(ed.updated))}`:''}.</p>
+    <div class="row" style="justify-content:space-between"><button class="btn small danger" type="button" id="nDel">Delete</button><button class="btn primary" type="button" id="nSave">Save changes</button></div>`
+  :`<p class="note" style="margin:0">Saved with: ${esc(ctx)}. Read and edit them later in Lists → Notes for later.</p>
+  <button class="btn primary big" type="button" id="nSave">Save note</button>`}`);
+  const ta=$('#nText');if(!ed)setTimeout(()=>ta.focus(),60);
+  if(!ed)ta.addEventListener('input',()=>{noteDraft.text=ta.value});   // closing without saving keeps what you typed
+  $('#nType').onclick=e=>{const b=e.target.closest('button');if(!b)return;d.type=b.dataset.v;$('#nType').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));$('#nHint').textContent=NOTE_HINT[d.type]||''};
   $('#nSave').onclick=async()=>{
     const text=ta.value.trim();if(!text){toast('Write something first.');ta.focus();return}
-    const now=nowIso(),id=newId();notes[id]={id,type:noteDraft.type,text:text.slice(0,4000),ctx,created:now,updated:now,done:false,deleted:false};
-    noteDraft={type:noteDraft.type,text:''};ta.value='';
-    try{await saveNotes();closeSheet();toast('Note saved.');if(view==='lists')renderLists()}catch(e){toast('Couldn\'t save the note. Try again.')}
+    const now=nowIso();
+    if(ed){notes[ed.id]={...ed,type:d.type,text:text.slice(0,4000),ctx:$('#nCtx').value.trim().slice(0,200),done:$('#nDone').checked,updated:now}}
+    else{const nid=newId();notes[nid]={id:nid,type:d.type,text:text.slice(0,4000),ctx,created:now,updated:now,done:false,deleted:false};noteDraft={type:d.type,text:''};ta.value=''}
+    try{await saveNotes();closeSheet();toast(ed?'Note updated.':'Note saved.');if(view==='lists')renderLists()}catch(e){toast('Couldn\'t save the note. Try again.')}
   };
+  const dl=$('#nDel');if(dl)dl.onclick=async e=>{if(e.target.dataset.armed!=='1'){e.target.dataset.armed='1';e.target.textContent='Tap again to delete';return}
+    notes[ed.id]={...ed,deleted:true,updated:nowIso()};await saveNotes();closeSheet();toast('Note deleted.');if(view==='lists')renderLists()};
 }
-$('#noteBtn').addEventListener('click',openNoteSheet);
+$('#noteBtn').addEventListener('click',()=>openNoteSheet());
 function notesText(arr){return [`ROIL notes (${arr.length}) · ${fmtD(new Date())}`,...arr.map(n=>`\n[${noteType(n.type)}]${n.done?' (done)':''} ${fmtDT(n.created)}\n${n.text}\n  where: ${n.ctx}`)].join('\n')}
 let notesShowDone=false;
 function notesHtml(){
@@ -1402,7 +1414,7 @@ function notesHtml(){
   return `<section class="panel lsec" id="notesPanel"><header><h3>Notes for later</h3><span class="muted mono" style="font-size:12px">${open.length} open${all.length-open.length?` · ${all.length-open.length} done`:''}</span></header>
   ${all.length?`<div class="row"><button class="btn small" type="button" data-nact="copy">Copy ${notesShowDone?'all':'open'} notes</button><button class="btn small" type="button" data-nact="share">Share</button><button class="btn small ghost" type="button" data-nact="toggle">${notesShowDone?'Hide done':'Show done'}</button><button class="btn small ghost" type="button" data-nact="new">New note</button></div>
   <ul class="notes">${shown.map(n=>`<li class="nrow${n.done?' done':''}"><label class="ncheck"><input type="checkbox" data-ndone="${n.id}" ${n.done?'checked':''} aria-label="Done"></label>
-    <div class="nbody"><span class="pill nt-${n.type}">${esc(noteType(n.type))}</span> <span class="mono muted" style="font-size:12px">${esc(fmtDT(n.created))}</span>
+    <div class="nbody"><span class="pill nt-${n.type}">${esc(noteType(n.type))}</span> <span class="mono muted" style="font-size:12px">${esc(fmtDT(n.created))}</span> <button type="button" class="linkish" data-nact="edit" data-id="${n.id}" style="font-size:13px">Edit</button>
       <p>${esc(n.text).replace(/\n/g,'<br>')}</p><span class="muted" style="font-size:12px">${esc(n.ctx)}</span></div>
     <button class="ib del${armedKey==='note:'+n.id?' armed':''}" type="button" data-ndel="${n.id}" aria-label="Delete note" title="${armedKey==='note:'+n.id?'Tap again to delete':'Delete'}"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></li>`).join('')||'<p class="note">Nothing open. Nice.</p>'}</ul>`
   :`<p class="note" style="margin:0">Tap <b>Note</b> at the top of any screen to jot down a bug or an idea. They're kept here, and synced to your other devices.</p>`}
@@ -1417,6 +1429,7 @@ function notesHtml(){
       else if(k==='share'){const t=notesText(arr);if(navigator.share){try{await navigator.share({title:'ROIL notes',text:t})}catch(err){}}else copyText(t)}
       else if(k==='toggle'){notesShowDone=!notesShowDone;renderLists()}
       else if(k==='new')openNoteSheet();
+      else if(k==='edit')openNoteSheet(a.dataset.id);
       return}
     const d=e.target.closest('#notesPanel [data-ndel]');
     if(d){const id=d.dataset.ndel;if(armedKey!=='note:'+id){arm('note:'+id);return}armedKey=null;notes[id]={...notes[id],deleted:true,text:'',updated:nowIso()};await saveNotes();renderLists();toast('Note deleted.')}
