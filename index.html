@@ -59,7 +59,8 @@ h2{font-family:var(--f-display);font-size:22px;letter-spacing:.03em;margin:0;tex
 
 /* nav */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);
-  display:grid;grid-template-columns:repeat(5,1fr);padding-bottom:env(safe-area-inset-bottom,0px)}
+  display:grid;grid-auto-flow:column;grid-auto-columns:1fr;padding-bottom:env(safe-area-inset-bottom,0px)}
+body[data-mode="ds"] nav.tabs [data-mode="issues"],body:not([data-mode="ds"]) nav.tabs [data-mode="ds"]{display:none}
 nav.tabs button{background:none;border:0;padding:10px 2px 9px;display:grid;justify-items:center;gap:3px;cursor:pointer;color:var(--muted);font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.05em;text-transform:uppercase;position:relative;white-space:nowrap}
 nav.tabs svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 nav.tabs button[aria-current="page"]{color:var(--accent)}
@@ -364,7 +365,7 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 .qty .ib{width:36px;height:36px;font-size:18px}
 .qty span{min-width:2ch;text-align:center}
 .pill.bad{background:color-mix(in srgb,var(--bad) 14%,var(--surface));color:var(--bad)}
-.pill:not(.Open):not(.Needs):not(.Fixed):not(.bad):not([class*="nt-"]){background:var(--sunk);color:var(--muted)}
+.pill:not(.Open):not(.Needs):not(.Fixed):not(.bad):not(.dsx):not([class*="nt-"]){background:var(--sunk);color:var(--muted)}
 .ladd.three{grid-template-columns:minmax(0,1fr) auto auto}
 .warnline{margin:8px 0 0;font-size:13px;font-weight:600;color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,transparent);border-radius:var(--r-sm);padding:6px 10px}
 #scanHost .overlay{z-index:60}
@@ -393,6 +394,31 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 .pill.nt-bug{background:color-mix(in srgb,var(--bad) 14%,var(--surface));color:var(--bad)}
 .pill.nt-improve{background:var(--accent-soft);color:var(--accent)}
 .pill.nt-feature{background:var(--follow-soft);color:var(--follow)}
+.modesw{margin:-4px 0 12px}
+.modesw button{min-height:38px;padding:6px;font-family:var(--f-display);letter-spacing:.05em;text-transform:uppercase;font-size:14px}
+.dsfrom{margin:0}
+.dscov{display:grid;gap:8px}
+.covtop{display:flex;align-items:baseline;gap:10px}.covtop b{font-family:var(--f-display);font-size:34px;line-height:1}
+.covbar{display:flex;height:12px;background:var(--sunk);border-radius:6px;overflow:hidden}
+.covbar i{display:block;height:100%}.covbar i.d{background:var(--good)}.covbar i.p{background:var(--open)}
+.dsrun{display:grid;gap:10px;border-color:var(--accent)}
+.dsrunlist{display:flex;flex-wrap:wrap;gap:6px}
+.chip.static{cursor:default;min-height:30px;padding:4px 10px;font-size:13px}
+.dsrows{display:grid;gap:6px}
+.dsrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-sm);padding:9px 10px;cursor:pointer;min-height:48px}
+.dsrow.inrun{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.dsn{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.dsp{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
+.dsl{grid-column:1/-1;font-size:12px}.dsl:empty{display:none}
+.toptag{font-family:var(--f-mono);font-size:10px;font-weight:500;color:var(--follow);text-transform:uppercase;margin-left:4px}
+.pill.dsx{background:var(--accent-soft);color:var(--accent)}
+.dsfirst{border-color:var(--follow)}
+.rflist{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.rfrow{display:grid;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px}
+.rfname{font-weight:600}
+.rfrow .seg button{min-height:40px;padding:6px 4px;font-size:14px}
+.dsday{display:grid;gap:6px}
+.ghostchip{border-style:dashed}
 .dupw{display:grid;gap:4px;justify-items:start}
 .dupw .item{width:100%}
 </style>
@@ -405,10 +431,12 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
     <div class="topr"><button class="notebtn" id="noteBtn" type="button" aria-label="Jot a note for later" title="Jot down a bug or idea"><svg viewBox="0 0 24 24"><path d="M5 19.5V5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v9.5L14.5 19H6a1 1 0 0 1-1-.5z"/><path d="M14 19v-4a1 1 0 0 1 1-1h4M8.5 8.5h7M8.5 12h4.5"/></svg><span>Note</span><b id="noteBadge" hidden></b></button>
     <button class="sync" id="sync" type="button"><i></i><span>Starting…</span></button></div>
   </header>
+  <div class="seg modesw" id="modeSw" role="group" aria-label="Mode"><button type="button" data-m="issues" aria-pressed="true">Issues</button><button type="button" data-m="ds" aria-pressed="false">Downstock</button></div>
   <div id="banner"></div>
 
   <!-- LOG -->
   <section id="v-log" class="stack">
+    <p class="banner dsfrom" id="dsFrom" hidden><span>Found while downstocking</span><button type="button" class="btn small ghost" id="dsFromX">Not from downstocking</button></p>
     <div id="logSteps" class="steps" hidden></div>
     <div id="logBody" class="stack"></div>
     <div class="savebar" id="saveBar">
@@ -456,6 +484,7 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
       <div class="part" id="part-issue">
         <p class="req" id="reqIssue" hidden>Pick what's wrong</p>
         <div id="fIssue" role="group" aria-label="Issue"></div>
+        <div class="rite" id="fPrsWrap" hidden><span class="label" style="margin:0">What was missed</span><div class="chips small-chips" id="fPrs" role="group" aria-label="PRS missed"></div></div>
         <div class="rite" id="fRiteWrap" hidden><label class="switch"><input type="checkbox" id="fRite"><span>RITE ticket submitted</span></label><input type="text" id="fRiteNo" maxlength="40" placeholder="Ticket number (optional)" aria-label="RITE ticket number"></div>
       </div>
       <div class="part" id="part-source">
@@ -489,13 +518,17 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
   <section id="v-history" class="stack" hidden></section>
   <section id="v-stats" class="stack" hidden></section>
   <section id="v-lists" class="stack" hidden></section>
+  <section id="v-ds" class="stack" hidden></section>
+  <section id="v-dsdays" class="stack" hidden></section>
 </div>
 
 <nav class="tabs" id="tabs" aria-label="Sections">
-  <button data-v="log" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Log</button>
-  <button data-v="follow"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8.5"/></svg>Open<span class="badge" id="fuBadge" hidden></span></button>
-  <button data-v="history"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>History</button>
-  <button data-v="stats"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>Stats</button>
+  <button data-v="ds" data-mode="ds"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M7 4v4M12 10v4M17 16v4"/></svg>Today</button>
+  <button data-v="dsdays" data-mode="ds"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Days</button>
+  <button data-v="log" data-mode="issues" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Log</button>
+  <button data-v="follow" data-mode="issues"><svg viewBox="0 0 24 24"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8.5"/></svg>Open<span class="badge" id="fuBadge" hidden></span></button>
+  <button data-v="history" data-mode="issues"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h9"/></svg>History</button>
+  <button data-v="stats" data-mode="issues"><svg viewBox="0 0 24 24"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>Stats</button>
   <button data-v="lists"><svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="17" cy="7" r="2"/><circle cx="14" cy="17" r="2"/></svg>Lists</button>
 </nav>
 
@@ -531,7 +564,7 @@ const DEFAULT_LISTS = {
     ["Services / Geek Squad",["Computer Setup","Computer Repair","Device Setup","TV Installation","Home Theater Installation","Appliance Installation","Networking Services","Data Services","Protection Plans","Tech Support"]],
     ["Best Buy Outlet",["Open-Box Products","Clearance Products","Refurbished Products","Returned Merchandise"]]
   ],
-  issues:["Wrong facing / placement","Overstuffed","Mixed product","Missing ESL","ESL not paired","Item in wrong location","RITE","Damaged product or fixture","Not per planogram","Missing signage","Safety / security concern"],
+  issues:["Wrong facing / placement","Overstuffed","Mixed product","Missing ESL","ESL not paired","Item in wrong location","RITE","Damaged product or fixture","Not per planogram","Missing signage","Safety / security concern","PRS not followed"],
   causes:["Outdated planogram","Training / process gap","Planogram not followed","Customer left item out","Display not maintained","Stock not on hand","Missed or late reset","Unknown"],
   shifts:["Opening","Mid","Closing"],
   sources:["Truck / freight","Customer","Recovery / zoning","Reset / planogram change","Pricing / ESL system","Vendor / merch partner","Unknown"],
@@ -717,7 +750,7 @@ function ent(x,p,key){
 /* Accepts every lists format ROIL has used (plain names, or entries with ids) and returns entries with ids. */
 function normLists(d){
   const has=d&&typeof d==='object';
-  const l={v:3,departments:[],issues:[],sources:[],causes:[],shifts:[],categories:[],defaultSource:has&&ENTRY_ID.test(d.defaultSource||'')?d.defaultSource:'',showShift:has&&d.showShift===true,updated:has&&typeof d.updated==='string'?d.updated:'',
+  const l={v:4,departments:[],issues:[],sources:[],causes:[],shifts:[],categories:[],defaultSource:has&&ENTRY_ID.test(d.defaultSource||'')?d.defaultSource:'',showShift:has&&d.showShift===true,updated:has&&typeof d.updated==='string'?d.updated:'',
     removed:has&&Array.isArray(d.removed)?d.removed.filter(x=>ENTRY_ID.test(x)).slice(-2000):[],moved:{}};
   if(has&&d.moved&&typeof d.moved==='object')for(const [a,b] of Object.entries(d.moved))if(ENTRY_ID.test(a)&&ENTRY_ID.test(b))l.moved[a]=b;
   const deps=has&&Array.isArray(d.departments)&&d.departments.length?d.departments:DEFAULT_LISTS.departments;
@@ -738,13 +771,14 @@ function normLists(d){
     for(const x of arr){const e=ent(x,KINDS[k].p);if(e&&!l[k].some(q=>q.id===e.id))l[k].push(e)}
   }
   if(!has||!(d.v>=3))upgradeLists(l);
+  if(!(has&&d.v>=4))upgradeLists4(l);
   return l;
 }
 /* Version 3 lists: Source split out of Cause, issue categories, RITE renamed. Runs once on older
    lists (on any device), always with the same ids, so devices that upgrade separately still agree. */
 const CUSTOMER_CAUSE=()=>sid('c','Customer left item out'),CUSTOMER_SOURCE=()=>sid('o','Customer'),DEMO_CAT=()=>sid('g','Demo units');
 const ISSUE_CATS={'Placement':['Wrong facing / placement','Overstuffed','Mixed product','Item in wrong location','Not per planogram'],
-  'Pricing & labels':['Missing ESL','ESL not paired','Missing signage'],'Demo units':['RITE','Demo unit issue'],'Condition':['Damaged product or fixture'],'Safety & security':['Safety / security concern']};
+  'Pricing & labels':['Missing ESL','ESL not paired','Missing signage'],'Demo units':['RITE','Demo unit issue'],'Condition':['Damaged product or fixture'],'Safety & security':['Safety / security concern','PRS not followed']};
 function upgradeLists(l){
   const rite=l.issues.find(e=>e.name.toLowerCase()==='rite');if(rite)rite.name='Demo unit issue';
   for(const [cat,names] of Object.entries(ISSUE_CATS)){const cid=sid('g',cat);
@@ -753,7 +787,13 @@ function upgradeLists(l){
   if(!l.defaultSource)l.defaultSource=sid('o','Truck / freight');
   l.v=3;
 }
-function listsBody(l){return JSON.parse(JSON.stringify({v:3,departments:l.departments,issues:l.issues,sources:l.sources,causes:l.causes,shifts:l.shifts,categories:l.categories,defaultSource:l.defaultSource||'',showShift:!!l.showShift,updated:l.updated||'',removed:l.removed||[],moved:l.moved||{}}))}
+/* Version 4: adds the "PRS not followed" issue type (product retention standards) under Safety & security. */
+const PRS_ID=()=>sid('i','PRS not followed');
+function upgradeLists4(l){
+  if(!l.issues.some(e=>e.id===PRS_ID())&&!l.removed.includes(PRS_ID()))l.issues.push({id:PRS_ID(),name:'PRS not followed',archived:false,cat:sid('g','Safety & security')});
+  l.v=4;
+}
+function listsBody(l){return JSON.parse(JSON.stringify({v:4,departments:l.departments,issues:l.issues,sources:l.sources,causes:l.causes,shifts:l.shifts,categories:l.categories,defaultSource:l.defaultSource||'',showShift:!!l.showShift,updated:l.updated||'',removed:l.removed||[],moved:l.moved||{}}))}
 let IX={dept:new Map(),pog:new Map()};for(const k in KINDS)IX[k]=new Map();
 function reindex(){
   IX={dept:new Map(),pog:new Map()};for(const k in KINDS)IX[k]=new Map();
@@ -830,7 +870,7 @@ let loaded=false;
 let view='log';
 let hf=ls.get('roil.hf',{range:'30',dept:'',issue:'',status:'',q:''});
 let srange=ls.get('roil.srange','30');
-const form={photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,dept:'',sub:'',issue:'',source:null,cause:'',status:'Open',shift:'',sku:'',lockup:false,found:[]};
+const form={photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,dept:'',sub:'',issue:'',source:null,cause:'',status:'Open',shift:'',sku:'',lockup:false,found:[],prs:[],fromDs:false};
 const last=ls.get('roil.last',{});
 form.dept=last.dept||'';form.sub=last.sub||'';form.shift=last.shift||'';
 const photoUrls=new Map(),thumbUrls=new Map(),afterUrls=new Map(),afterThumbUrls=new Map();   // item id -> blob: URL for photos kept on this device
@@ -863,7 +903,7 @@ function dropLocal(id){
   dropPhotoUrls(id);
   setItems(items.filter(x=>x.id!==id));
 }
-const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','sourceId','causeId','shiftId','dept','planogram','issue','source','cause','shift','note','status','fixedAt','photo','photoRev','after','afterRev','rite','riteNo','sku','lockup','found'];
+const ITEM_FIELDS=['id','created','updated','deptId','planogramId','issueId','sourceId','causeId','shiftId','dept','planogram','issue','source','cause','shift','note','status','fixedAt','photo','photoRev','after','afterRev','rite','riteNo','sku','lockup','found','prs','ds'];
 const REF_FIELDS=['deptId','planogramId','issueId','sourceId','causeId','shiftId'];
 function serverItem(it){const o={};for(const k of ITEM_FIELDS)o[k]=it[k]??(k==='fixedAt'?null:k==='photo'?false:'');o.photo=!!o.photo;o.lockup=!!o.lockup;o.found=cleanFound(o.found);return o}
 
@@ -932,7 +972,7 @@ function b64ToBlob(s,type){const bin=atob(s);const a=new Uint8Array(bin.length);
    doesn't need one giant string. Same item format the server version uses. */
 async function buildBackup(){
   const phs=await getAll('photos');const its=items.map(x=>({...x}));const l=listsBody(lists);
-  const parts=[`{"format":"roil-backup","version":2,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"products":${JSON.stringify(prods)},"notes":${JSON.stringify(notes)},"appearance":${JSON.stringify(ap)},"items":${JSON.stringify(its)},"photos":{`];
+  const parts=[`{"format":"roil-backup","version":2,"exported":${JSON.stringify(new Date().toISOString())},"lists":${JSON.stringify(l||null)},"deleted":${JSON.stringify(tombs)},"products":${JSON.stringify(prods)},"notes":${JSON.stringify(notes)},"downstock":${JSON.stringify(dk)},"appearance":${JSON.stringify(ap)},"items":${JSON.stringify(its)},"photos":{`];
   let first=true;
   for(const p of phs){
     const full=p.full||p.thumb,af=p.after||p.afterThumb;if(!full&&!af)continue;
@@ -963,6 +1003,7 @@ async function doBackup(shareIt){
 async function mergeIncoming(data,opt={}){
   if(data.lists&&typeof data.lists==='object'){lists=mergeLists(lists,normLists(data.lists));relinkAll()}
   let noteOp=null;if(data.notes&&typeof data.notes==='object'){const m=mergeNotes(notes,cleanNotes(data.notes));if(JSON.stringify(m)!==JSON.stringify(notes)){notes=m;noteOp={s:'meta',v:notes,k:'notes'};updateNoteBadge()}}
+  let dkOp=null;if(data.downstock&&typeof data.downstock==='object'){const m=mergeDk(dk,cleanDk(data.downstock));if(JSON.stringify(m)!==JSON.stringify(dk)){dk=m;dkOp={s:'meta',v:dk,k:'downstock'}}}
   let prodOp=null;if(data.products&&typeof data.products==='object'){const m=mergeProds(prods,cleanProds(data.products));if(JSON.stringify(m)!==JSON.stringify(prods)){prods=m;prodOp={s:'meta',v:prods,k:'products'}}}
   const ID=/^[a-z0-9]{6,40}$/;const have=new Map(items.map(i=>[i.id,i]));const ops=[];let added=0,updated=0,photos=0,removed=0;
   const newTombs={...tombs};
@@ -982,6 +1023,7 @@ async function mergeIncoming(data,opt={}){
     it.rite=!!it.rite;it.riteNo=String(it.riteNo||'').slice(0,40);it.after=!!it.after;const REV=v=>/^[a-z0-9]{1,20}$/.test(String(v||''))?String(v):'';it.afterRev=REV(it.afterRev);it.photoRev=it.photo?REV(it.photoRev):'';if(!it.after)it.afterRev='';
     it.note=String(it.note).slice(0,2000);
     it.sku=SKU_RE.test(String(x.sku||''))?String(x.sku):'';it.lockup=!!x.lockup;it.found=cleanFound(x.found);
+    it.prs=Array.isArray(x.prs)?x.prs.filter(k=>PRS_OPTS.some(o=>o[0]===k)):[];it.ds=!!x.ds;
     for(const k of REF_FIELDS)it[k]=ENTRY_ID.test(String(it[k]))?String(it[k]):'';
     link(it);
     const cur=have.get(it.id);
@@ -1004,7 +1046,7 @@ async function mergeIncoming(data,opt={}){
   relinkAll([...have.values()]);ops.push({s:'meta',v:listsBody(lists),k:'lists'});buildForm();
   let apChanged=false;
   if(opt.appearance&&data.appearance&&typeof data.appearance==='object'){const inc=cleanAp(data.appearance);if((inc.updated||'')>(ap.updated||'')){ap=inc;ls.set('roil.appearance',ap);applyAp();apChanged=true;if(loaded)renderLog()}}
-  ops.push({s:'meta',v:newTombs,k:'deleted'});if(prodOp)ops.push(prodOp);if(noteOp)ops.push(noteOp);
+  ops.push({s:'meta',v:newTombs,k:'deleted'});if(prodOp)ops.push(prodOp);if(noteOp)ops.push(noteOp);if(dkOp)ops.push(dkOp);
   await write(ops);
   tombs=newTombs;
   setItems([...have.values()]);
@@ -1109,7 +1151,7 @@ const Drive={
 function sortedProds(){const o={skus:{},upcs:{}};for(const t of['skus','upcs'])for(const k of Object.keys(prods[t]).sort())o[t][k]=prods[t][k];return o}
 function syncDocText(){
   const its=items.map(x=>({...x})).sort((a,b)=>a.id<b.id?-1:1);
-  return JSON.stringify({format:'roil-sync',version:2,lists:listsBody(lists),deleted:tombs,products:sortedProds(),notes:Object.fromEntries(Object.keys(notes).sort().map(k=>[k,notes[k]])),items:its});
+  return JSON.stringify({format:'roil-sync',version:2,lists:listsBody(lists),deleted:tombs,products:sortedProds(),notes:Object.fromEntries(Object.keys(notes).sort().map(k=>[k,notes[k]])),downstock:{cfg:dk.cfg,days:Object.fromEntries(Object.keys(dk.days).sort().map(k=>[k,dk.days[k]]))},items:its});
 }
 const pname=(kind,id,rev)=>rev?`${kind}-${id}-${rev}.jpg`:`${kind}-${id}.jpg`;
 async function syncPhotos(folder,files){
@@ -1223,7 +1265,7 @@ function syncHtml(){
 
 /* ---------- Notes for later: quick jots about ROIL itself (bugs, ideas) while you're on the floor ----------
    Synced with your other devices and kept in backups, so you can read them at home. */
-const APP_VERSION='roil-pages-14';
+const APP_VERSION='roil-pages-15';
 const NOTE_TYPES=[['bug','Bug'],['improve','Improvement'],['feature','Feature idea'],['other','Other']];
 const noteType=k=>(NOTE_TYPES.find(t=>t[0]===k)||NOTE_TYPES[3])[1];
 let notes={};   // id -> {id,type,text,ctx,created,updated,done,deleted}
@@ -1294,19 +1336,359 @@ function notesHtml(){
   el.addEventListener('change',async e=>{const c=e.target.closest('#notesPanel [data-ndone]');if(!c)return;const n=notes[c.dataset.ndone];if(!n)return;notes[n.id]={...n,done:c.checked,updated:nowIso()};await saveNotes();renderLists()});
 })();
 
+/* ================= DOWNSTOCK =================
+   A daily coverage board: every planogram (or a department with no planograms) is an "area".
+   Each day an area is Not done, Partly done, Done, or Follow-up (with a reason), plus the extras
+   Filled (restocked beyond empties) and LaserLine (fronted). Others' work can be marked
+   "Done by someone else" and spot-checked. Runs group the areas you walk together.
+   Synced (meta "downstock"): cfg.reasons, cfg.groups, cfg.top, and day records, merged entry by entry. */
+const DS_HELP=[['lift','Lift (needs a spotter)'],['ladder','Ladder'],['person','Second person'],['heavy','Heavy or bulky']];
+const DS_REASON_DEFAULTS=[["Couldn't find in overstock",'db'],['Needs equipment or help','help'],['Waiting on PRS supplies',''],['Other','']];
+const DS_ST={none:'Not done',partly:'Partly done',done:'Done',follow:'Follow-up'};
+let dk={cfg:{reasons:{},groups:{},top:{},skip:{}},days:{}};
+function dsDefaults(){
+  DS_REASON_DEFAULTS.forEach(([n,kind],i)=>{const id=sid('r',n);if(!dk.cfg.reasons[id])dk.cfg.reasons[id]={id,name:n,kind,order:i,archived:false,updated:''}});
+}
+function cleanDk(o){
+  const r={cfg:{reasons:{},groups:{},top:{},skip:{}},days:{}};if(!o||typeof o!=='object')return r;const c=o.cfg||{};
+  for(const [k,v] of Object.entries(c.skip||{}))if(ENTRY_ID.test(k)&&v&&typeof v==='object')r.cfg.skip[k]={on:!!v.on,updated:String(v.updated||'').slice(0,40)};
+  const T=v=>String(v||'').slice(0,40);
+  for(const [k,v] of Object.entries(c.reasons||{}))if(ENTRY_ID.test(k)&&v&&typeof v==='object')r.cfg.reasons[k]={id:k,name:String(v.name||'').slice(0,80)||'Reason',kind:['db','help'].includes(v.kind)?v.kind:'',order:+v.order||0,archived:!!v.archived,updated:T(v.updated)};
+  for(const [k,v] of Object.entries(c.groups||{}))if(ENTRY_ID.test(k)&&v&&typeof v==='object')r.cfg.groups[k]={id:k,name:String(v.name||'').slice(0,60)||'Group',areas:Array.isArray(v.areas)?v.areas.filter(a=>ENTRY_ID.test(String(a))).slice(0,200):[],deleted:!!v.deleted,updated:T(v.updated)};
+  for(const [k,v] of Object.entries(c.top||{}))if(ENTRY_ID.test(k)&&v&&typeof v==='object')r.cfg.top[k]={on:!!v.on,updated:T(v.updated)};
+  for(const [k,v] of Object.entries(o.days||{})){
+    const m=/^(\d{4}-\d{2}-\d{2})\|([a-z0-9_]{1,40})$/.exec(k);if(!m||!v||typeof v!=='object')continue;
+    r.days[k]={day:m[1],area:m[2],st:DS_ST[v.st]?v.st:'none',filled:!!v.filled,laser:!!v.laser,reason:ENTRY_ID.test(String(v.reason||''))?String(v.reason):'',
+      help:DS_HELP.some(h=>h[0]===v.help)?v.help:'',db:!!v.db,dbNo:String(v.dbNo||'').slice(0,40),note:String(v.note||'').slice(0,300),
+      by:v.by==='other'?'other':'me',check:['good','missed'].includes(v.check)?v.check:'',t:T(v.t),updated:T(v.updated)};
+  }
+  return r;
+}
+function mergeDk(a,b){
+  const pick=(x,y)=>{const o={...x};for(const [k,v] of Object.entries(y))if(!o[k]||(v.updated||'')>(o[k].updated||''))o[k]=v;return o};
+  return {cfg:{reasons:pick(a.cfg.reasons,b.cfg.reasons),groups:pick(a.cfg.groups,b.cfg.groups),top:pick(a.cfg.top,b.cfg.top),skip:pick(a.cfg.skip||{},b.cfg.skip||{})},days:pick(a.days,b.days)};
+}
+async function saveDk(){await write([{s:'meta',v:dk,k:'downstock'}]);markChanged()}
+const today=()=>localDay(new Date());
+const dsReasons=(all)=>Object.values(dk.cfg.reasons).filter(r=>all||!r.archived).sort((a,b)=>a.order-b.order||a.name.localeCompare(b.name));
+const dsReason=id=>dk.cfg.reasons[id];
+/* areas: active planograms; a department without planograms is one area */
+const isSkip=id=>!!(dk.cfg.skip&&dk.cfg.skip[id]&&dk.cfg.skip[id].on);
+function dsAreas(all){
+  const out=[];
+  for(const d of activeOf(lists.departments)){
+    const pg=activeOf(d.planograms);
+    if(pg.length)for(const p of pg)out.push({id:p.id,dept:d,name:p.name,label:d.name+' › '+p.name});
+    else out.push({id:d.id,dept:d,name:d.name,label:d.name,whole:true});
+  }
+  return all?out:out.filter(a=>!isSkip(a.id)&&!isSkip(a.dept.id));   // areas you've marked as not downstocked are left out
+}
+const dsArea=id=>dsAreas(true).find(a=>a.id===id);
+const rec=(area,day=today())=>dk.days[day+'|'+area];
+function setRec(area,patch,day=today()){
+  const k=day+'|'+area,cur=dk.days[k]||{day,area,st:'none',filled:false,laser:false,reason:'',help:'',db:false,dbNo:'',note:'',by:'me',check:'',t:''};
+  const n={...cur,...patch,updated:nowIso()};if(patch.st&&patch.st!==cur.st)n.t=nowIso();
+  if(n.st!=='follow'){n.reason='';n.help='';n.db=false;n.dbNo=''}
+  if(n.st==='none'){n.filled=false;n.laser=false}
+  if(n.by!=='other')n.check='';
+  dk.days[k]=n;return n;
+}
+function lastDone(area){let best='';for(const r of Object.values(dk.days))if(r.area===area&&(r.st==='done')&&r.day>best)best=r.day;return best}
+function daysAgo(day){if(!day)return null;const a=new Date(day+'T00:00:00'),b=new Date(today()+'T00:00:00');return Math.round((b-a)/86400000)}
+const dsAgo=day=>{const n=daysAgo(day);return n==null?'never':n===0?'today':n===1?'yesterday':n+' days ago'};
+/* follow-ups and partly-done areas from earlier days that haven't been done since */
+function carriedOver(){
+  const latest=new Map();
+  for(const r of Object.values(dk.days))if(r.day<today()){const c=latest.get(r.area);if(!c||r.day>c.day)latest.set(r.area,r)}
+  const out=[];
+  for(const [area,r] of latest){if(r.st!=='follow'&&r.st!=='partly')continue;const t=rec(area);if(t&&t.st==='done')continue;const A=dsArea(area);if(A&&!isSkip(A.id)&&!isSkip(A.dept.id))out.push(r)}
+  return out.sort((a,b)=>b.day.localeCompare(a.day));
+}
+const isTop=id=>!!(dk.cfg.top[id]&&dk.cfg.top[id].on);
+function stPill(r){
+  if(!r||r.st==='none')return '<span class="pill">Not done</span>';
+  const s=r.st==='done'?'<span class="pill Fixed">Done</span>':r.st==='partly'?'<span class="pill Open">Partly done</span>':'<span class="pill Needs">Follow-up</span>';
+  return s+(r.filled?'<span class="pill dsx">Filled</span>':'')+(r.laser?'<span class="pill dsx">LaserLine</span>':'')+(r.by==='other'?`<span class="pill">${r.check==='missed'?'Others · missed empties':r.check==='good'?'Others · checked':'Done by others'}</span>`:'')
+    +(r.st==='follow'&&dsReason(r.reason)&&dsReason(r.reason).kind==='db'&&!r.db?'<span class="pill bad">Delta Buster not submitted</span>':'');
+}
+function reasonText(r){
+  const R=dsReason(r.reason);if(!R)return r.note||'';
+  let t=R.name;if(R.kind==='db')t+=r.db?` (Delta Buster${r.dbNo?' #'+r.dbNo:''} submitted)`:' (Delta Buster not submitted)';
+  if(R.kind==='help'&&r.help)t+=` (${DS_HELP.find(h=>h[0]===r.help)[1].toLowerCase()})`;
+  if(r.note)t+=': '+r.note;return t;
+}
+
+/* ---------- the current run (kept on this device) ---------- */
+let dsRun=ls.get('roil.dsRun',null);   // {areas:[ids], started}
+const saveRun=()=>ls.set('roil.dsRun',dsRun);
+let dsFilter=ls.get('roil.dsFilter','all');const dsOpenDepts=new Set();
+
+function renderDs(){
+  const el=$('#v-ds');if(!el)return;
+  const A=dsAreas(),T=today();
+  const recs=A.map(a=>rec(a.id));
+  const n={done:0,partly:0,follow:0,none:0};recs.forEach(r=>n[r?r.st:'none']++);
+  const pct=A.length?Math.round(n.done/A.length*100):0;
+  const top=A.filter(a=>isTop(a.id)&&!(rec(a.id)&&rec(a.id).st==='done'));
+  const carried=carriedOver();
+  const liftCarry=carried.filter(r=>r.help==='lift');
+  const runSet=new Set(dsRun?dsRun.areas:[]);
+  const row=a=>{const r=rec(a.id);const ld=lastDone(a.id);
+    return `<button type="button" class="dsrow${runSet.has(a.id)?' inrun':''}" data-area="${a.id}"><span class="dsn">${esc(a.whole?a.name:a.name)}${isTop(a.id)?' <span class="toptag">top stock</span>':''}</span>
+      <span class="dsp">${runSet.has(a.id)?'<span class="pill Open">In this run</span>':''}${stPill(r)}</span><span class="dsl muted">${r&&r.st==='done'?'':ld?'Last done '+dsAgo(ld):'Never done'}</span></button>`};
+  const want=a=>{const r=rec(a.id),st=r?r.st:'none';return dsFilter==='all'||(dsFilter==='todo'&&st!=='done')||(dsFilter==='follow'&&(st==='follow'||st==='partly'))};
+  const byDept=new Map();for(const a of A){if(!byDept.has(a.dept.id))byDept.set(a.dept.id,{d:a.dept,areas:[]});byDept.get(a.dept.id).areas.push(a)}
+  el.innerHTML=`<div class="row" style="justify-content:space-between"><h2>Downstock · ${esc(new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}))}</h2></div>
+  <div class="panel dscov"><div class="covtop"><b>${pct}%</b><span>${n.done} of ${A.length} areas done${n.partly?` · ${n.partly} partly`:''}${n.follow?` · ${n.follow} follow-up`:''}</span></div>
+    <div class="covbar"><i class="d" style="width:${A.length?n.done/A.length*100:0}%"></i><i class="p" style="width:${A.length?(n.partly+n.follow)/A.length*100:0}%"></i></div></div>
+  ${dsRun?`<div class="panel dsrun"><div><b>Run in progress</b><span class="muted"> · ${dsRun.areas.length} area${dsRun.areas.length===1?'':'s'} · started ${esc(fmtDT(dsRun.started))}</span></div>
+      <div class="dsrunlist">${dsRun.areas.map(id=>{const a=dsArea(id);return a?`<span class="chip static">${esc(a.label)}</span>`:''}).join('')}</div>
+      <div class="row"><button class="btn primary" type="button" id="dsFinish">Finish run</button><button class="btn" type="button" id="dsAdd">Add areas</button><button class="btn ghost" type="button" id="dsCancel">Cancel run</button></div></div>`
+    :`<button class="btn primary big" type="button" id="dsStart">Start a run</button>`}
+  ${top.length||liftCarry.length?`<section class="panel lsec dsfirst"><header><h3>Do these first: top stock</h3><span class="muted mono" style="font-size:12px">${top.length+liftCarry.filter(r=>!top.some(a=>a.id===r.area)).length}</span></header>
+    <p class="note" style="margin:0">Use the lift before the store opens; once it's open, it needs a spotter.</p>
+    <div class="dsrows">${top.map(row).join('')}${liftCarry.filter(r=>!top.some(a=>a.id===r.area)).map(r=>row(dsArea(r.area))).join('')}</div></section>`:''}
+  ${carried.length?`<section class="panel lsec"><header><h3>Carried over</h3><span class="muted mono" style="font-size:12px">${carried.length}</span></header>
+    <div class="dsrows">${carried.map(r=>{const a=dsArea(r.area);return `<button type="button" class="dsrow" data-area="${a.id}" data-from="${r.day}"><span class="dsn">${esc(a.label)}</span><span class="dsp">${stPill(r)}</span><span class="dsl muted">${esc(dsAgo(r.day))}${reasonText(r)?' · '+esc(reasonText(r)):''}</span></button>`}).join('')}</div></section>`:''}
+  <div class="seg" id="dsFilt" role="group" aria-label="Show">${[['all','All'],['todo','Not done'],['follow','Follow-up']].map(([k,t])=>`<button type="button" data-v="${k}" aria-pressed="${dsFilter===k}">${t}</button>`).join('')}</div>
+  <div class="lrows">${[...byDept.values()].map(({d,areas})=>{const sh=areas.filter(want);if(!sh.length)return '';const dn=areas.filter(a=>rec(a.id)&&rec(a.id).st==='done').length;
+    return `<details class="dept" data-ddept="${d.id}" ${dsOpenDepts.has(d.id)||dsFilter!=='all'?'open':''}><summary>${esc(d.name)}<span class="cnt">${dn}/${areas.length} done</span></summary><div class="dbody dsrows">${sh.map(row).join('')}</div></details>`}).join('')||'<p class="note">Nothing to show with this filter.</p>'}</div>
+  <div class="row"><button class="btn small" type="button" id="dsCopy">Copy today's summary for Teams</button></div>`;
+  $('#dsFilt').onclick=e=>{const b=e.target.closest('button');if(!b)return;dsFilter=b.dataset.v;ls.set('roil.dsFilter',dsFilter);renderDs()};
+  el.querySelectorAll('details[data-ddept]').forEach(x=>x.addEventListener('toggle',()=>{if(x.open)dsOpenDepts.add(x.dataset.ddept);else dsOpenDepts.delete(x.dataset.ddept)}));
+  const st=$('#dsStart');if(st)st.onclick=()=>openRunPicker();
+  const ad=$('#dsAdd');if(ad)ad.onclick=()=>openRunPicker();
+  const ca=$('#dsCancel');if(ca)ca.onclick=e=>{if(e.target.dataset.armed!=='1'){e.target.dataset.armed='1';e.target.textContent='Tap again to cancel';setTimeout(()=>{if(e.target.isConnected){e.target.dataset.armed='';e.target.textContent='Cancel run'}},4000);return}dsRun=null;saveRun();renderDs();toast('Run cancelled. Nothing was marked.')};
+  const fi=$('#dsFinish');if(fi)fi.onclick=()=>openRunFinish();
+  $('#dsCopy').onclick=()=>copyText(dsSummary(T));
+}
+$('#v-ds').addEventListener('click',e=>{const r=e.target.closest('.dsrow');if(r)openAreaSheet(r.dataset.area)});
+
+/* ---------- one area: set today's status ---------- */
+function openAreaSheet(id){
+  const a=dsArea(id);if(!a)return;
+  const r0=rec(id)||{st:'none',filled:false,laser:false,reason:'',help:'',db:false,dbNo:'',note:'',by:'me',check:''};
+  const s={...r0};const prev=carriedOver().find(x=>x.area===id);
+  const seg=(k,opts,cur)=>`<div class="seg" data-f="${k}" role="group">${opts.map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="${cur===v}">${t}</button>`).join('')}</div>`;
+  const paint=()=>{
+    $('#asBody').innerHTML=`
+      <div><span class="label">Today</span>${seg('st',[['none','Not done'],['partly','Partly'],['done','Done'],['follow','Follow-up']],s.st)}</div>
+      ${s.st!=='none'?`<div><span class="label">Extras <span class="lsub">pick any</span></span><div class="chips"><button type="button" class="chip" data-x="filled" aria-pressed="${s.filled}">Filled</button><button type="button" class="chip" data-x="laser" aria-pressed="${s.laser}">LaserLine</button></div></div>
+      <div><span class="label">Who did it</span>${seg('by',[['me','Me'],['other','Someone else']],s.by)}</div>
+      ${s.by==='other'?`<div><span class="label">Spot-check</span>${seg('check',[['','Not checked'],['good','Looks good'],['missed','Missed empties']],s.check)}${s.check==='missed'?'<p class="note" style="margin:4px 0 0">Missed empties means stock was available but the spot was left empty.</p>':''}</div>`:''}`:''}
+      ${s.st==='follow'?`<div><span class="label">Why it needs follow-up</span><div class="chips">${dsReasons().map(R=>`<button type="button" class="chip" data-reason="${R.id}" aria-pressed="${s.reason===R.id}">${esc(R.name)}</button>`).join('')}</div></div>
+        ${dsReason(s.reason)&&dsReason(s.reason).kind==='db'?`<div class="rite"><label class="switch"><input type="checkbox" id="asDb" ${s.db?'checked':''}><span>Delta Buster submitted</span></label><input type="text" id="asDbNo" maxlength="40" value="${esc(s.dbNo)}" placeholder="Delta Buster number (optional)" aria-label="Delta Buster number"></div>`:''}
+        ${dsReason(s.reason)&&dsReason(s.reason).kind==='help'?`<div><span class="label">What's needed</span><div class="chips">${DS_HELP.map(([k,t])=>`<button type="button" class="chip" data-help="${k}" aria-pressed="${s.help===k}">${t}</button>`).join('')}</div></div>`:''}`:''}
+      ${s.st!=='none'?`<div><label class="label" for="asNote">Note <span class="lsub">optional, e.g. stopped at bay 4</span></label><input type="text" id="asNote" maxlength="300" value="${esc(s.note)}"></div>`:''}`;
+    const dbi=$('#asDb');if(dbi)dbi.onchange=()=>{s.db=dbi.checked};
+    const dbn=$('#asDbNo');if(dbn)dbn.oninput=()=>{s.dbNo=dbn.value.trim()};
+    const nt=$('#asNote');if(nt)nt.oninput=()=>{s.note=nt.value.trim()};
+  };
+  openSheet(`<div class="head"><div><h2>${esc(a.name)}</h2><span class="muted" style="font-size:13px">${esc(a.whole?'Whole department':a.dept.name)} · last done ${esc(dsAgo(lastDone(id)))}${isTop(id)?' · top stock':''}</span></div><button class="btn small" data-close>Close</button></div>
+    ${prev?`<p class="banner" style="margin:0">From ${esc(dsAgo(prev.day))}: ${esc(DS_ST[prev.st])}${reasonText(prev)?' · '+esc(reasonText(prev)):''}</p>`:''}
+    <div class="stack" id="asBody" style="gap:14px"></div>
+    <div class="row" style="justify-content:space-between"><button class="btn small" type="button" id="asIssue">Log issue here</button><button class="btn primary" type="button" id="asSave">Save</button></div>`);
+  paint();
+  $('#asBody').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    const f=b.closest('[data-f]');
+    if(f){s[f.dataset.f]=b.dataset.v;if(f.dataset.f==='st'&&s.st==='follow'&&prev&&prev.st==='follow'&&!s.reason){s.reason=prev.reason;s.help=prev.help;s.db=prev.db;s.dbNo=prev.dbNo}paint();return}
+    if(b.dataset.x){s[b.dataset.x]=!s[b.dataset.x];paint();return}
+    if(b.dataset.reason){s.reason=s.reason===b.dataset.reason?'':b.dataset.reason;paint();return}
+    if(b.dataset.help){s.help=s.help===b.dataset.help?'':b.dataset.help;paint()}
+  });
+  $('#asSave').onclick=async()=>{
+    if(s.st==='follow'&&!s.reason){toast('Pick why it needs follow-up.');return}
+    setRec(id,{st:s.st,filled:s.filled,laser:s.laser,reason:s.reason,help:s.help,db:s.db,dbNo:s.dbNo,note:s.note,by:s.by,check:s.check});
+    try{await saveDk();closeSheet();renderDs();toast(`${a.name}: ${DS_ST[s.st]}.`,s.check==='missed'?[['Log issue',()=>dsLogIssue(id,'Missed empties on a downstock run (spot-check)')]]:[])}catch(err){toast('Couldn\'t save. Try again.')}
+  };
+  $('#asIssue').onclick=()=>{closeSheet();dsLogIssue(id)};
+}
+/* Open the issue form for this area; the issue is marked as found while downstocking */
+function dsLogIssue(areaId,note){
+  const a=dsArea(areaId);if(!a)return;
+  setMode('issues');
+  form.dept=a.dept.id;form.sub=a.whole?'':a.id;form.fromDs=true;
+  $('#fDept').innerHTML=deptOptions(form.dept);$('#fSub').innerHTML=subOptions(form.dept,form.sub);$('#reqDept').hidden=true;
+  if(note&&!$('#fNote').value)$('#fNote').value=note;
+  step=0;renderLog();updateLogUI();toast(`Logging an issue at ${a.label}.`);
+}
+
+/* ---------- runs ---------- */
+let runPickTake=null;
+function openRunPicker(){
+  const sel=new Set(dsRun?dsRun.areas:[]);const A=dsAreas();
+  const byDept=new Map();for(const a of A){if(!byDept.has(a.dept.id))byDept.set(a.dept.id,{d:a.dept,areas:[]});byDept.get(a.dept.id).areas.push(a)}
+  const groups=Object.values(dk.cfg.groups).filter(g=>!g.deleted).sort((a,b)=>a.name.localeCompare(b.name));
+  const openD=new Set();
+  const paint=()=>{
+    $('#rpCount').textContent=`${sel.size} area${sel.size===1?'':'s'} picked`;
+    $('#rpBody').innerHTML=`${groups.length?`<div><span class="label">Your groups</span><div class="chips">${groups.map(g=>`<button type="button" class="chip" data-group="${g.id}" aria-pressed="${g.areas.length&&g.areas.every(x=>sel.has(x))}">${esc(g.name)} <span class="muted">${g.areas.length}</span></button>`).join('')}</div></div>`:''}
+      <div class="lrows">${[...byDept.values()].map(({d,areas})=>{const k=areas.filter(a=>sel.has(a.id)).length;
+        return `<details class="dept" data-rd="${d.id}" ${openD.has(d.id)?'open':''}><summary>${esc(d.name)}<span class="cnt">${k?k+' picked · ':''}${areas.length}</span></summary><div class="dbody"><div class="chips">${areas.map(a=>{const r=rec(a.id);
+          return `<button type="button" class="chip" data-pick="${a.id}" aria-pressed="${sel.has(a.id)}">${esc(a.name)}${r&&r.st==='done'?' ✓':''}${isTop(a.id)?' ▲':''}</button>`}).join('')}</div>
+          <button type="button" class="btn small ghost" data-alldept="${d.id}">Pick all in ${esc(d.name)}</button></div></details>`}).join('')}</div>`;
+    $('#rpBody').querySelectorAll('details[data-rd]').forEach(x=>x.addEventListener('toggle',()=>{if(x.open)openD.add(x.dataset.rd);else openD.delete(x.dataset.rd)}));
+  };
+  runPickTake=c=>{   // scanning a shelf tag adds the planogram that SKU lives in
+    if(c.kind!=='sku'){const s=c.kind==='upc'?upcSku(c.code):'';if(!s){const m='Scan a shelf tag to add its planogram.';toast(m);return m}c={kind:'sku',code:s}}
+    const L=skuLocs(c.code);if(!L.length){const m=`ROIL doesn't know where SKU ${c.code} lives yet. Pick the planogram below.`;toast(m);return m}
+    const area=L[0].p&&dsArea(L[0].p)?L[0].p:L[0].d;if(!dsArea(area)){return 'That planogram is archived.'}
+    sel.add(area);paint();const m=`Added ${dsArea(area).label}`;toast(m);return m;
+  };
+  openSheet(`<div class="head"><div><h2>${dsRun?'Add to this run':'Start a run'}</h2><span class="muted" id="rpCount" style="font-size:13px"></span></div><button class="btn small" data-close>Cancel</button></div>
+    <p class="note" style="margin:0">Pick the planograms you're about to walk. ✓ = done today, ▲ = top stock.${canCam?' Scanning a shelf tag adds its planogram.':''}</p>
+    ${canCam?'<button class="btn" type="button" id="rpScan">Scan shelf tags</button>':''}
+    <div class="stack" id="rpBody" style="gap:12px"></div>
+    <div class="row" style="justify-content:space-between"><button class="btn small ghost" type="button" id="rpGroup">Save as a group</button><button class="btn primary" type="button" id="rpGo">${dsRun?'Update run':'Start run'}</button></div>`,()=>{runPickTake=null});
+  paint();
+  $('#rpBody').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.pick){sel.has(b.dataset.pick)?sel.delete(b.dataset.pick):sel.add(b.dataset.pick);paint();return}
+    if(b.dataset.group){const g=dk.cfg.groups[b.dataset.group];const all=g.areas.every(x=>sel.has(x));for(const x of g.areas)if(dsArea(x))all?sel.delete(x):sel.add(x);paint();return}
+    if(b.dataset.alldept){const areas=byDept.get(b.dataset.alldept).areas;const all=areas.every(a=>sel.has(a.id));for(const a of areas)all?sel.delete(a.id):sel.add(a.id);paint()}
+  });
+  const sc=$('#rpScan');if(sc)sc.onclick=()=>openScanner({title:'Scan shelf tags',hint:'Scan a shelf tag in each planogram you\'re about to walk.',continuous:true,onCode:c=>runPickTake?runPickTake(c):''});
+  $('#rpGroup').onclick=()=>{
+    if(!sel.size){toast('Pick some planograms first.');return}
+    const host=$('#rpGroup').parentNode;host.innerHTML=`<span class="ladd" style="width:100%"><input type="text" id="rpGName" maxlength="60" placeholder="Group name, e.g. Laptops aisle"><button class="btn small primary" type="button" id="rpGSave">Save group</button></span>`;
+    const inp=$('#rpGName');inp.focus();
+    const saveG=async()=>{const n=inp.value.trim();if(!n){inp.focus();return}const id=rid('k');dk.cfg.groups[id]={id,name:n.slice(0,60),areas:[...sel],deleted:false,updated:nowIso()};await saveDk();toast(`Saved the group “${n}”.`);
+      host.innerHTML=`<span class="muted">Saved “${esc(n)}”.</span><button class="btn primary" type="button" id="rpGo2">${dsRun?'Update run':'Start run'}</button>`;$('#rpGo2').onclick=go;groups.push(dk.cfg.groups[id]);paint()};
+    $('#rpGSave').onclick=saveG;inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();saveG()}};
+  };
+  const go=()=>{if(!sel.size){toast('Pick at least one planogram.');return}
+    dsRun={areas:[...sel],started:dsRun?dsRun.started:nowIso()};saveRun();closeSheet();renderDs();toast(`Run ${dsRun.areas.length===sel.size?'started':'updated'}: ${sel.size} area${sel.size===1?'':'s'}. Tap Finish run when you're done.`)};
+  $('#rpGo').onclick=go;
+}
+function openRunFinish(){
+  if(!dsRun)return;
+  const st=new Map(dsRun.areas.filter(id=>dsArea(id)).map(id=>[id,{st:'done',filled:false,laser:false,reason:'',db:false,help:''}]));
+  const paint=()=>{
+    $('#rfBody').innerHTML=[...st].map(([id,s])=>{const a=dsArea(id);
+      return `<li class="rfrow" data-id="${id}"><div class="rfname">${esc(a.label)}</div>
+        <div class="seg" data-f="st">${[['done','Done'],['partly','Partly'],['follow','Follow-up'],['none','Not done']].map(([v,t])=>`<button type="button" data-v="${v}" aria-pressed="${s.st===v}">${t}</button>`).join('')}</div>
+        ${s.st==='done'||s.st==='partly'?`<div class="chips"><button type="button" class="chip" data-x="filled" aria-pressed="${s.filled}">Filled</button><button type="button" class="chip" data-x="laser" aria-pressed="${s.laser}">LaserLine</button></div>`:''}
+        ${s.st==='follow'?`<div class="chips">${dsReasons().map(R=>`<button type="button" class="chip" data-reason="${R.id}" aria-pressed="${s.reason===R.id}">${esc(R.name)}</button>`).join('')}</div>
+          ${dsReason(s.reason)&&dsReason(s.reason).kind==='db'?`<label class="switch"><input type="checkbox" data-db ${s.db?'checked':''}><span>Delta Buster submitted</span></label>`:''}
+          ${dsReason(s.reason)&&dsReason(s.reason).kind==='help'?`<div class="chips">${DS_HELP.map(([k,t])=>`<button type="button" class="chip" data-help="${k}" aria-pressed="${s.help===k}">${t}</button>`).join('')}</div>`:''}`:''}</li>`}).join('');
+  };
+  openSheet(`<div class="head"><div><h2>Finish run</h2><span class="muted" style="font-size:13px">Everything is Done unless you change it.</span></div><button class="btn small" data-close>Back</button></div>
+    <ul class="rflist" id="rfBody"></ul>
+    <p class="note" style="margin:0">Delta Buster numbers and notes can be added afterwards by tapping the area on the board.</p>
+    <button class="btn primary big" type="button" id="rfSave">Save run</button>`);
+  paint();
+  $('#rfBody').addEventListener('click',e=>{const b=e.target.closest('button');const li=e.target.closest('.rfrow');if(!b||!li)return;const s=st.get(li.dataset.id);
+    if(b.closest('[data-f]')){s.st=b.dataset.v;paint();return}
+    if(b.dataset.x){s[b.dataset.x]=!s[b.dataset.x];paint();return}
+    if(b.dataset.reason){s.reason=s.reason===b.dataset.reason?'':b.dataset.reason;paint();return}
+    if(b.dataset.help){s.help=s.help===b.dataset.help?'':b.dataset.help;paint()}
+  });
+  $('#rfBody').addEventListener('change',e=>{if(e.target.matches('[data-db]')){st.get(e.target.closest('.rfrow').dataset.id).db=e.target.checked}});
+  $('#rfSave').onclick=async()=>{
+    for(const [id,s] of st)if(s.st==='follow'&&!s.reason){toast(`Pick why ${dsArea(id).name} needs follow-up.`);return}
+    for(const [id,s] of st)if(s.st!=='none')setRec(id,{st:s.st,filled:s.filled,laser:s.laser,reason:s.reason,help:s.help,db:s.db,by:'me',check:''});
+    dsRun=null;saveRun();
+    try{await saveDk();closeSheet();renderDs();const d=[...st.values()].filter(s=>s.st==='done').length;toast(`Run saved: ${d} done${st.size-d?`, ${st.size-d} other`:''}.`)}catch(e){toast('Couldn\'t save. Try again.')}
+  };
+}
+
+/* ---------- days, summary ---------- */
+function dsDayStats(day){
+  const A=dsAreas(),n={done:0,partly:0,follow:0,filled:0,laser:0,other:0,missed:0,db:0};
+  for(const a of A){const r=rec(a.id,day);if(!r)continue;if(r.st!=='none')n[r.st]++;if(r.filled)n.filled++;if(r.laser)n.laser++;if(r.by==='other')n.other++;if(r.check==='missed')n.missed++;if(r.db)n.db++}
+  return {...n,total:A.length};
+}
+function dsSummary(day){
+  const A=dsAreas(),s=dsDayStats(day),d=new Date(day+'T12:00:00');
+  const L=[`Downstock · ${d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'})}`,`${s.done} of ${s.total} areas done (${s.total?Math.round(s.done/s.total*100):0}%)${s.filled?` · Filled ${s.filled}`:''}${s.laser?` · LaserLine ${s.laser}`:''}`];
+  const fol=A.map(a=>({a,r:rec(a.id,day)})).filter(x=>x.r&&x.r.st==='follow');
+  if(fol.length)L.push('',`Follow-up (${fol.length}):`,...fol.map(x=>`• ${x.a.label}: ${reasonText(x.r)}`));
+  const par=A.map(a=>({a,r:rec(a.id,day)})).filter(x=>x.r&&x.r.st==='partly');
+  if(par.length)L.push('',`Partly done (${par.length}):`,...par.map(x=>`• ${x.a.label}${x.r.note?': '+x.r.note:''}`));
+  const nd=A.filter(a=>{const r=rec(a.id,day);return !r||r.st==='none'});
+  if(nd.length){const g=new Map();for(const a of nd){if(!g.has(a.dept.name))g.set(a.dept.name,[]);if(!a.whole)g.get(a.dept.name).push(a.name)}
+    L.push('',`Not done (${nd.length}):`,...[...g].map(([dn,ps])=>`• ${dn}${ps.length>4?` (${ps.length})`:ps.length?': '+ps.join(', '):''}`))}
+  if(s.other)L.push('',`Done by others: ${s.other}${s.missed?` (${s.missed} spot-checked with missed empties)`:''}`);
+  return L.join('\n');
+}
+function renderDsDays(){
+  const el=$('#v-dsdays');if(!el)return;
+  const days=[...new Set(Object.values(dk.days).map(r=>r.day))].sort().reverse().slice(0,30);if(!days.includes(today()))days.unshift(today());
+  const A=dsAreas();
+  const stale=A.map(a=>({a,ld:lastDone(a.id)})).sort((x,y)=>(x.ld||'').localeCompare(y.ld||'')).filter(x=>!x.ld||daysAgo(x.ld)>=2).slice(0,15);
+  const month=today().slice(0,7);const dbs=Object.values(dk.days).filter(r=>r.day.startsWith(month)&&r.db).length;
+  const reasonsM=countBy(Object.values(dk.days).filter(r=>r.day.startsWith(month)&&r.st==='follow'),r=>dsReason(r.reason)?dsReason(r.reason).name:'Other');
+  el.innerHTML=`<h2>Downstock days</h2>
+  <div class="tiles"><div class="tile"><span class="v">${dbs}</span><span class="k">Delta Busters this month</span></div>
+    <div class="tile"><span class="v">${days.length?Math.round(days.slice(0,7).reduce((a,d)=>{const s=dsDayStats(d);return a+(s.total?s.done/s.total:0)},0)/Math.min(7,days.length)*100):0}%</span><span class="k">Average coverage, last ${Math.min(7,days.length)} days</span></div></div>
+  <div class="list">${days.map(d=>{const s=dsDayStats(d);const p=s.total?Math.round(s.done/s.total*100):0;
+    return `<div class="panel dsday"><div class="row" style="justify-content:space-between"><b>${esc(new Date(d+'T12:00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}))}</b><span class="mono">${p}%</span></div>
+      <div class="covbar"><i class="d" style="width:${s.total?s.done/s.total*100:0}%"></i><i class="p" style="width:${s.total?(s.partly+s.follow)/s.total*100:0}%"></i></div>
+      <span class="muted" style="font-size:13px">${s.done} done · ${s.partly} partly · ${s.follow} follow-up${s.filled?` · ${s.filled} filled`:''}${s.laser?` · ${s.laser} LaserLine`:''}${s.other?` · ${s.other} by others${s.missed?` (${s.missed} missed)`:''}`:''}</span>
+      <button class="btn small" type="button" data-sum="${d}">Copy summary</button></div>`}).join('')}</div>
+  <section class="panel lsec"><header><h3>Not done lately</h3></header>${stale.length?`<div class="hot">${stale.map(x=>`<div><b>${x.ld?daysAgo(x.ld)+'d':'—'}</b><span>${esc(x.a.label)}</span></div>`).join('')}</div>`:'<p class="note" style="margin:0">Every area has been done in the last 2 days.</p>'}</section>
+  <section class="panel lsec"><header><h3>Follow-up reasons this month</h3></header>${bars(reasonsM,null,8)}</section>`;
+  el.querySelectorAll('[data-sum]').forEach(b=>b.onclick=()=>copyText(dsSummary(b.dataset.sum)));
+}
+
+/* ---------- Lists → Downstock settings ---------- */
+let dsListOpen=new Set();
+function dsListsHtml(){
+  const groups=Object.values(dk.cfg.groups).filter(g=>!g.deleted).sort((a,b)=>a.name.localeCompare(b.name));
+  const R=dsReasons(true);const A=dsAreas(true);const byDept=new Map();for(const a of A){if(!byDept.has(a.dept.id))byDept.set(a.dept.id,{d:a.dept,areas:[]});byDept.get(a.dept.id).areas.push(a)}
+  const nTop=A.filter(a=>isTop(a.id)).length,nSkip=A.filter(a=>isSkip(a.id)).length+activeOf(lists.departments).filter(d=>isSkip(d.id)).length;
+  return `<section class="panel lsec" id="dsPanel"><header><h3>Downstock</h3></header>
+  <div><span class="label">Follow-up reasons</span><ul class="lrows">${R.map(r=>`<li class="ladd"><input type="text" data-dsr="${r.id}" value="${esc(r.name)}" maxlength="80" aria-label="Reason name" ${r.archived?'disabled':''}><button class="btn small${r.archived?'':' ghost'}" type="button" data-dsarch="${r.id}">${r.archived?'Restore':'Hide'}</button></li>`).join('')}</ul>
+    <div class="ladd" style="margin-top:6px"><input type="text" id="dsNewR" maxlength="80" placeholder="Add a reason"><button class="btn small" type="button" data-dsact="addr">Add</button></div>
+    <p class="note" style="margin:4px 0 0">“${esc(dsReason(sid('r',DS_REASON_DEFAULTS[0][0]))?.name||'')}” asks about a Delta Buster; “${esc(dsReason(sid('r',DS_REASON_DEFAULTS[1][0]))?.name||'')}” asks what's needed (lift, ladder…).</p></div>
+  <div><span class="label">Saved groups <span class="lsub">planograms you walk together; make them when starting a run</span></span>${groups.length?`<ul class="lrows">${groups.map(g=>`<li class="arow"><span>${esc(g.name)}</span><span class="muted mono">${g.areas.length}</span><span></span><button class="ib del${armedKey==='grp:'+g.id?' armed':''}" type="button" data-dsdelg="${g.id}" aria-label="Delete group"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></li>`).join('')}</ul>`:'<p class="note" style="margin:0">None yet. On the Downstock board, start a run, pick planograms, then tap Save as a group.</p>'}</div>
+  <details class="arch" ${dsListOpen.has('top')?'open':''} data-dsopen="top"><summary>Top-stock sections (${nTop})</summary>
+    <p class="note">Planograms with stock up top that needs the lift. They're listed first on the board each morning.</p>
+    ${[...byDept.values()].filter(({d})=>!isSkip(d.id)).map(({d,areas})=>`<div style="margin-top:8px"><span class="label">${esc(d.name)}</span><div class="chips">${areas.filter(a=>!isSkip(a.id)).map(a=>`<button type="button" class="chip" data-dstop="${a.id}" aria-pressed="${isTop(a.id)}">${esc(a.name)}</button>`).join('')}</div></div>`).join('')}</details>
+  <details class="arch" ${dsListOpen.has('skip')?'open':''} data-dsopen="skip"><summary>Not downstocked (${nSkip})</summary>
+    <p class="note">Leave out areas that never get downstocked (services, displays only, online-only). They don't count toward coverage.</p>
+    ${[...byDept.values()].map(({d,areas})=>`<div style="margin-top:8px"><button type="button" class="chip${isSkip(d.id)?'':' ghostchip'}" data-dsskip="${d.id}" aria-pressed="${isSkip(d.id)}">${esc(d.name)} (whole department)</button>${isSkip(d.id)?'':`<div class="chips" style="margin-top:6px">${areas.filter(a=>!a.whole).map(a=>`<button type="button" class="chip" data-dsskip="${a.id}" aria-pressed="${isSkip(a.id)}">${esc(a.name)}</button>`).join('')}</div>`}</div>`).join('')}</details>
+  </section>`;
+}
+(function bindDsLists(){
+  const el=$('#v-lists');
+  el.addEventListener('click',async e=>{
+    const b=e.target.closest('#dsPanel button');if(!b)return;
+    if(b.dataset.dstop){const id=b.dataset.dstop;dk.cfg.top[id]={on:!isTop(id),updated:nowIso()};await saveDk();renderLists();return}
+    if(b.dataset.dsskip){const id=b.dataset.dsskip;if(!dk.cfg.skip)dk.cfg.skip={};dk.cfg.skip[id]={on:!isSkip(id),updated:nowIso()};await saveDk();renderLists();return}
+    if(b.dataset.dsarch){const r=dk.cfg.reasons[b.dataset.dsarch];r.archived=!r.archived;r.updated=nowIso();await saveDk();renderLists();return}
+    if(b.dataset.dsdelg){const id=b.dataset.dsdelg;if(armedKey!=='grp:'+id){arm('grp:'+id);return}armedKey=null;dk.cfg.groups[id]={...dk.cfg.groups[id],deleted:true,updated:nowIso()};await saveDk();renderLists();return}
+    if(b.dataset.dsact==='addr'){const i=$('#dsNewR');const n=i.value.trim();if(!n)return;const id=rid('r');dk.cfg.reasons[id]={id,name:n.slice(0,80),kind:'',order:dsReasons(true).length,archived:false,updated:nowIso()};await saveDk();renderLists()}
+  });
+  el.addEventListener('change',async e=>{const t=e.target;if(t.dataset&&t.dataset.dsr){const r=dk.cfg.reasons[t.dataset.dsr];const n=t.value.trim();if(!n){t.value=r.name;return}r.name=n.slice(0,80);r.updated=nowIso();await saveDk()}});
+  el.addEventListener('keydown',e=>{if(e.target.id==='dsNewR'&&e.key==='Enter'){e.preventDefault();$('#dsPanel [data-dsact=addr]').click()}});
+  el.addEventListener('toggle',e=>{const d=e.target;if(d.dataset&&d.dataset.dsopen){if(d.open)dsListOpen.add(d.dataset.dsopen);else dsListOpen.delete(d.dataset.dsopen)}},true);
+})();
+
+/* ---------- Issues | Downstock switch ---------- */
+let mode=ls.get('roil.mode','issues');
+function setMode(m,quiet){
+  mode=m==='ds'?'ds':'issues';ls.set('roil.mode',mode);document.body.dataset.mode=mode;
+  $('#modeSw').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===mode));
+  if(!quiet)setView(mode==='ds'?'ds':'log');
+}
+$('#modeSw').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.dataset.m!==mode)setMode(b.dataset.m)});
+
+$('#dsFromX').onclick=()=>{form.fromDs=false;updateLogUI()};
+
 async function boot(){
   handleOAuthReturn();
+  dsDefaults();setMode(mode,true);if(mode==='ds')setView('ds');
   buildForm();showPhotos();renderLog();renderAll();tick();setInterval(tick,30000);setSync();
   try{
-    const [its,phs,l,dl,pr,nt]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists'),getOne('meta','deleted'),getOne('meta','products'),getOne('meta','notes')]);
-    if(pr)prods=cleanProds(pr);if(nt)notes=cleanNotes(nt);updateNoteBadge();
+    const [its,phs,l,dl,pr,nt,dsd]=await Promise.all([getAll('items'),getAll('photos'),getOne('meta','lists'),getOne('meta','deleted'),getOne('meta','products'),getOne('meta','notes'),getOne('meta','downstock')]);
+    if(pr)prods=cleanProds(pr);if(nt)notes=cleanNotes(nt);updateNoteBadge();if(dsd)dk=cleanDk(dsd);dsDefaults();
     for(const p of phs)setPhotoUrls(p);
     if(l)lists=normLists(l);
     if(dl&&typeof dl==='object')tombs=dl;
     const legacy=!l||!l.v||its.some(i=>!('deptId' in i));
     const ch=relinkAll(its);
     if(legacy||ch)await write([{s:'meta',v:listsBody(lists),k:'lists'},...its.map(v=>({s:'items',v}))]);
-    loaded=true;buildForm();setItems(its);if(logBox)logBox.render();renderLog();
+    loaded=true;buildForm();setItems(its);if(logBox)logBox.render();renderLog();if(mode==='ds')renderAll();
   }catch(e){loaded=true;renderAll();toast('Your browser won\'t let ROIL store data. Make sure you\'re not in a private or Incognito window.')}
   if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
   if(navigator.storage&&navigator.storage.persist){try{await navigator.storage.persist()}catch(e){}}
@@ -1371,7 +1753,13 @@ $('#fIssue').addEventListener('click',e=>{const t=e.target.closest('.ctab');if(!
 });
 const catName=issueId=>{const e=IX.issues.get(issueId),c=e&&e.cat&&IX.categories.get(e.cat);return c?c.name:'Uncategorized'};
 const isDemoIssue=id=>{const e=IX.issues.get(id);return !!(e&&e.cat===DEMO_CAT())};
-function showRite(){const on=isDemoIssue(form.issue);$('#fRiteWrap').hidden=!on;if(!on){$('#fRite').checked=false;$('#fRiteNo').value=''}}
+const PRS_OPTS=[['spider','Spider wrap'],['clam','Clamshell'],['limit','Limit one'],['other','Other']];
+const isPrsIssue=id=>id===PRS_ID();
+const prsText=a=>(a||[]).map(k=>(PRS_OPTS.find(o=>o[0]===k)||[,''])[1]).filter(Boolean).join(', ');
+const prsChips=sel=>PRS_OPTS.map(([k,t])=>`<button type="button" class="chip" data-prs="${k}" aria-pressed="${(sel||[]).includes(k)}">${t}</button>`).join('');
+function showPrs(){const on=isPrsIssue(form.issue);$('#fPrsWrap').hidden=!on;if(!on)form.prs=[];$('#fPrs').innerHTML=prsChips(form.prs)}
+$('#fPrs').addEventListener('click',e=>{const b=e.target.closest('[data-prs]');if(!b)return;const k=b.dataset.prs;form.prs=(form.prs||[]).includes(k)?form.prs.filter(x=>x!==k):[...(form.prs||[]),k];showPrs()});
+function showRite(){showPrs();const on=isDemoIssue(form.issue);$('#fRiteWrap').hidden=!on;if(!on){$('#fRite').checked=false;$('#fRiteNo').value=''}}
 function tick(){$('#when').textContent=form.photoFile?'Photo taken · '+fmtDT(form.takenAt):'Logged as '+fmtDT(new Date().toISOString());if(view==='follow')renderFollow()}
 function bindChoice(id,key,toggle){
   $(id).addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.classList.contains('ctab'))return;const v=b.dataset.v;
@@ -1719,6 +2107,12 @@ function routeScan(raw){
   const c=parseCode(raw);
   if(camScan){const m=camScan.onCode(c);if(m){const s=$('#scanMsg');if(s)s.textContent=m}return}
   if(pairTake){pairTake(c);return}
+  if(runPickTake){runPickTake(c);return}
+  if(mode==='ds'&&!detailBox){   // on the Downstock board, a shelf tag opens its planogram
+    const s=c.kind==='sku'?c.code:c.kind==='upc'?upcSku(c.code):'';const L=s?skuLocs(s):[];
+    const area=L.length?(L[0].p&&dsArea(L[0].p)?L[0].p:L[0].d):'';
+    if(area&&dsArea(area)){if(view!=='ds')setView('ds');openAreaSheet(area)}else toast(s?`ROIL doesn't know where SKU ${s} lives yet.`:'Scan a shelf tag to open its planogram.');
+    return}
   if(detailBox&&detailBox.root.isConnected){detailBox.take(c,'auto');return}
   if(view!=='log')setView('log');
   if(logBox){logBox.take(c,'auto');if(c.kind!=='bad')toast(c.kind==='sku'?`Location SKU ${c.code}`:`Added ${c.kind==='sku'?'SKU':'UPC'} ${c.code}`)}
@@ -1923,6 +2317,7 @@ function updateLogUI(){
   if($('#fFound')){const sh=foundShown();if(sh)foundOpenNow=true;   // once open, it stays open for this issue
    $('#fFound').hidden=!sh;$('#foundOpen').hidden=sh}
   $('#scanBtn').hidden=!canCam;
+  const dsf=$('#dsFrom');if(dsf)dsf.hidden=!form.fromDs;
   const lw=$('#lockWarn');if(lw){const c=lockConflict(form.lockup,form.source);lw.hidden=!c;lw.textContent=c?LOCK_WARN:''}
   const L=logLayout(),v=logValues();
   if(L==='sections'&&!(ap.whyOpen||whyOpenNow))fillWhy();
@@ -1976,7 +2371,7 @@ function onFormChoice(key){
   updateLogUI();
   if((key==='source'||key==='lockup')&&lockConflict(form.lockup,form.source))toast(LOCK_WARN);
   if(key==='status')showPhotos();
-  const demo=key==='issue'&&isDemoIssue(form.issue);
+  const demo=key==='issue'&&(isDemoIssue(form.issue)||isPrsIssue(form.issue));   // these have more to fill in on this step
   const stay=demo||(key==='issue'&&itemsRelevant(form.issue));   // stay put when there's more to fill in here
   if(partOpen&&['issue','source','cause','shift'].includes(key)&&form[key]&&!stay&&partOpen.key===({issue:'what'}[key]||key))setTimeout(()=>closePart(),180);
   if(logLayout()==='steps'&&key==='issue'&&form.issue&&!stay&&STEPS[step].id==='what')setTimeout(()=>goStep(step+1),220);
@@ -2020,7 +2415,7 @@ async function doSave(skipAfterCheck,skipDup){
     shiftId:lists.showShift?(form.shift||''):'',dept:'',planogram:'',issue:'',source:'',cause:'',shift:'',
     rite:demo&&$('#fRite').checked,riteNo:demo?$('#fRiteNo').value.trim().slice(0,40):'',
     note:$('#fNote').value.trim(),status:form.status,fixedAt:form.status==='Fixed'?now:null,photo:false,after:false,afterRev:'',
-    sku:form.sku||'',lockup:!!form.lockup,found:cleanFound(form.found)};
+    sku:form.sku||'',lockup:!!form.lockup,found:cleanFound(form.found),prs:isPrsIssue(form.issue)?[...(form.prs||[])]:[],ds:!!form.fromDs};
   link(item);
   let photo=null;
   try{
@@ -2041,7 +2436,7 @@ async function doSave(skipAfterCheck,skipDup){
 }
 function resetForm(){
   for(const u of[form.photoUrl,form.afterUrl])if(u)URL.revokeObjectURL(u);
-  Object.assign(form,{photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,takenAt:null,issue:'',source:null,cause:'',status:'Open',saveAfterPhoto:false,sku:'',lockup:false,found:[]});
+  Object.assign(form,{photoFile:null,photoUrl:null,afterFile:null,afterUrl:null,takenAt:null,issue:'',source:null,cause:'',status:'Open',saveAfterPhoto:false,sku:'',lockup:false,found:[],prs:[],fromDs:false});
   $('#fRite').checked=false;$('#fRiteNo').value='';$('#fNote').value='';whyOpenNow=false;foundOpenNow=false;step=0;
   showPhotos();buildForm();tick();if(logBox)logBox.render();renderLog();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -2073,6 +2468,8 @@ function cardText(it){
   const ft=foundText(it,it.sku);if(ft.length)lines.push('Items found:',...ft.map(x=>'  '+x));
   if(it.source)lines.push(`Source: ${it.source}`);
   if(it.cause)lines.push(`Cause: ${it.cause}`);
+  if(it.prs&&it.prs.length)lines.push(`PRS missed: ${prsText(it.prs)}`);
+  if(it.ds)lines.push('Found while downstocking');
   if(isDemoIssue(it.issueId))lines.push(`RITE: ${it.rite?'submitted'+(it.riteNo?' #'+it.riteNo:''):'not submitted yet'}`);
   lines.push(`Status: ${it.status}${it.status!=='Fixed'?' (open '+age(it.created)+')':''}`);
   if(it.note)lines.push(`Note: ${it.note}`);
@@ -2147,7 +2544,7 @@ async function copyPhoto(it){
 /* ---------- views ---------- */
 function setView(v){
   view=v;
-  for(const s of['log','follow','history','stats','lists'])$('#v-'+s).hidden=s!==v;
+  for(const s of['log','follow','history','stats','lists','ds','dsdays'])$('#v-'+s).hidden=s!==v;
   document.querySelectorAll('#tabs button').forEach(b=>{if(b.dataset.v===v)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
   if(v==='lists')refreshStorage();
   renderAll();window.scrollTo({top:0});
@@ -2164,10 +2561,13 @@ function renderAll(){
   if(view==='history')renderHistory();
   if(view==='stats')renderStats();
   if(view==='lists')renderLists();
+  if(view==='ds')renderDs();
+  if(view==='dsdays')renderDsDays();
 }
 function thumb(it){const b=thumbSrc(it),a=it.after?afterThumbUrls.get(it.id)||'':'';if(b&&a)return `<span class="thumb ba"><img src="${esc(b)}" alt=""><img src="${esc(a)}" alt=""></span>`;const x=b||a;return x?`<img class="thumb" src="${esc(x)}" alt="" loading="lazy">`:`<span class="thumb">${it.photo?'PHOTO':'NO PHOTO'}</span>`}
 function itemCard(it,extra=''){
   if(isDemoIssue(it.issueId)&&!it.rite)extra+='<span class="pill Needs">RITE not submitted</span>';
+  if(it.ds)extra+='<span class="pill dsx">Downstock</span>';
   const nw=(it.found||[]).filter(f=>verdict(f,it.sku)==='wrong').length;if(nw)extra+=`<span class="pill bad">${nw} wrong item${nw===1?'':'s'}</span>`;
   return `<button class="item" data-id="${esc(it.id)}">${thumb(it)}<span class="body">
     <span class="t">${esc(it.issue)} <span class="pill ${pillCls(it.status)}">${esc(it.status)}</span>${extra}</span>
@@ -2304,9 +2704,9 @@ function save(filename,data){
   setTimeout(()=>URL.revokeObjectURL(u),30000);
 }
 function exportCsv(arr){
-  const head=['Date','Time','Shift','Department','Planogram','Category','Issue','Source','Cause','Status','Fixed at','Hours to fix','RITE ticket','Location SKU','Product','Lock-up','Items found','Wrong items','Note','Photo','After photo'];
+  const head=['Date','Time','Shift','Department','Planogram','Category','Issue','Source','Cause','Status','Fixed at','Hours to fix','RITE ticket','Location SKU','Product','Lock-up','Items found','Wrong items','PRS missed','Found while downstocking','Note','Photo','After photo'];
   const rows=arr.map(it=>{const d=new Date(it.created);const fx=it.fixedAt?new Date(it.fixedAt):null;
-    return [d.toLocaleDateString(),d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}),it.shift,it.dept,it.planogram,catName(it.issueId),it.issue,it.source,it.cause,it.status,fx?fx.toLocaleString():'',fx?((fx-d)/3600000).toFixed(2):'',isDemoIssue(it.issueId)?(it.rite?'Submitted'+(it.riteNo?' #'+it.riteNo:''):'Not submitted'):'',it.sku||'',prodName(it.sku),it.lockup?'Yes':'',foundText(it,it.sku).join('; '),(it.found||[]).filter(f=>verdict(f,it.sku)==='wrong').reduce((a,f)=>a+f.qty,0)||'',it.note,it.photo?'Yes':'No',it.after?'Yes':'No']});
+    return [d.toLocaleDateString(),d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'}),it.shift,it.dept,it.planogram,catName(it.issueId),it.issue,it.source,it.cause,it.status,fx?fx.toLocaleString():'',fx?((fx-d)/3600000).toFixed(2):'',isDemoIssue(it.issueId)?(it.rite?'Submitted'+(it.riteNo?' #'+it.riteNo:''):'Not submitted'):'',it.sku||'',prodName(it.sku),it.lockup?'Yes':'',foundText(it,it.sku).join('; '),(it.found||[]).filter(f=>verdict(f,it.sku)==='wrong').reduce((a,f)=>a+f.qty,0)||'',prsText(it.prs),it.ds?'Yes':'',it.note,it.photo?'Yes':'No',it.after?'Yes':'No']});
   save(`ROIL issues ${localDay(new Date())}.csv`,'﻿'+[head,...rows].map(r=>r.map(csvCell).join(',')).join('\r\n'));
 }
 async function exportReport(arr){
@@ -2353,6 +2753,7 @@ function openDetail(id){
   <div class="two collapse"><div><label class="label" for="dIssue">Issue</label><select id="dIssue">${entryOptions(lists.issues,it.issueId)}</select></div>
   <div><label class="label" for="dCause">Cause</label><select id="dCause">${entryOptions(lists.causes,it.causeId,'Not set')}</select></div></div>
   <div><label class="label" for="dSource">Source</label><select id="dSource">${entryOptions(lists.sources,it.sourceId,'Not set')}</select><p class="warnline" id="dLockWarn" hidden></p></div>
+ <div class="rite" id="dPrsWrap" ${isPrsIssue(it.issueId)?'':'hidden'}><span class="label" style="margin:0">What was missed</span><div class="chips small-chips" id="dPrs">${prsChips(it.prs)}</div></div>
   <div class="rite" id="dRiteWrap" ${isDemoIssue(it.issueId)?'':'hidden'}><label class="switch"><input type="checkbox" id="dRite" ${it.rite?'checked':''}><span>RITE ticket submitted</span></label><input type="text" id="dRiteNo" maxlength="40" value="${esc(it.riteNo||'')}" placeholder="Ticket number (optional)" aria-label="RITE ticket number"></div>
   <div><label class="label" for="dNote">Note</label><textarea id="dNote">${esc(it.note)}</textarea></div>
   ${it.fixedAt?`<p class="note" style="margin:0">Fixed ${esc(fmtDT(it.fixedAt))}${new Date(it.fixedAt)-new Date(it.created)>=600000?' · took '+dur(new Date(it.fixedAt)-new Date(it.created)):' · on the spot'}</p>`:''}
@@ -2360,7 +2761,9 @@ function openDetail(id){
   let st=it.status;
   $('#dStatus').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;st=b.dataset.v;$('#dStatus').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===st))});
   $('#dDept').onchange=e=>{$('#dSub').innerHTML=subOptions(e.target.value,'')};
-  $('#dIssue').onchange=e=>{$('#dRiteWrap').hidden=!isDemoIssue(e.target.value)};
+  let dprs=[...(it.prs||[])];
+  $('#dIssue').onchange=e=>{$('#dRiteWrap').hidden=!isDemoIssue(e.target.value);$('#dPrsWrap').hidden=!isPrsIssue(e.target.value)};
+  $('#dPrs').onclick=e=>{const b=e.target.closest('[data-prs]');if(!b)return;const k=b.dataset.prs;dprs=dprs.includes(k)?dprs.filter(x=>x!==k):[...dprs,k];$('#dPrs').innerHTML=prsChips(dprs)};
   let fileP=it.photo?photoFile(it):null;if(fileP)fileP.catch(()=>{});
   if(it.photo&&!photoUrls.has(it.id))ensureFull(it.id).then(()=>{const im=$('#dImg'),u=photoUrls.get(it.id);if(im&&u)im.src=u});
   if(it.after&&!afterUrls.has(it.id))ensureFull(it.id,'after').then(()=>{const im=$('#dAfterImg'),u=afterUrls.get(it.id);if(im&&u)im.src=u});
@@ -2396,7 +2799,7 @@ function openDetail(id){
   $('#dSave').onclick=async()=>{
     const dept=$('#dDept').value;if(!dept){toast('Pick a department.');return}
     const now=new Date().toISOString();
-    const demo=isDemoIssue($('#dIssue').value);const p={sku:ds.sku,lockup:ds.lockup,found:cleanFound(ds.found),status:st,deptId:dept,issueId:$('#dIssue').value,sourceId:$('#dSource').value,causeId:$('#dCause').value,rite:demo&&$('#dRite').checked,riteNo:demo?$('#dRiteNo').value.trim().slice(0,40):'',planogramId:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
+    const demo=isDemoIssue($('#dIssue').value);const p={sku:ds.sku,lockup:ds.lockup,found:cleanFound(ds.found),prs:isPrsIssue($('#dIssue').value)?dprs:[],status:st,deptId:dept,issueId:$('#dIssue').value,sourceId:$('#dSource').value,causeId:$('#dCause').value,rite:demo&&$('#dRite').checked,riteNo:demo?$('#dRiteNo').value.trim().slice(0,40):'',planogramId:$('#dSub').value,note:$('#dNote').value.trim(),updated:now};
     if(st==='Fixed'&&it.status!=='Fixed')p.fixedAt=now;if(st!=='Fixed')p.fixedAt=null;
     const nowFixed=st==='Fixed'&&it.status!=='Fixed';
     try{await store.patch(it.id,p);closeSheet();toast('Saved.');if(nowFixed&&!it.after&&ap.afterPrompt)askAfterFor(it.id,true)}catch(e){toast('Couldn\'t save. Try again.')}
@@ -2600,6 +3003,7 @@ function renderLists(){
     <label class="switch"><input type="checkbox" id="tShift" ${lists.showShift?'checked':''}><span><b>Shift selector</b><br><span class="note">Adds a shift choice to the Log screen and a By shift chart to Stats.</span></span></label>
     ${lists.showShift?`<div><span class="label">Shifts</span>${rowsHtml('shifts',lists.shifts,U)}</div>`:''}
   </section>
+  ${dsListsHtml()}
   ${productsHtml()}
   ${appearanceHtml()}
   ${syncHtml()}
