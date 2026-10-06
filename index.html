@@ -463,6 +463,8 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 .legend2{display:grid;gap:6px;margin-top:8px;font-size:13px}
 .legend2 span{display:flex;align-items:center;gap:8px}.legend2 i{display:inline-grid;place-items:center;width:28px;height:16px;border-radius:3px;font-style:normal;font-size:11px;color:var(--surface);flex:none}.legend2 i:not([class]){background:var(--sunk);color:var(--bad)}
 .tunl button{min-height:38px;font-size:14px}
+.texp{border-style:dashed}
+.st-exp{background:transparent;border:2px dashed var(--accent);color:var(--accent)}
 .tload{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:14px}.tload .linkish{font-size:13px}
 .tload3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.tload3 label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
 .tload3 input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;min-height:44px;color:var(--ink)}
@@ -1337,7 +1339,7 @@ function syncHtml(){
 
 /* ---------- Notes for later: quick jots about ROIL itself (bugs, ideas) while you're on the floor ----------
    Synced with your other devices and kept in backups, so you can read them at home. */
-const APP_VERSION='roil-pages-20';
+const APP_VERSION='roil-pages-21';
 const NOTE_TYPES=[['bug','Bug'],['improve','Improvement'],['feature','Feature idea'],['other','Other']];
 const noteType=k=>(NOTE_TYPES.find(t=>t[0]===k)||NOTE_TYPES[3])[1];
 let notes={};   // id -> {id,type,text,ctx,created,updated,done,deleted}
@@ -1729,7 +1731,7 @@ function renderDsDays(){
   const days=[...new Set(Object.values(dk.days).map(r=>r.day))].sort().reverse().slice(0,30);if(!days.includes(today()))days.unshift(today());
   const A=dsAreas();
   const stale=A.map(a=>({a,ld:lastDone(a.id)})).sort((x,y)=>(x.ld||'').localeCompare(y.ld||'')).filter(x=>!x.ld||weekdaysBetween(x.ld,today())>=2).slice(0,15);
-  const W=weekSummary(today()),recentTrucks=liveTrucks().slice(0,8);
+  const W=weekSummary(today()),recentTrucks=arrivedTrucks().slice(0,8);
   const month=today().slice(0,7);const dbs=Object.values(dk.days).filter(r=>r.day.startsWith(month)&&r.db).length;
   const reasonsM=countBy(Object.values(dk.days).filter(r=>r.day.startsWith(month)&&r.st==='follow').flatMap(r=>r.reasons.map(id=>({n:dsReason(id)?dsReason(id).name:'Other'}))),x=>x.n);
   el.innerHTML=`<h2>Downstock days</h2>
@@ -1806,7 +1808,7 @@ function cleanTrucks(o){
   const r={};if(!o||typeof o!=='object')return r;const D=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||''))?String(v):'';
   for(const [k,t] of Object.entries(o)){if(!ENTRY_ID.test(k)||!t||typeof t!=='object'||!TRUCKS[t.type])continue;
     const log={};for(const [d,v] of Object.entries(t.log||{}))if(D(d)&&v&&typeof v==='object')log[d]={pallets:Math.max(0,Math.min(999,parseInt(v.pallets,10)||0)),store:STORE_LV.some(s=>s[0]===v.store)?v.store:'none'};
-    r[k]={id:k,type:t.type,arrived:D(t.arrived),dropped:!!t.dropped,emptied:D(t.emptied),pickupReq:D(t.pickupReq),pickedUp:D(t.pickedUp),
+    r[k]={id:k,type:t.type,arrived:D(t.arrived),expected:!!t.expected,dropped:!!t.dropped,emptied:D(t.emptied),pickupReq:D(t.pickupReq),pickedUp:D(t.pickedUp),
       pieces:Math.max(0,Math.min(99999,parseInt(t.pieces,10)||0)),cube:Math.max(0,Math.min(99999,Math.round((parseFloat(t.cube)||0)*10)/10)),
       palTotal:t.palTotal===''||t.palTotal==null?'':Math.max(0,Math.min(999,parseInt(t.palTotal,10)||0)),loadNote:String(t.loadNote||'').slice(0,200),
       pallets:Math.max(0,Math.min(999,parseInt(t.pallets,10)||0)),store:STORE_LV.some(s=>s[0]===t.store)?t.store:'none',
@@ -1829,7 +1831,8 @@ function weekMonday(s){const d=dayOf(s),w=d.getDay();return addDays(s,w===6?2:w=
 const weekStart=s=>addDays(weekMonday(s),-2),weekEnd=s=>addDays(weekMonday(s),4);
 function weekdaysBetween(a,b){let n=0;for(let d=a;d<b;d=addDays(d,1)){const w=dayOf(addDays(d,1)).getDay();if(w>0&&w<6)n++}return n}
 const liveTrucks=()=>Object.values(dk.trucks||{}).filter(t=>!t.deleted).sort((a,b)=>b.arrived.localeCompare(a.arrived));
-const truckOpen=t=>!t.finished||(t.dropped&&!t.pickedUp);
+const truckOpen=t=>t.expected||!t.finished||(t.dropped&&!t.pickedUp);
+const arrivedTrucks=()=>liveTrucks().filter(t=>!t.expected);   // expected trucks (load entered from the email, not here yet) stay out of stats
 function saveTruck(t){t.updated=nowIso();t.log={...t.log,[today()]:{pallets:t.pallets,store:t.store}};dk.trucks[t.id]=t;return saveDk()}
 /* scheduled trucks from the last 2 days that haven't been answered yet */
 function truckPrompts(){
@@ -1846,8 +1849,11 @@ function trucksHtml(){
   if(!P.length&&!open.length)return `<div class="row"><button class="btn small ghost" type="button" data-tr="arrived">Truck arrived today</button><button class="btn small ghost" type="button" data-tr="past">Add a past truck</button></div>`;
   const stage=(t,k,label)=>`<button type="button" class="tstage${t[k]?' on':''}" data-tr="stage" data-k="${k}" data-id="${t.id}">${label}${t[k]?`<small>${esc(shortDay(t[k]))}</small>`:''}</button>`;
   return `<section class="panel lsec trucks"><header><h3>Trucks</h3><button class="btn small ghost" type="button" data-tr="arrived">Arrived today</button><button class="btn small ghost" type="button" data-tr="past">Add past</button></header>
-  ${P.map(p=>`<div class="tprompt"><span><b>${TRUCKS[p.type].full}</b> was due ${p.day===today()?'today':esc(shortDay(p.day))}. Has it arrived?</span><span class="row"><button class="btn small primary" type="button" data-tr="came" data-type="${p.type}" data-day="${p.day}">Arrived</button><button class="btn small" type="button" data-tr="nocome" data-type="${p.type}" data-day="${p.day}">Didn't arrive</button></span></div>`).join('')}
+  ${P.map(p=>`<div class="tprompt"><span><b>${TRUCKS[p.type].full}</b> ${p.day===today()?'is due today':'was due '+esc(shortDay(p.day))}. Has it arrived?</span><span class="row"><button class="btn small primary" type="button" data-tr="came" data-type="${p.type}" data-day="${p.day}">Arrived</button><button class="btn small" type="button" data-tr="nocome" data-type="${p.type}" data-day="${p.day}">Didn't arrive</button><button class="btn small ghost" type="button" data-tr="expect" data-type="${p.type}" data-day="${p.day}">Add load from email</button></span></div>`).join('')}
   ${open.map(t=>{const age=calDays(t.arrived,today());const done=!!t.finished;
+    if(t.expected)return `<div class="tcard texp" data-truck="${t.id}"><div class="row" style="justify-content:space-between"><b>${TRUCKS[t.type].name} · expected ${t.arrived===today()?'today':esc(shortDay(t.arrived))}</b><button type="button" class="linkish" data-tr="edit" data-id="${t.id}">Edit load</button></div>
+      <div class="tload">${loadText(t)?`<span>${esc(loadText(t))}</span>${t.loadNote?`<span class="muted">${esc(t.loadNote)}</span>`:''}`:'<span class="muted">No load details yet.</span>'}</div>
+      ${t.arrived<=today()?`<div class="row"><span>Has it arrived?</span><button class="btn small primary" type="button" data-tr="arr" data-id="${t.id}">Arrived</button><button class="btn small" type="button" data-tr="noarr" data-id="${t.id}">Didn't arrive</button></div>`:''}</div>`;
     return `<div class="tcard" data-truck="${t.id}"><div class="row" style="justify-content:space-between"><b>${TRUCKS[t.type].name} · arrived ${esc(shortDay(t.arrived))}</b><button type="button" class="linkish" data-tr="edit" data-id="${t.id}">Edit</button><span class="mono muted">${done?`finished in ${calDays(t.arrived,t.finished)+1} d`:`day ${age+1}`}</span></div>
       <div class="tload">${loadText(t)?`<span>${esc(loadText(t))}</span>${t.loadNote?`<span class="muted">${esc(t.loadNote)}</span>`:''}`:'<span class="muted">No load details yet.</span>'}<button type="button" class="linkish" data-tr="edit" data-id="${t.id}">${loadText(t)?'Edit load':'Add pieces & CUBE'}</button></div>
       <div class="seg tunl" role="group" aria-label="Unload">${[['0','Live unload'],['1','Dropped trailer']].map(([v,l])=>`<button type="button" data-tr="drop" data-v="${v}" data-id="${t.id}" aria-pressed="${(t.dropped?'1':'0')===v}">${l}</button>`).join('')}</div>
@@ -1863,6 +1869,7 @@ function trucksHtml(){
 async function onTruck(b){
   const a=b.dataset.tr,t=b.dataset.id?{...dk.trucks[b.dataset.id]}:null;
   if(a==='came'){const nt=await newTruck(b.dataset.type,b.dataset.day);renderDs();toast(`${TRUCKS[b.dataset.type].name} truck added.`,[['Add pieces & CUBE',()=>openTruckSheet(nt.id)]]);return}
+  if(a==='expect'){const nt=await newTruck(b.dataset.type,b.dataset.day);nt.expected=true;await saveTruck(nt);renderDs();openTruckSheet(nt.id);return}
   if(a==='nocome'){dk.cfg.dismiss={...(dk.cfg.dismiss||{}),[b.dataset.type+'|'+b.dataset.day]:{updated:nowIso()}};await saveDk();renderDs();return}
   if(a==='edit'){openTruckSheet(b.dataset.id);return}
   if(a==='past'){openTruckSheet(null);return}
@@ -1872,7 +1879,9 @@ async function onTruck(b){
       <label class="switch"><input type="checkbox" id="trDrop"><span>Dropped trailer <span class="lsub">DDC usually is; RDC only when it's too big for both stores</span></span></label>`);
     $('#sheetHost').querySelectorAll('[data-new]').forEach(x=>x.onclick=async()=>{const ty=x.dataset.new;const dr=$('#trDrop').checked||TRUCKS[ty].dropped;closeSheet();await newTruck(ty,today(),dr);renderDs()});return}
   if(!t)return;
-  if(a==='stage'){const k=b.dataset.k;t[k]=t[k]?'':today();if(k==='pickedUp'&&t.pickedUp&&!t.emptied)t.emptied=today()}
+  if(a==='arr'){t.expected=false;toast(`${TRUCKS[t.type].name} truck arrived.`)}
+  else if(a==='noarr'){t.deleted=true;dk.cfg.dismiss={...(dk.cfg.dismiss||{}),[t.type+'|'+t.arrived]:{updated:nowIso()}};toast('Removed. The load you entered is dropped too.')}
+  else if(a==='stage'){const k=b.dataset.k;t[k]=t[k]?'':today();if(k==='pickedUp'&&t.pickedUp&&!t.emptied)t.emptied=today()}
   else if(a==='drop'){t.dropped=b.dataset.v==='1';if(!t.dropped){t.emptied='';t.pickupReq='';t.pickedUp=''}}
   else if(a==='pal')t.pallets=Math.max(0,Math.min(999,t.pallets+(+b.dataset.d)));
   else if(a==='store')t.store=b.dataset.v;
@@ -1894,7 +1903,8 @@ function openTruckSheet(id){
   const date=(k,label)=>`<div><label class="label" for="te-${k}">${label}</label><div class="ladd"><input type="date" id="te-${k}" value="${s[k]||''}"><button type="button" class="btn small ghost" data-clr="${k}">Clear</button></div></div>`;
   const paint=()=>{
     $('#teBody').innerHTML=`<div><span class="label">Truck</span><div class="seg" data-f="type">${Object.keys(TRUCKS).map(k=>`<button type="button" data-v="${k}" aria-pressed="${s.type===k}">${TRUCKS[k].full}</button>`).join('')}</div></div>
-      <div><label class="label" for="te-arrived">Arrived</label><input type="date" id="te-arrived" value="${s.arrived}"></div>
+      <label class="switch"><input type="checkbox" id="te-exp" ${s.expected?'checked':''}><span>Not arrived yet <span class="lsub">load entered from the email</span></span></label>
+      <div><label class="label" for="te-arrived">${s.expected?'Expected':'Arrived'}</label><input type="date" id="te-arrived" value="${s.arrived}"></div>
       <div><span class="label">Load <span class="lsub">from the email</span></span><div class="tload3">
         <label><span>Pieces</span><input type="number" id="te-pieces" inputmode="numeric" min="0" value="${s.pieces||''}"></label>
         <label><span>CUBE (cu ft)</span><input type="number" id="te-cube" inputmode="decimal" min="0" step="0.1" value="${s.cube||''}"></label>
@@ -1909,6 +1919,7 @@ function openTruckSheet(id){
       <div><span class="label">Freight left on the sales floor</span><div class="chips">${activeOf(lists.departments).map(d=>`<button type="button" class="chip" data-fl="${d.id}" aria-pressed="${s.floor.includes(d.id)}">${esc(d.name)}</button>`).join('')}</div></div>`;
   };
   const read=()=>{
+    const ex=$('#te-exp');if(ex)s.expected=ex.checked;
     const pc=$('#te-pieces');if(pc)s.pieces=Math.max(0,parseInt(pc.value,10)||0);const cu=$('#te-cube');if(cu)s.cube=Math.max(0,Math.round((parseFloat(cu.value)||0)*10)/10);
     const pt=$('#te-palt');if(pt)s.palTotal=pt.value===''?'':Math.max(0,parseInt(pt.value,10)||0);const ln=$('#te-lnote');if(ln)s.loadNote=ln.value.trim().slice(0,200);
     for(const k of['arrived','emptied','pickupReq','pickedUp','finished']){const i=$('#te-'+k);if(i)s[k]=i.value||''}const pl=$('#te-pal');if(pl)s.pallets=Math.max(0,Math.min(999,parseInt(pl.value,10)||0))};
@@ -1917,6 +1928,7 @@ function openTruckSheet(id){
     <div class="stack" id="teBody" style="gap:12px"></div>
     <div class="row" style="justify-content:space-between">${id?'<button class="btn small danger" type="button" id="teDel">Delete</button>':'<span></span>'}<button class="btn primary" type="button" id="teSave">Save</button></div>`);
   paint();
+  $('#teBody').addEventListener('change',e=>{if(e.target.id==='te-exp'){read();paint()}});
   $('#teBody').addEventListener('input',e=>{if(e.target.id==='te-cube'){const c=parseFloat(e.target.value)||0;const est=$('#te-est'),pt=$('#te-palt');if(est&&s.type==='rdc')est.textContent=palEstNote(c);if(pt)pt.placeholder=c?'≈'+palletsFromCube(c):'after unload'}});
   $('#teBody').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;read();
     const f=b.closest('[data-f]');if(f){s[f.dataset.f]=f.dataset.f==='dropped'?b.dataset.v==='1':b.dataset.v;paint();return}
@@ -1924,7 +1936,8 @@ function openTruckSheet(id){
     if(b.dataset.fl){const d=b.dataset.fl;s.floor=s.floor.includes(d)?s.floor.filter(x=>x!==d):[...s.floor,d];paint()}});
   $('#teSave').onclick=async()=>{read();
     if(!s.arrived){toast('Pick the day it arrived.');return}
-    if(s.arrived>today()){toast('The arrival day is in the future.');return}
+    if(s.expected?s.arrived>addDays(today(),3):s.arrived>today()){toast(s.expected?'Expected more than 3 days out. Add it closer to the day.':'The arrival day is in the future. Turn on “Not arrived yet” for a truck that\'s still coming.');return}
+    if(s.expected){s.emptied='';s.pickupReq='';s.pickedUp='';s.finished=''}
     for(const k of['emptied','pickupReq','pickedUp','finished'])if(s[k]&&s[k]<s.arrived){toast('A date is before the truck arrived.');return}
     if(!s.dropped){s.emptied='';s.pickupReq='';s.pickedUp=''}
     const t={...s,id:id||rid('t'),deleted:false,log:{...(s.log||{})},updated:nowIso()};
@@ -1970,7 +1983,7 @@ function weekSummary(day){
   const doneSet=new Set(Object.values(dk.days).filter(r=>inWk(r)&&r.st==='done').map(r=>r.area));
   const cov=A.length?Math.round(A.filter(a=>doneSet.has(a.id)).length/A.length*100):0;
   const dbs=Object.values(dk.days).filter(r=>inWk(r)&&r.db).length;
-  const tr=liveTrucks().filter(t=>t.arrived>=ws&&t.arrived<=we).reverse();
+  const tr=arrivedTrucks().filter(t=>t.arrived>=ws&&t.arrived<=we).reverse();
   const leftoverDays=new Set();for(const t of liveTrucks())for(const [d,v] of Object.entries(t.log||{}))if(d>=ws&&d<=we&&d>t.arrived&&(v.pallets>0||v.store!=='none'))leftoverDays.add(d);
   for(const r of Object.values(dk.days))if(inWk(r)&&r.why==='truck')leftoverDays.add(r.day);
   const floor=tr.reduce((a,t)=>a+t.floor.length,0);
@@ -2009,6 +2022,7 @@ function calDaysOf(mon){return [-2,-1,0,1,2,3,4].map(n=>addDays(mon,n))}
 /* what stage a truck's work and its trailer were in on a given day */
 function truckDay(t,d){
   if(d<t.arrived)return null;
+  if(t.expected)return d===t.arrived?{work:'exp',trailer:null,req:false}:null;
   const end=t.finished||today();
   let work=null;
   if(t.finished&&d===t.finished)work='done';
@@ -2022,7 +2036,7 @@ function truckDay(t,d){
   if(d>today()){work=null}
   return {work,trailer,req:t.pickupReq===d};
 }
-const STAGE_LBL={unload:'Unloading',left1:'Leftovers (a little)',left2:'Leftovers (some)',left3:'Leftovers (a lot)',done:'Finished',bay:'Trailer in bay',empty:'Trailer empty, waiting for pickup',picked:'Trailer picked up'};
+const STAGE_LBL={exp:'Expected (load entered, not arrived yet)',unload:'Unloading',left1:'Leftovers (a little)',left2:'Leftovers (some)',left3:'Leftovers (a lot)',done:'Finished',bay:'Trailer in bay',empty:'Trailer empty, waiting for pickup',picked:'Trailer picked up'};
 function dayIssues(d){return {logged:items.filter(i=>localDay(new Date(i.created))===d),fixed:items.filter(i=>i.fixedAt&&localDay(new Date(i.fixedAt))===d)}}
 function renderCal(){
   const el=$('#v-cal');if(!el)return;
@@ -2059,7 +2073,7 @@ function renderCal(){
   <div class="panel lsec"><div class="tiles3"><div><b>${added}</b><span>issues logged</span></div><div><b>${fixed}</b><span>issues fixed</span></div><div><b class="${added>fixed?'up':'down'}">${added>fixed?'+':''}${added-fixed}</b><span>change in open</span></div></div>
     <p class="note" style="margin:0">${W.cov}% of downstock areas done at least once this week${W.leftover?` · truck leftovers worked ${W.leftover} day${W.leftover===1?'':'s'}`:''}.</p></div>
   <details class="arch"><summary>What the colors mean</summary><div class="legend2">
-    ${['unload','left1','left2','left3','done','bay','empty','picked'].map(k=>`<span><i class="st-${k}">${k==='done'||k==='picked'?'✓':''}</i>${STAGE_LBL[k]}</span>`).join('')}<span><i class="st-empty">☎</i>Pickup requested</span><span><i>⚑</i>Freight left on the sales floor (issue logged)</span>
+    ${['exp','unload','left1','left2','left3','done','bay','empty','picked'].map(k=>`<span><i class="st-${k}">${k==='done'||k==='picked'?'✓':''}</i>${STAGE_LBL[k]}</span>`).join('')}<span><i class="st-empty">☎</i>Pickup requested</span><span><i>⚑</i>Freight left on the sales floor (issue logged)</span>
     ${EV_KINDS.map(([k,t])=>`<span><i class="ev-${k}"></i>${t}</span>`).join('')}</div></details>`;
   $('#calPrev').onclick=()=>{calWeek=addDays(calWeek,-7);renderCal()};
   $('#calNext').onclick=()=>{calWeek=addDays(calWeek,7);renderCal()};
