@@ -463,6 +463,9 @@ button.linkish{border:0;background:none;padding:0;font-size:inherit;min-height:0
 .legend2{display:grid;gap:6px;margin-top:8px;font-size:13px}
 .legend2 span{display:flex;align-items:center;gap:8px}.legend2 i{display:inline-grid;place-items:center;width:28px;height:16px;border-radius:3px;font-style:normal;font-size:11px;color:var(--surface);flex:none}.legend2 i:not([class]){background:var(--sunk);color:var(--bad)}
 .tunl button{min-height:38px;font-size:14px}
+.tload{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:14px}.tload .linkish{font-size:13px}
+.tload3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.tload3 label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.tload3 input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;min-height:44px;color:var(--ink)}
 #dbgPanel>summary{cursor:pointer;list-style:none}#dbgPanel>summary::-webkit-details-marker{display:none}
 #dbgPanel .kv{grid-template-columns:auto 1fr;font-size:13px}
 .tcard .row b+.linkish{margin-left:8px;margin-right:auto;font-size:13px}
@@ -1334,7 +1337,7 @@ function syncHtml(){
 
 /* ---------- Notes for later: quick jots about ROIL itself (bugs, ideas) while you're on the floor ----------
    Synced with your other devices and kept in backups, so you can read them at home. */
-const APP_VERSION='roil-pages-19';
+const APP_VERSION='roil-pages-20';
 const NOTE_TYPES=[['bug','Bug'],['improve','Improvement'],['feature','Feature idea'],['other','Other']];
 const noteType=k=>(NOTE_TYPES.find(t=>t[0]===k)||NOTE_TYPES[3])[1];
 let notes={};   // id -> {id,type,text,ctx,created,updated,done,deleted}
@@ -1783,6 +1786,7 @@ function dsListsHtml(){
     if(b.dataset.dsact==='addr'){const i=$('#dsNewR');const n=i.value.trim();if(!n)return;const id=rid('r');dk.cfg.reasons[id]={id,name:n.slice(0,80),kind:'',order:50+dsReasons(true).length,archived:false,updated:nowIso()};await saveDk();renderLists()}
   });
   el.addEventListener('change',async e=>{const t=e.target;
+    if(t.id==='trPalH'){const h=Math.max(40,Math.min(110,parseInt(t.value,10)||100));dk.cfg.truckCfg={...(dk.cfg.truckCfg||{}),palH:{h,updated:nowIso()}};await saveDk();renderLists();return}
     if(t.id==='trHoliday'){dk.cfg.truckCfg={...(dk.cfg.truckCfg||{}),holidayOn:{on:t.checked,updated:nowIso()}};await saveDk();toast(t.checked?'Holiday truck schedule on.':'Holiday truck schedule off.');return}
     if(t.dataset&&t.dataset.dsr){const r=dk.cfg.reasons[t.dataset.dsr];const n=t.value.trim();if(!n){t.value=r.name;return}r.name=n.slice(0,80);r.updated=nowIso();await saveDk()}});
   el.addEventListener('keydown',e=>{if(e.target.id==='dsNewR'&&e.key==='Enter'){e.preventDefault();$('#dsPanel [data-dsact=addr]').click()}});
@@ -1803,6 +1807,8 @@ function cleanTrucks(o){
   for(const [k,t] of Object.entries(o)){if(!ENTRY_ID.test(k)||!t||typeof t!=='object'||!TRUCKS[t.type])continue;
     const log={};for(const [d,v] of Object.entries(t.log||{}))if(D(d)&&v&&typeof v==='object')log[d]={pallets:Math.max(0,Math.min(999,parseInt(v.pallets,10)||0)),store:STORE_LV.some(s=>s[0]===v.store)?v.store:'none'};
     r[k]={id:k,type:t.type,arrived:D(t.arrived),dropped:!!t.dropped,emptied:D(t.emptied),pickupReq:D(t.pickupReq),pickedUp:D(t.pickedUp),
+      pieces:Math.max(0,Math.min(99999,parseInt(t.pieces,10)||0)),cube:Math.max(0,Math.min(99999,Math.round((parseFloat(t.cube)||0)*10)/10)),
+      palTotal:t.palTotal===''||t.palTotal==null?'':Math.max(0,Math.min(999,parseInt(t.palTotal,10)||0)),loadNote:String(t.loadNote||'').slice(0,200),
       pallets:Math.max(0,Math.min(999,parseInt(t.pallets,10)||0)),store:STORE_LV.some(s=>s[0]===t.store)?t.store:'none',
       floor:Array.isArray(t.floor)?t.floor.filter(x=>ENTRY_ID.test(String(x))).slice(0,40):[],finished:D(t.finished),deleted:!!t.deleted,log,updated:String(t.updated||'').slice(0,40)}}
   return r;
@@ -1810,6 +1816,7 @@ function cleanTrucks(o){
 function cleanTruckCfg(c){
   const r={};if(!c||typeof c!=='object')return r;
   for(const k of Object.keys(TRUCKS))if(c[k]&&typeof c[k]==='object')r[k]={days:(c[k].days||[]).map(Number).filter(n=>n>=0&&n<=6),holiday:(c[k].holiday||[]).map(Number).filter(n=>n>=0&&n<=6),updated:String(c[k].updated||'').slice(0,40)};
+  if(c.palH&&typeof c.palH==='object')r.palH={h:Math.max(40,Math.min(110,parseInt(c.palH.h,10)||100)),updated:String(c.palH.updated||'').slice(0,40)};
   if(c.holidayOn&&typeof c.holidayOn==='object')r.holidayOn={on:!!c.holidayOn.on,updated:String(c.holidayOn.updated||'').slice(0,40)};
   return r;
 }
@@ -1833,7 +1840,7 @@ function truckPrompts(){
       if(liveTrucks().some(t=>t.type===type&&t.arrived===d))continue;if(dk.cfg.dismiss&&dk.cfg.dismiss[type+'|'+d])continue;out.push({type,day:d})}}
   return out;
 }
-function newTruck(type,day,dropped){const id=rid('t');const t={id,type,arrived:day,dropped:dropped??TRUCKS[type].dropped,emptied:'',pickupReq:'',pickedUp:'',pallets:0,store:'none',floor:[],finished:'',deleted:false,log:{},updated:''};return saveTruck(t).then(()=>t)}
+function newTruck(type,day,dropped){const id=rid('t');const t={id,type,arrived:day,pieces:0,cube:0,palTotal:'',loadNote:'',dropped:dropped??TRUCKS[type].dropped,emptied:'',pickupReq:'',pickedUp:'',pallets:0,store:'none',floor:[],finished:'',deleted:false,log:{},updated:''};return saveTruck(t).then(()=>t)}
 function trucksHtml(){
   const P=truckPrompts(),open=liveTrucks().filter(truckOpen);
   if(!P.length&&!open.length)return `<div class="row"><button class="btn small ghost" type="button" data-tr="arrived">Truck arrived today</button><button class="btn small ghost" type="button" data-tr="past">Add a past truck</button></div>`;
@@ -1842,6 +1849,7 @@ function trucksHtml(){
   ${P.map(p=>`<div class="tprompt"><span><b>${TRUCKS[p.type].full}</b> was due ${p.day===today()?'today':esc(shortDay(p.day))}. Has it arrived?</span><span class="row"><button class="btn small primary" type="button" data-tr="came" data-type="${p.type}" data-day="${p.day}">Arrived</button><button class="btn small" type="button" data-tr="nocome" data-type="${p.type}" data-day="${p.day}">Didn't arrive</button></span></div>`).join('')}
   ${open.map(t=>{const age=calDays(t.arrived,today());const done=!!t.finished;
     return `<div class="tcard" data-truck="${t.id}"><div class="row" style="justify-content:space-between"><b>${TRUCKS[t.type].name} · arrived ${esc(shortDay(t.arrived))}</b><button type="button" class="linkish" data-tr="edit" data-id="${t.id}">Edit</button><span class="mono muted">${done?`finished in ${calDays(t.arrived,t.finished)+1} d`:`day ${age+1}`}</span></div>
+      <div class="tload">${loadText(t)?`<span>${esc(loadText(t))}</span>${t.loadNote?`<span class="muted">${esc(t.loadNote)}</span>`:''}`:'<span class="muted">No load details yet.</span>'}<button type="button" class="linkish" data-tr="edit" data-id="${t.id}">${loadText(t)?'Edit load':'Add pieces & CUBE'}</button></div>
       <div class="seg tunl" role="group" aria-label="Unload">${[['0','Live unload'],['1','Dropped trailer']].map(([v,l])=>`<button type="button" data-tr="drop" data-v="${v}" data-id="${t.id}" aria-pressed="${(t.dropped?'1':'0')===v}">${l}</button>`).join('')}</div>
       ${t.dropped?`<div><span class="label">Trailer${t.emptied&&!t.pickedUp&&calDays(t.emptied,today())>0?` <span class="lsub">empty and waiting ${calDays(t.emptied,today())} d</span>`:''}</span><div class="tstages">${stage(t,'emptied','Emptied')}${stage(t,'pickupReq','Pickup requested')}${stage(t,'pickedUp','Picked up')}</div></div>`
         :''}
@@ -1854,7 +1862,7 @@ function trucksHtml(){
 }
 async function onTruck(b){
   const a=b.dataset.tr,t=b.dataset.id?{...dk.trucks[b.dataset.id]}:null;
-  if(a==='came'){await newTruck(b.dataset.type,b.dataset.day);renderDs();toast(`${TRUCKS[b.dataset.type].name} truck added. Update it as the work goes.`);return}
+  if(a==='came'){const nt=await newTruck(b.dataset.type,b.dataset.day);renderDs();toast(`${TRUCKS[b.dataset.type].name} truck added.`,[['Add pieces & CUBE',()=>openTruckSheet(nt.id)]]);return}
   if(a==='nocome'){dk.cfg.dismiss={...(dk.cfg.dismiss||{}),[b.dataset.type+'|'+b.dataset.day]:{updated:nowIso()}};await saveDk();renderDs();return}
   if(a==='edit'){openTruckSheet(b.dataset.id);return}
   if(a==='past'){openTruckSheet(null);return}
@@ -1881,12 +1889,18 @@ async function onTruckFloor(sel){
 }
 /* Edit everything about a truck, including past ones, or add one after the fact. */
 function openTruckSheet(id){
-  const t0=id?dk.trucks[id]:{type:'rdc',arrived:addDays(today(),-1),dropped:false,emptied:'',pickupReq:'',pickedUp:'',pallets:0,store:'none',floor:[],finished:'',log:{}};if(!t0)return;
-  const s={...t0,floor:[...t0.floor]};
+  const t0=id?dk.trucks[id]:{type:'rdc',arrived:addDays(today(),-1),dropped:false,emptied:'',pickupReq:'',pickedUp:'',pallets:0,store:'none',floor:[],finished:'',log:{},pieces:0,cube:0,palTotal:'',loadNote:''};if(!t0)return;
+  const s={pieces:0,cube:0,palTotal:'',loadNote:'',...t0,floor:[...t0.floor]};if(s.palTotal==null)s.palTotal='';
   const date=(k,label)=>`<div><label class="label" for="te-${k}">${label}</label><div class="ladd"><input type="date" id="te-${k}" value="${s[k]||''}"><button type="button" class="btn small ghost" data-clr="${k}">Clear</button></div></div>`;
   const paint=()=>{
     $('#teBody').innerHTML=`<div><span class="label">Truck</span><div class="seg" data-f="type">${Object.keys(TRUCKS).map(k=>`<button type="button" data-v="${k}" aria-pressed="${s.type===k}">${TRUCKS[k].full}</button>`).join('')}</div></div>
       <div><label class="label" for="te-arrived">Arrived</label><input type="date" id="te-arrived" value="${s.arrived}"></div>
+      <div><span class="label">Load <span class="lsub">from the email</span></span><div class="tload3">
+        <label><span>Pieces</span><input type="number" id="te-pieces" inputmode="numeric" min="0" value="${s.pieces||''}"></label>
+        <label><span>CUBE (cu ft)</span><input type="number" id="te-cube" inputmode="decimal" min="0" step="0.1" value="${s.cube||''}"></label>
+        ${s.type==='rdc'?`<label><span>Pallets</span><input type="number" id="te-palt" inputmode="numeric" min="0" value="${s.palTotal===''?'':s.palTotal}" placeholder="${s.cube?'≈'+palletsFromCube(s.cube):'after unload'}"></label>`:''}</div>
+        <p class="note" id="te-est" style="margin:4px 0 0">${s.type==='rdc'?palEstNote(s.cube):'DDC isn\'t palletized.'}</p>
+        <input type="text" id="te-lnote" maxlength="200" value="${esc(s.loadNote||'')}" placeholder="Load note (optional), e.g. 12 XXL TVs, 17 major appliances" style="margin-top:6px"></div>
       <div class="seg" data-f="dropped">${[['0','Live unload'],['1','Dropped trailer']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${(s.dropped?'1':'0')===v}">${l}</button>`).join('')}</div>
       ${s.dropped?`${date('emptied','Trailer emptied')}${date('pickupReq','Pickup requested')}${date('pickedUp','Trailer picked up')}`:''}
       ${date('finished','Truck finished')}
@@ -1894,12 +1908,16 @@ function openTruckSheet(id){
         <div><span class="label">Store pallets waiting</span><div class="seg" data-f="store">${STORE_LV.map(([k,l])=>`<button type="button" data-v="${k}" aria-pressed="${s.store===k}">${l}</button>`).join('')}</div></div></div>
       <div><span class="label">Freight left on the sales floor</span><div class="chips">${activeOf(lists.departments).map(d=>`<button type="button" class="chip" data-fl="${d.id}" aria-pressed="${s.floor.includes(d.id)}">${esc(d.name)}</button>`).join('')}</div></div>`;
   };
-  const read=()=>{for(const k of['arrived','emptied','pickupReq','pickedUp','finished']){const i=$('#te-'+k);if(i)s[k]=i.value||''}const pl=$('#te-pal');if(pl)s.pallets=Math.max(0,Math.min(999,parseInt(pl.value,10)||0))};
+  const read=()=>{
+    const pc=$('#te-pieces');if(pc)s.pieces=Math.max(0,parseInt(pc.value,10)||0);const cu=$('#te-cube');if(cu)s.cube=Math.max(0,Math.round((parseFloat(cu.value)||0)*10)/10);
+    const pt=$('#te-palt');if(pt)s.palTotal=pt.value===''?'':Math.max(0,parseInt(pt.value,10)||0);const ln=$('#te-lnote');if(ln)s.loadNote=ln.value.trim().slice(0,200);
+    for(const k of['arrived','emptied','pickupReq','pickedUp','finished']){const i=$('#te-'+k);if(i)s[k]=i.value||''}const pl=$('#te-pal');if(pl)s.pallets=Math.max(0,Math.min(999,parseInt(pl.value,10)||0))};
   openSheet(`<div class="head"><h2>${id?'Edit truck':'Add a truck'}</h2><button class="btn small" data-close>Cancel</button></div>
     <p class="note" style="margin:0">${id?'Fix anything that was entered wrong or missed.':'For a truck you didn\'t log on the day.'} Dates can be in the past.</p>
     <div class="stack" id="teBody" style="gap:12px"></div>
     <div class="row" style="justify-content:space-between">${id?'<button class="btn small danger" type="button" id="teDel">Delete</button>':'<span></span>'}<button class="btn primary" type="button" id="teSave">Save</button></div>`);
   paint();
+  $('#teBody').addEventListener('input',e=>{if(e.target.id==='te-cube'){const c=parseFloat(e.target.value)||0;const est=$('#te-est'),pt=$('#te-palt');if(est&&s.type==='rdc')est.textContent=palEstNote(c);if(pt)pt.placeholder=c?'≈'+palletsFromCube(c):'after unload'}});
   $('#teBody').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;read();
     const f=b.closest('[data-f]');if(f){s[f.dataset.f]=f.dataset.f==='dropped'?b.dataset.v==='1':b.dataset.v;paint();return}
     if(b.dataset.clr){s[b.dataset.clr]='';paint();return}
@@ -1915,6 +1933,8 @@ function openTruckSheet(id){
   const dl=$('#teDel');if(dl)dl.onclick=async e=>{if(e.target.dataset.armed!=='1'){e.target.dataset.armed='1';e.target.textContent='Tap again to delete';return}
     dk.trucks[id]={...dk.trucks[id],deleted:true,updated:nowIso()};await saveDk();closeSheet();rerenderDsViews();toast('Truck deleted.')};
 }
+function palEstNote(cube){const L=learnedCubePerPallet();
+  return (cube>0?`About ${palletsFromCube(cube)} pallets. `:'')+(L?`Based on your average of ${L.per} cu ft per pallet (${L.n} trucks).`:`Estimate assumes ${stdCubePerPallet()} cu ft per pallet (48×40 in, loaded ${palletH()} in high); it learns from the real counts you enter.`)+' Enter the real count after the unload.'}
 function rerenderDsViews(){if(view==='ds')renderDs();if(view==='dsdays')renderDsDays();if(view==='cal')renderCal()}
 
 /* "Freight left on sales floor" issue, filled in: department, Source Truck / freight, which truck */
@@ -1923,10 +1943,26 @@ function truckIssue(deptId,type){
   Object.assign(form,{dept:deptId,sub:'',issue:FREIGHT_ID(),source:sid('o','Truck / freight'),truck:type||''});
   buildForm();step=0;renderLog();updateLogUI();toast('Take a photo, then save.');
 }
+/* Pallet estimate from CUBE: a 48x40 in pallet (13.3 sq ft) loaded to a set height (default 100 in, about
+   trailer height less the pallet and clearance). Once you've entered real pallet counts, your store's own
+   average cube per pallet is used instead. DDC isn't palletized. */
+const palletH=()=>(dk.cfg.truckCfg&&dk.cfg.truckCfg.palH&&dk.cfg.truckCfg.palH.h)||100;
+const stdCubePerPallet=()=>Math.round(48*40*palletH()/1728);
+function learnedCubePerPallet(){const T=liveTrucks().filter(t=>t.type==='rdc'&&t.cube>0&&t.palTotal!==''&&t.palTotal!=null&&t.palTotal>0);if(T.length<2)return null;
+  const c=T.reduce((a,t)=>a+t.cube,0),p=T.reduce((a,t)=>a+t.palTotal,0);return {per:Math.round(c/p),n:T.length}}
+const palletsFromCube=cube=>{const L=learnedCubePerPallet();const per=L?L.per:stdCubePerPallet();return cube>0?Math.max(1,Math.round(cube/per)):0};
+const num=n=>Number(n).toLocaleString();
+function loadText(t){
+  const bits=[];if(t.pieces)bits.push(`${num(t.pieces)} pcs`);if(t.cube)bits.push(`${num(t.cube)} cu ft`);
+  if(t.type==='rdc'){if(t.palTotal!==''&&t.palTotal!=null)bits.push(`${t.palTotal} pallets`);else if(t.cube)bits.push(`≈${palletsFromCube(t.cube)} pallets (est.)`)}
+  else if(bits.length)bits.push('not palletized');
+  return bits.join(' · ');
+}
 function truckLine(t){
   const fin=t.finished?`finished ${shortDay(t.finished)} (${calDays(t.arrived,t.finished)+1} d)`:`not finished (day ${calDays(t.arrived,today())+1})`;
   const tr=t.dropped?(t.emptied?` · trailer emptied ${shortDay(t.emptied)}${t.pickedUp?`, picked up ${shortDay(t.pickedUp)} (sat ${calDays(t.emptied,t.pickedUp)} d)`:t.pickupReq?`, pickup requested ${shortDay(t.pickupReq)}`:''}`:' · trailer not emptied'):'';
-  return `${TRUCKS[t.type].name} ${shortDay(t.arrived)}: ${fin}${tr}${t.floor.length?` · freight left on floor in ${t.floor.length} dept${t.floor.length===1?'':'s'}`:''}`;
+  const ld=loadText(t);
+  return `${TRUCKS[t.type].name} ${shortDay(t.arrived)}${ld?' ('+ld+')':''}: ${fin}${tr}${t.floor.length?` · freight left on floor in ${t.floor.length} dept${t.floor.length===1?'':'s'}`:''}`;
 }
 function weekSummary(day){
   const ws=weekStart(day),we=weekEnd(day),end=we<today()?we:today(),A=dsAreas();
@@ -1948,6 +1984,8 @@ function truckSettingsHtml(){
   const dayChips=(type,k)=>`<div class="chips">${[1,2,3,4,5,6,0].map(n=>`<button type="button" class="chip" data-tcfg="${type}" data-k="${k}" data-n="${n}" aria-pressed="${truckCfg(type)[k].includes(n)}">${DOW[n]}</button>`).join('')}</div>`;
   return `<details class="arch" ${dsListOpen.has('trucks')?'open':''} data-dsopen="trucks"><summary>Truck schedule</summary>
     ${Object.keys(TRUCKS).map(k=>`<div style="margin-top:8px"><span class="label">${TRUCKS[k].full}</span>${dayChips(k,'days')}<span class="label" style="margin-top:6px">Extra holiday days</span>${dayChips(k,'holiday')}</div>`).join('')}
+    <div style="margin-top:10px"><label class="label" for="trPalH">Pallet estimate: loaded height (inches)</label><input type="number" id="trPalH" min="40" max="110" value="${palletH()}" style="width:6em">
+      <p class="note" style="margin:4px 0 0">48×40 in pallets loaded ${palletH()} in high ≈ ${stdCubePerPallet()} cu ft each.${learnedCubePerPallet()?` Your real average is ${learnedCubePerPallet().per} cu ft per pallet, and that's what's used.`:''}</p></div>
     <label class="switch" style="margin-top:10px"><input type="checkbox" id="trHoliday" ${holidayOn()?'checked':''}><span>Holiday schedule is on <span class="lsub">adds the extra days</span></span></label>
     <p class="note">On a scheduled day the board asks whether the truck has arrived. For an odd day, use “Truck arrived today”. A “Holiday schedule” event on the Calendar also turns on the extra days while it lasts.</p></details>`;
 }

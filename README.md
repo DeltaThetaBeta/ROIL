@@ -106,6 +106,7 @@ Switch between **Issues** and **Downstock** at the top of the screen. Downstock 
   - **Schedule** (Lists → Downstock → Truck schedule): RDC (brown goods) is Monday and DDC (white goods) is Tuesday. The holiday schedule adds Wednesday and Thursday.
   - **Arrivals:** on a scheduled day the board asks **Has it arrived?** For an odd day, use **Arrived today**. To log a truck after the fact, use **Add past**. Tap **Edit** on a truck card, a truck row in the Calendar, or a truck under Days → Recent trucks to fix any date or detail, or to delete it.
   - **Each truck's card has:**
+    - **Load**: pieces and CUBE (cu ft) from the email, plus an optional note. For RDC, ROIL estimates the pallet count from the CUBE: 48×40 in pallets loaded 100 in high, about 111 cu ft each (change the height in Lists → Downstock → Truck schedule). Enter the real count after the unload. Once two trucks have real counts, ROIL estimates from your store's own average. DDC isn't palletized.
     - **Live unload** or **Dropped trailer**: DDC starts as dropped and RDC as live, and you can switch either one. For dropped trailers, the trailer's stage is **Emptied → Pickup requested → Picked up**.
     - **Unbroken truck pallets** (− / +).
     - **Store pallets waiting** (none / some / a lot).
