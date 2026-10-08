@@ -1,7 +1,7 @@
 /* ROIL offline support: keeps the app's own files cached so it opens with no signal.
    Your issues and photos are NOT handled here; they live in the phone's browser storage.
    Bump VERSION whenever you upload new files, so devices pick up the update. */
-const VERSION = 'roil-pages-26';
+const VERSION = 'roil-pages-27';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
