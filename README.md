@@ -13,7 +13,7 @@ Live at: https://deltathetabeta.github.io/ROIL/ (the capital `ROIL` matters)
 | iPhone / iPad | Open it in Safari, then **Share → Add to Home Screen**. **Required on iPhone:** otherwise Safari erases the data after 7 days without a visit. |
 | Windows / Mac | Open it in Chrome or Edge, then the **install icon** in the address bar (or browser menu → Install ROIL) |
 
-Installing keeps your data from being cleared and opens ROIL like an app. Check **Lists → Backup & storage** says **kept permanently**.
+Installing keeps your data from being cleared and opens ROIL like an app. Check **Settings → Backup & storage** says **kept permanently**.
 
 ## Logging an issue
 - **Before and After photos.** Take the Before photo when you find it. The After box turns on when the status is **Fixed**, and adding an After photo sets the status to Fixed for you.
@@ -22,9 +22,11 @@ Installing keeps your data from being cleared and opens ROIL like an app. Check 
 - **Source and Cause** fold into one **Why** row, already set to the default source. Tap it to change them.
 - **Issue types** are grouped in tabs by category (Placement, Pricing & labels, Demo units, and so on).
 - **An after photo means Fixed.** While there's an after photo, **Open** and **Follow-up** are locked. Remove the after photo to change the status.
+- **See a photo up close:** tap a photo on an issue, or the magnifier on the Log screen's photo. Pinch or double-tap to zoom, drag to move around, then tap **Close** (or press Escape on a computer).
+- **Saving is quick.** Photos are resized for storage the moment you take them, so Save doesn't wait. Uploading to Drive already happens in the background.
 - **Changing photos later:** open the issue. Each photo has **Replace** and **Remove** (tap Remove twice to confirm), and an empty slot has **+ Add before photo** or **+ Add after photo**. Photo changes save right away, and other devices pick them up on the next sync. **Mark fixed** on the Open tab also offers an after photo.
 
-Three layouts, set in **Lists → Appearance → Log screen layout**:
+Three layouts, set in **Settings → Appearance → Log screen layout**:
 | Layout | What it looks like |
 |---|---|
 | **Steps** | One card at a time (Photos, Where, What's wrong, Why, Finish), with Back, Skip, Next and Save at the bottom of the screen. Picking an issue moves you to the next step. |
@@ -46,7 +48,7 @@ So after taking the photo, you can scan the tag and the items in one go, then pi
 - **Items found** (on the **What's wrong** step): it opens automatically for Placement and Pricing & labels issues, or once you've scanned an item. For other issues, tap **+ Items found**. Scan (the camera stays open) or type the UPC of each product that's actually there. Scanning the same product again adds one to its quantity. Each item is marked:
   - **Correct:** it belongs to this location's SKU.
   - **Wrong item:** it belongs somewhere else.
-  - **Not known yet:** tap **Belongs here** or **Different product**, and ROIL remembers your answer.
+  - **Not known yet:** tap **Belongs here** or **Wrong product**, and ROIL remembers your answer.
 
   UPCs are checked as you add them, so a misread barcode is caught.
 - **Editing an item:** tap an item's code to open it. You can:
@@ -57,11 +59,11 @@ So after taking the photo, you can scan the tag and the items in one go, then pi
   - Remove it.
 
   Tap **Done** to save, or tap the code again to close it. The − and + buttons still work without opening it.
-- **Already logged?** When you save, ROIL checks for an open issue with the same location SKU, an item in common, or the same planogram and issue. If there's one, you can open it instead of saving a duplicate. You can turn this off in Lists → Appearance → Log screen.
+- **Already logged?** When you save, ROIL checks for an open issue with the same location SKU, an item in common, or the same planogram and issue. If there's one, you can open it instead of saving a duplicate. You can turn this off in Settings → Appearance → Log screen.
 
-**Lists → Products** holds what ROIL has learned. Each SKU shows its UPCs, a product name, a bestbuy.com link and the places it's been logged (you can forget a wrong one). There's also a list of UPCs that aren't paired yet, which you can pair with a SKU. Products sync between your devices and are included in backups.
+**Settings → Products** holds what ROIL has learned. Each SKU shows its UPCs, a product name, a bestbuy.com link and the places it's been logged (you can forget a wrong one). There's also a list of UPCs that aren't paired yet, which you can pair with a SKU. Products sync between your devices and are included in backups.
 
-**Pair mode** (in Lists → Products) teaches ROIL quickly. Scan a shelf tag, then every product that belongs on it, then the next tag, and so on.
+**Pair mode** (in Settings → Products) teaches ROIL quickly. Scan a shelf tag, then every product that belongs on it, then the next tag, and so on.
 
 **Bluetooth or USB barcode scanners:** use one set to keyboard (HID) mode with Enter (or Tab) after each scan. It works anywhere in ROIL:
 - In Pair mode, scans go to Pair mode.
@@ -73,7 +75,7 @@ A shelf-tag QR sets the location SKU, and a product barcode adds an item. For sh
 On computers, Chrome can't use the camera to scan, so type codes or use a scanner there.
 
 ## Downstock
-Switch between **Issues** and **Downstock** at the top of the screen. Downstock has its own tabs, **Today** and **Days**, and shares Lists, Products, scanning and sync with Issues.
+Switch between **Issues** and **Downstock** at the top of the screen. Downstock has its own tabs, **Today** and **Days**, and shares Settings, Products, scanning and sync with Issues.
 
 - **Today** is a board of every area. An area is a planogram, or a whole department if it has no planograms.
   - **Statuses:**
@@ -81,33 +83,35 @@ Switch between **Issues** and **Downstock** at the top of the screen. Downstock 
     - **Partial**
     - **Done** (the empties are filled)
     - **Follow-up**, with a reason
-  - **Extras** you can add to any area: **Filled** (restocked beyond the empties) and **LaserLine** (fronted).
+  - **Extras** you can add to any area: **Filled** (restocked beyond the empties), **LaserLine** (fronted) and **Clean & Bright**.
   - A coverage bar shows how much of the store is done today, and each area shows when it was last done.
   - The board starts fresh each day, and every day is kept.
 - **Runs:** tap **Start a run** and pick the planograms you're about to walk. You can pick them from the list or a saved group, or by scanning shelf tags. Tap **Finish run** when you're done:
   - Everything is marked **Done** unless you change it.
-  - You can add Filled or LaserLine, or mark an area Partial or Follow-up.
+  - You can add Filled, LaserLine or Clean & Bright, or mark an area Partial or Follow-up.
   - **Save as a group** remembers planograms you always walk together.
 - **Follow-up reasons** (pick as many as apply to one planogram):
   - **Couldn't find in overstock** asks whether a **Delta Buster** was submitted (with an optional number). Until it is, a **"Delta Buster not submitted"** pill shows.
   - **Needs equipment or help** asks what's needed (pick any): a lift (needs a spotter), a ladder, a second person, or a heavy or bulky item.
   - **Waiting on PRS supplies** asks what's short (pick any): spider wraps, clamshells, limit-one tags or other.
+  - **Planogram out of date** (an item with no home on the planogram) asks whether **3PL feedback** was submitted (with an optional reference number). Until it is, a **"3PL feedback not submitted"** pill shows.
+  - **Needs fill later**, **Needs LaserLine later** and **Needs Clean & Bright later** are for work left for another time.
   - **Overstock in the wrong spot or mixed**, **Overstock blocked** and **Other** are the defaults too.
-- **Partial** asks why: ran out of time, pulled to another task, store opened (the lift needs a spotter) or other. The note is for things like "stopped at bay 4".
+- **Partial** asks why: ran out of time, pulled to another task, store opened (the lift needs a spotter), messy overstock (slow to find) or other. The note is for things like "stopped at bay 4".
 
-  You can rename, add or hide reasons in Lists → Downstock.
+  You can rename, add or hide reasons in Settings → Downstock.
 - **Carried over:** follow-ups and partial areas from earlier days stay at the top until they're done.
-- **Do these first: top stock.** Mark top-stock sections in Lists → Downstock, and they're listed first each morning, together with lift follow-ups from earlier days.
-- **Not downstocked:** in Lists → Downstock, leave out departments or planograms that never get downstocked, so they don't count against coverage.
+- **Do these first: top stock.** Mark top-stock sections in Settings → Downstock, and they're listed first each morning, together with lift follow-ups from earlier days.
+- **Not downstocked:** in Settings → Downstock, leave out departments or planograms that never get downstocked, so they don't count against coverage.
 - **Someone else's work:** mark an area **Done by someone else**, then spot-check it later as **Looks good** or **Missed empties** (stock was available but the spot was left empty).
 - **Log issue here** on any area opens the issue form with the department and planogram filled in. The issue is tagged **Found while downstocking**.
 - **Shelf tags:** on the board, scanning a shelf tag with a Bluetooth scanner opens that planogram.
 - **Trucks:** the board tracks each truck until it's worked.
-  - **Schedule** (Lists → Downstock → Truck schedule): RDC (brown goods) is Monday and DDC (white goods) is Tuesday. The holiday schedule adds Wednesday and Thursday.
+  - **Schedule** (Settings → Downstock → Truck schedule): RDC (brown goods) is Monday and DDC (white goods) is Tuesday. The holiday schedule adds Wednesday and Thursday.
   - **Arrivals:** on a scheduled day the board asks **Has it arrived?** For an odd day, use **Arrived today**. To log a truck after the fact, use **Add past**. Tap **Edit** on a truck card, a truck row in the Calendar, or a truck under Days → Recent trucks to fix any date or detail, or to delete it.
   - **Each truck's card has:**
     - **Before it arrives:** the truck email usually comes the evening before or that morning. Tap **Add load from email** on the "due today" prompt, or use **Add past** with **Not arrived yet** turned on (up to 3 days ahead). The truck waits on the board as **expected**. When it shows up, tap **Arrived**. The next morning, the card offers **Arrived Mon** (the day it was due) or **Arrived today** (for a truck that came a day late). Expected trucks don't count in stats until then.
-    - **Load**: pieces and CUBE (cu ft) from the email, plus an optional note. For RDC, ROIL estimates the pallet count from the CUBE: 48×40 in pallets loaded 100 in high, about 111 cu ft each (change the height in Lists → Downstock → Truck schedule). Enter the real count after the unload. Once two trucks have real counts, ROIL estimates from your store's own average. DDC isn't palletized.
+    - **Load**: pieces and CUBE (cu ft) from the email, plus an optional note. For RDC, ROIL estimates the pallet count from the CUBE: 48×40 in pallets loaded 100 in high, about 111 cu ft each (change the height in Settings → Downstock → Truck schedule). Enter the real count after the unload. Once two trucks have real counts, ROIL estimates from your store's own average. DDC isn't palletized.
     - **Paperwork**: the trailer ID and manifest # from the manifest. They show on the truck card, the calendar day sheet and the weekly summary, so each truck can be matched to its documents. ROIL warns when the same trailer is still on another open truck, or the same manifest # was already used.
     - **Folding**: tap a truck's header to fold it to one line (truck, trailer ID, status) or open it again. Unfinished trucks start open; a finished truck that's only waiting on its trailer starts folded. A card that needs you opens again on its own, with the reason in color. Your choice is remembered on this device.
     - **Southbound**: once a dropped trailer is emptied, tap **Loading it as the Southbound** when RLC and other outbound freight go on it. Add the **BOL #** in Edit. **Pickup requested today** (usually Friday) counts as picked up, so the card goes away. The next Monday (through Wednesday) the card comes back and asks whether it's still here. **Gone** closes it. **Still here** logs a **missed pickup**, flagged in red on the calendar and listed in the weekly summary, and offers **Requested again today** or **Picked up today**. On Fridays a loaded Southbound that hasn't been requested shows **Request Southbound pickup**.
@@ -145,7 +149,7 @@ Tap a day to see everything that happened that day. Use ‹ › to move between 
 - **Issues:** on the issue screen, **Change dates** lets you set when it was logged and when it was fixed.
 
 ## Debug tools
-**Lists → Debug tools** shows:
+**Settings → Debug tools** shows:
 - the app version
 - how much data is stored
 - the sync status and any changes waiting to sync
@@ -158,18 +162,18 @@ It also has buttons to:
 - **Download data** (no photos)
 - **Re-ask skipped truck days**
 
-## Notes for later
-Tap **Note** at the top of any screen to jot something down while you're on the floor. Pick a kind: **Bug** (doesn't work or shows the wrong thing), **Improvement** (works, but should work or look differently), **New feature** (something ROIL doesn't do yet) or **Other**. A hint under the buttons explains each one. You can also tap the mic on the phone's keyboard and talk instead of typing.
-- **Context is saved with each note:** the screen you were on and the app version.
-- **Read them in Lists → Notes for later.** Tick off the ones that are done, or **Copy** or **Share** them (for example, to paste into a chat).
-- **Edit** on any note changes its kind, text, the screen it was written on, or whether it's done. Delete is there too.
-- **Notes sync to your other devices** and are included in backups.
+## Feedback
+Tap **Feedback** at the top of any screen to jot something down while you're on the floor. Pick a kind: **Bug** (doesn't work or shows the wrong thing), **Improvement** (works, but should work or look differently), **New feature** (something ROIL doesn't do yet) or **Other**. A hint under the buttons explains each one. You can also tap the mic on the phone's keyboard and talk instead of typing.
+- **Context is saved with each one:** the screen you were on and the app version.
+- **Read it in Settings → Feedback.** Tick off the ones that are done, or **Copy** or **Share** them (for example, to paste into a chat).
+- **Edit** on any entry changes its kind, text, the screen it was written on, or whether it's done. Delete is there too.
+- **Feedback syncs to your other devices** and are included in backups.
 - **What you've typed is kept if you close the note without saving.**
 
 ## More than one device
 The easy way is **Sync with Google Drive** (below), which keeps every device in step automatically. Without sync, each device keeps its own log, and you can combine them with a backup file:
-1. On device A: **Lists → Share backup** (to yourself in Teams or Google Drive), or **Download backup**.
-2. On device B: **Lists → Restore or merge a backup**, then pick the file.
+1. On device A: **Settings → Share backup** (to yourself in Teams or Google Drive), or **Download backup**.
+2. On device B: **Settings → Restore or merge a backup**, then pick the file.
 
 Merging is safe to repeat in either direction:
 - It adds new issues and keeps whichever version of an issue was edited most recently.
@@ -177,7 +181,7 @@ Merging is safe to repeat in either direction:
 - An older backup never brings back something you deleted.
 
 ## Sync with Google Drive
-**Lists → Sync → Google Drive → Connect Google Drive** on each device, signed in with the same Google account.
+**Settings → Sync → Google Drive → Connect Google Drive** on each device, signed in with the same Google account.
 
 **How it works:**
 - Every device keeps a full copy and works offline.
@@ -202,16 +206,18 @@ A **ROIL server** destination will be added once self-hosting is running.
 - The chip at the top shows how long ago you last backed up. It turns orange after 7 days.
 - Clearing the browser's site data, uninstalling the browser, or replacing a device without a backup would lose that device's log.
 
-## Lists
+## Settings: the lists of choices
 Each issue records:
 - **Department** and **planogram**.
 - **Issue:** what's wrong, grouped into **categories** (Placement, Pricing & labels, Demo units, Condition, Safety & security).
 - **Source:** who or what likely caused it, such as Truck / freight or Customer. One source can be the default for new issues; it starts as Truck / freight.
 - **Cause:** why it happened.
 
-Issue types in the **Demo units** category get a **RITE ticket submitted** checkbox and an optional ticket number. Until it's ticked, the issue shows *RITE not submitted*.
+Issue types in the **Demo units** category get a **RITE ticket submitted** checkbox and an optional ticket number. Until it's ticked, the issue shows *RITE not submitted*. **Planogram out of date** works the same way with **3PL feedback submitted**. In the CSV both show in the *Form submitted (RITE / 3PL)* column.
 
-All of these are edited in **Lists**. Issues link to these entries, so:
+Starter issue types added in version 27: **Unpriced open box**, **Pickup label left on returned product** (Pricing & labels), **Poor-quality open box** (Condition), **Store pickup problem**, **Planogram out of date** (Placement) and **Lock-up left unlocked** (Safety & security). If you'd already made one with the same name, yours is kept and no copy is added.
+
+All of these are edited in **Settings**. Issues link to these entries, so:
 - **Renaming** an entry updates every issue that uses it, including History, Stats, exports and share text.
 - **Deleting an unused entry** removes it.
 - **Deleting an entry that issues use** asks you to choose:
@@ -220,7 +226,7 @@ All of these are edited in **Lists**. Issues link to these entries, so:
 - **Merging backups** between devices keeps entries added on either side, takes renames from the newer lists, and doesn't bring back anything deleted or merged away.
 
 ## Appearance
-**Lists → Appearance** has these settings, saved per device and carried in backups:
+**Settings → Appearance** has these settings, saved per device and carried in backups:
 - **Color theme:**
   - **ROIL**, which follows your device's light or dark setting.
   - Editor-style themes: GitHub Light and Dark, Solarized Light and Dark, Catppuccin Latte and Mocha, One Dark, Dracula, Nord, Monokai, Gruvbox Dark and Tokyo Night.
